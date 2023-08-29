@@ -7,6 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	SUPABASE_BESS_READING_TABLE_NAME  = "bess_readings"
+	SUPABASE_METER_READING_TABLE_NAME = "meter_readings"
+)
+
 // supabaseBessReading holds the json encoding schema for a BESS reading in supabase.
 type supabaseBessReading struct {
 	ID          uuid.UUID `json:"id"`
@@ -25,18 +30,26 @@ type supabaseMeterReading struct {
 	TotalPower float64   `json:"total_power"`
 }
 
-func convertMeterReadings(readings []repository.StoredMeterReading) []supabaseMeterReading {
-	var supabaseReadings []supabaseMeterReading
-	for _, reading := range readings {
-		supabaseReadings = append(supabaseReadings, supabaseMeterReading(reading.MeterReading))
-	}
-	return supabaseReadings
-}
+// convertReadingsForSupabase returns the equivilent "supbase type" for the given readings (which include supabase json tags) and the
+// associated supabase table name.
+func convertReadingsForSupabase(readings interface{}) (interface{}, string) {
+	switch readingsTyped := readings.(type) {
 
-func convertBessReadings(readings []repository.StoredBessReading) []supabaseBessReading {
-	var supabaseReadings []supabaseBessReading
-	for _, reading := range readings {
-		supabaseReadings = append(supabaseReadings, supabaseBessReading(reading.BessReading))
+	case []repository.StoredBessReading:
+		var supabaseReadings []supabaseBessReading
+		for _, reading := range readingsTyped {
+			supabaseReadings = append(supabaseReadings, supabaseBessReading(reading.BessReading))
+		}
+		return supabaseReadings, SUPABASE_BESS_READING_TABLE_NAME
+
+	case []repository.StoredMeterReading:
+		var supabaseReadings []supabaseMeterReading
+		for _, reading := range readingsTyped {
+			supabaseReadings = append(supabaseReadings, supabaseMeterReading(reading.MeterReading))
+		}
+		return supabaseReadings, SUPABASE_METER_READING_TABLE_NAME
+
+	default:
+		return nil, ""
 	}
-	return supabaseReadings
 }

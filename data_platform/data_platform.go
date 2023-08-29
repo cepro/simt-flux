@@ -2,6 +2,7 @@ package dataplatform
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/cepro/besscontroller/repository"
@@ -13,8 +14,8 @@ import (
 // DataPlatform handles the streaming of telemetry to Supabase.
 // Put new meter and bess readings onto the appropriate channels and they will be uploaded.
 type DataPlatform struct {
-	MeterReadings chan telemetry.MeterReading
 	BessReadings  chan telemetry.BessReading
+	MeterReadings chan telemetry.MeterReading
 
 	repository *repository.Repository
 	supaClient *supa.Client
@@ -31,8 +32,8 @@ func New(supabaseUrl string, supabaseKey string) (*DataPlatform, error) {
 
 	return &DataPlatform{
 		// TODO: properly consider bufferring behaviour of channels
-		MeterReadings: make(chan telemetry.MeterReading, 25),
 		BessReadings:  make(chan telemetry.BessReading, 25),
+		MeterReadings: make(chan telemetry.MeterReading, 25),
 		repository:    repository,
 		supaClient:    supaClient,
 	}, nil
@@ -47,12 +48,6 @@ func (d *DataPlatform) Run() {
 
 	for {
 		select {
-		case reading := <-d.MeterReadings:
-			err := d.repository.AddMeterReading(reading)
-			if err != nil {
-				fmt.Printf("failed to persist meter reading: %v\n", err)
-			}
-			fmt.Printf("Stored meter reading\n")
 
 		case reading := <-d.BessReadings:
 			err := d.repository.AddBessReading(reading)
@@ -60,6 +55,14 @@ func (d *DataPlatform) Run() {
 				fmt.Printf("failed to persist bess reading: %v\n", err)
 			}
 			fmt.Printf("Stored bess reading\n")
+
+		case reading := <-d.MeterReadings:
+			err := d.repository.AddMeterReading(reading)
+			if err != nil {
+				fmt.Printf("failed to persist meter reading: %v\n", err)
+			}
+			fmt.Printf("Stored meter reading\n")
+
 		case _ = <-uploadTicker.C:
 			d.attemptUploadPending()
 		}
@@ -72,40 +75,40 @@ func (d *DataPlatform) attemptUploadPending() {
 	uploadChunkLimit := 50
 
 	// first attempt to upload any new readings that have not been seen before
-	freshMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, true)
-	if err != nil {
-		fmt.Printf("failed to query fresh meter readings: %v\n", err)
-	} else {
-		err = d.handleMeterReadings(freshMeterReadings)
-		if err != nil {
-			fmt.Printf("failed to handle fresh meter readings: %v\n", err)
-		}
-	}
 	freshBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, true)
 	if err != nil {
 		fmt.Printf("failed to query fresh bess readings: %v\n", err)
-	} else {
-		err = d.handleBessReadings(freshBessReadings)
+	} else if len(freshBessReadings) > 1 {
+		err = d.handleReadings(freshBessReadings)
 		if err != nil {
 			fmt.Printf("failed to handle fresh bess readings: %v\n", err)
 		}
 	}
+	freshMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, true)
+	if err != nil {
+		fmt.Printf("failed to query fresh meter readings: %v\n", err)
+	} else if len(freshMeterReadings) > 1 {
+		err = d.handleReadings(freshMeterReadings)
+		if err != nil {
+			fmt.Printf("failed to handle fresh meter readings: %v\n", err)
+		}
+	}
 
 	// then attempt to upload any old meter readings that have already failed an upload at least once
-	oldMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, false)
+	oldBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, false)
 	if err != nil {
 		fmt.Printf("failed to query old meter readings: %v\n", err)
-	} else {
-		err = d.handleMeterReadings(oldMeterReadings)
+	} else if len(oldBessReadings) > 1 {
+		err = d.handleReadings(oldBessReadings)
 		if err != nil {
 			fmt.Printf("failed to handle old meter readings: %v\n", err)
 		}
 	}
-	oldBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, false)
+	oldMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, false)
 	if err != nil {
 		fmt.Printf("failed to query old meter readings: %v\n", err)
-	} else {
-		err = d.handleBessReadings(oldBessReadings)
+	} else if len(oldMeterReadings) > 1 {
+		err = d.handleReadings(oldMeterReadings)
 		if err != nil {
 			fmt.Printf("failed to handle old meter readings: %v\n", err)
 		}
@@ -114,15 +117,13 @@ func (d *DataPlatform) attemptUploadPending() {
 	return
 }
 
-func (d *DataPlatform) handleMeterReadings(readings []repository.StoredMeterReading) error {
+// handleReadings attempts to upload the given readings. If successfull, it deletes the readings from the database, if
+// unsuccessful, it increments the 'upload attempt count' column and leaves the reading in the database for another time.
+func (d *DataPlatform) handleReadings(readings interface{}) error {
 
-	if len(readings) < 1 {
-		return nil
-	}
-
-	// rows = append(rows, supabaseMeterReading{})
-
-	uploadErr := d.supaClient.DB.From("meter_readings").Insert(convertMeterReadings(readings)).Execute(nil)
+	convertedReadings, tableName := convertReadingsForSupabase(readings)
+	// TODO: organise error better
+	uploadErr := d.supaClient.DB.From(tableName).Insert(convertedReadings).Execute(nil)
 	if uploadErr != nil {
 		uploadErr := fmt.Errorf("upload failed: %w", uploadErr)
 		errInc := d.repository.IncrementUploadAttemptCount(readings)
@@ -137,49 +138,9 @@ func (d *DataPlatform) handleMeterReadings(readings []repository.StoredMeterRead
 		return fmt.Errorf("delete meter readings: %w", deleteErr)
 	}
 
-	// TODO: really think through this logic to handle edge cases, e.g. where the upload succeeds but the delete doesn't
-
-	return nil
-}
-
-func (d *DataPlatform) handleBessReadings(readings []repository.StoredBessReading) error {
-
-	if len(readings) < 1 {
-		return nil
-	}
-
-	// rows = append(rows, supabaseBessReading{})
-
-	uploadErr := d.supaClient.DB.From("bess_readings").Insert(convertBessReadings(readings)).Execute(nil)
-	if uploadErr != nil {
-		uploadErr := fmt.Errorf("upload failed: %w", uploadErr)
-		errInc := d.repository.IncrementUploadAttemptCount(readings)
-		if errInc != nil {
-			return fmt.Errorf("%w: increment upload attempt count: %w", uploadErr, errInc)
-		}
-		return uploadErr
-	}
-
-	deleteErr := d.repository.DeleteReadings(readings)
-	if deleteErr != nil {
-		return fmt.Errorf("delete meter readings: %w", deleteErr)
-	}
+	fmt.Printf("Uploaded %d readings to table %s\n", reflect.ValueOf(readings).Len(), tableName)
 
 	// TODO: really think through this logic to handle edge cases, e.g. where the upload succeeds but the delete doesn't
-
-	return nil
-}
-
-func (d *DataPlatform) uploadBessReadings(readings []telemetry.BessReading) error {
-	var rows []supabaseBessReading
-	for _, reading := range readings {
-		rows = append(rows, supabaseBessReading(reading))
-	}
-
-	err := d.supaClient.DB.From("bess_readings").Insert(rows).Execute(nil)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
