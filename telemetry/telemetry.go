@@ -6,26 +6,39 @@ import (
 	"github.com/google/uuid"
 )
 
-// MeterReading holds data pulled from a meter
-type MeterReading struct {
-	ID         uuid.UUID
-	Time       time.Time
-	MeterID    uuid.UUID
-	Frequency  float64
-	TotalPower float64
-	// TODO: include three phase elemenets of voltage, power and current etc
-	// TODO: include start/end times of reading?
-	// TODO: should we differentiate between the types of meter - this is a three phase 'industrial' meter, but there are lots of Emlites on site too.
+// ReadingMeta holds meta data about a reading
+type ReadingMeta struct {
+	ID       uuid.UUID // The identifier for this reading
+	DeviceID uuid.UUID // The identifier for the device this reading came from - e.g. the meter ID or BESS ID
+	Time     time.Time // The time that the reading *started* to be taken (e.g. the time that the first modbus request was initiated)
 }
 
 // BessReading holds data pulled from a battery energy storage system
 type BessReading struct {
-	ID          uuid.UUID
-	Time        time.Time
-	BessID      uuid.UUID
+	ReadingMeta
 	Soe         float64
 	TargetPower float64
 	// TODO: other data...
+}
+
+// MeterReading holds data pulled from a meter
+type MeterReading struct {
+	ReadingMeta
+	Frequency            float64
+	VoltageLineAverage   float64
+	CurrentPhA           float64
+	CurrentPhB           float64
+	CurrentPhC           float64
+	CurrentPhAverage     float64
+	PowerPhAActive       float64
+	PowerPhBActive       float64
+	PowerPhCActive       float64
+	PowerTotalActive     float64
+	PowerTotalReactive   float64
+	PowerTotalApparent   float64
+	PowerFactorTotal     float64
+	EnergyImportedActive float64
+	EnergyExportedActive float64
 }
 
 // BessCommand holds control data that is sent to a battery energy storage system

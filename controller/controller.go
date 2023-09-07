@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
 	"time"
 
 	"github.com/cepro/besscontroller/telemetry"
@@ -47,15 +48,17 @@ func New(config Config) *Controller {
 
 // Run loops forever, running the control loop every 5 seconds, and storing any neccesary data from the available meter and
 // bess readings whenever they become available.
-func (c *Controller) Run() {
+func (c *Controller) Run(ctx context.Context) {
 	ctrlLoopTicker := time.NewTicker(time.Second * 5)
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case t := <-ctrlLoopTicker.C:
 			c.runControlLoop(t)
 		case reading := <-c.SiteMeterReadings:
-			c.sitePower = reading.TotalPower
+			c.sitePower = reading.PowerTotalActive
 		case reading := <-c.BessReadings:
 			c.bessSoe = reading.Soe
 		}
@@ -65,7 +68,6 @@ func (c *Controller) Run() {
 // runControlLoop inspects the latest telemetry and attempts to bring the microgrid site power level to <=0 during
 // 'import avoidance periods' by setting the battery power level appropriately.
 func (c *Controller) runControlLoop(t time.Time) {
-	fmt.Printf("Controlling t: %v, sitePower: %v, bessSoe: %v\n", t, c.sitePower, c.bessSoe)
 
 	inImportAvoidancePeriod := false
 	for _, period := range c.config.ImportAvoidancePeriods {
@@ -87,5 +89,11 @@ func (c *Controller) runControlLoop(t time.Time) {
 		TargetPower: targetPower,
 	}
 	c.lastTargetPower = targetPower
-	fmt.Printf("In import avoidance period: %v, setting target power: %v\n", inImportAvoidancePeriod, targetPower)
+	slog.Info(
+		"Controlling BESS",
+		"site_power", c.sitePower,
+		"bess_soe", c.bessSoe,
+		"import_avoidance_active", inImportAvoidancePeriod,
+		"bess_target_power", targetPower,
+	)
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cepro/besscontroller/telemetry"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -34,11 +34,6 @@ func (r *Repository) AddMeterReading(reading telemetry.MeterReading) error {
 	result := r.db.Create(newStoredMeterReading(reading))
 	return result.Error
 }
-
-// func (r *Repository) DeleteMeterReadings(readings []StoredMeterReading) error {
-// 	result := r.db.Delete(&readings)
-// 	return result.Error
-// }
 
 func (r *Repository) AddBessReading(reading telemetry.BessReading) error {
 	result := r.db.Create(newStoredBessReading(reading))

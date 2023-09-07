@@ -1,7 +1,8 @@
 package tesla
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
 	"time"
 
 	"github.com/cepro/besscontroller/telemetry"
@@ -33,23 +34,27 @@ func NewPowerPack(id uuid.UUID, host string) (*PowerPack, error) {
 }
 
 // Run loops forever, polling telemetry from the PowerPack every `pollPeriod`, and sending commands to the PowerPack every time they
-// are received on the `p.Commands` channel.
-func (p *PowerPack) Run(pollPeriod time.Duration) {
+// are received on the `p.Commands` channel. Exits when the context is cancelled.
+func (p *PowerPack) Run(ctx context.Context, pollPeriod time.Duration) {
 
 	pollTicker := time.NewTicker(pollPeriod)
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case command := <-p.Commands:
 			// TODO: issue command
-			fmt.Printf("Issue command to BESS: %v\n", command)
+			slog.Info("Issue command to BESS", "bess_command", command)
 		case t := <-pollTicker.C:
 			// TODO: read actual telemetry from the PowerPack
 			p.Telemetry <- telemetry.BessReading{
-				ID:     uuid.New(),
-				Time:   t,
-				BessID: p.id,
-				Soe:    0.5,
+				ReadingMeta: telemetry.ReadingMeta{
+					ID:       uuid.New(),
+					DeviceID: p.id,
+					Time:     t,
+				},
+				Soe: 0.5,
 			}
 		}
 	}

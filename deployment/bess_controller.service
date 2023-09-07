@@ -1,0 +1,14 @@
+[Unit]
+Description= Service to run the BESS controller program
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/home/pi/bess_controller/bess_controller_rpi
+Restart=always
+RestartSec=16
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

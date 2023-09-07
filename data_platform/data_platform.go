@@ -1,7 +1,9 @@
 package dataplatform
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -12,7 +14,8 @@ import (
 )
 
 // DataPlatform handles the streaming of telemetry to Supabase.
-// Put new meter and bess readings onto the appropriate channels and they will be uploaded.
+// Put new meter and bess readings onto the appropriate channels, they will be bufferred on disk in a SQLite database before
+// being uploaded to Supabase.
 type DataPlatform struct {
 	BessReadings  chan telemetry.BessReading
 	MeterReadings chan telemetry.MeterReading
@@ -21,17 +24,17 @@ type DataPlatform struct {
 	supaClient *supa.Client
 }
 
-func New(supabaseUrl string, supabaseKey string) (*DataPlatform, error) {
+func New(supabaseUrl string, supabaseKey string, bufferRepositoryFilename string) (*DataPlatform, error) {
 
 	supaClient := supa.CreateClient(supabaseUrl, supabaseKey)
 
-	repository, err := repository.New("telemetry.db")
+	repository, err := repository.New(bufferRepositoryFilename)
 	if err != nil {
 		return nil, fmt.Errorf("create repository: %w", err)
 	}
 
 	return &DataPlatform{
-		// TODO: properly consider bufferring behaviour of channels
+		// TODO: properly consider bufferring behaviour of channels and alerting / error conditions
 		BessReadings:  make(chan telemetry.BessReading, 25),
 		MeterReadings: make(chan telemetry.MeterReading, 25),
 		repository:    repository,
@@ -40,36 +43,36 @@ func New(supabaseUrl string, supabaseKey string) (*DataPlatform, error) {
 }
 
 // Run loops forever waiting for meter or bess readings, when they are available they are uploaded.
-func (d *DataPlatform) Run() {
-
-	// TODO: consider alerting for best-efford approach
+func (d *DataPlatform) Run(ctx context.Context) {
 
 	uploadTicker := time.NewTicker(time.Second * 5)
 
 	for {
 		select {
-
+		case <-ctx.Done():
+			return
 		case reading := <-d.BessReadings:
 			err := d.repository.AddBessReading(reading)
 			if err != nil {
-				fmt.Printf("failed to persist bess reading: %v\n", err)
+				slog.Error("failed to persist bess reading", "error", err)
 			}
-			fmt.Printf("Stored bess reading\n")
+			slog.Debug("Stored bess reading")
 
 		case reading := <-d.MeterReadings:
 			err := d.repository.AddMeterReading(reading)
 			if err != nil {
-				fmt.Printf("failed to persist meter reading: %v\n", err)
+				slog.Error("failed to persist meter reading", "error", err)
 			}
-			fmt.Printf("Stored meter reading\n")
+			slog.Debug("Stored meter reading")
 
 		case _ = <-uploadTicker.C:
-			d.attemptUploadPending()
+			d.attemptUpload()
 		}
 	}
 }
 
-func (d *DataPlatform) attemptUploadPending() {
+// attemptUpload attempts to upload the telemetry from the repository into Supabase.
+func (d *DataPlatform) attemptUpload() {
 
 	// uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
 	uploadChunkLimit := 50
@@ -77,40 +80,40 @@ func (d *DataPlatform) attemptUploadPending() {
 	// first attempt to upload any new readings that have not been seen before
 	freshBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, true)
 	if err != nil {
-		fmt.Printf("failed to query fresh bess readings: %v\n", err)
+		slog.Error("failed to query fresh bess readings", "error", err)
 	} else if len(freshBessReadings) > 1 {
 		err = d.handleReadings(freshBessReadings)
 		if err != nil {
-			fmt.Printf("failed to handle fresh bess readings: %v\n", err)
+			slog.Error("failed to handle fresh bess readings", "error", err)
 		}
 	}
 	freshMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, true)
 	if err != nil {
-		fmt.Printf("failed to query fresh meter readings: %v\n", err)
+		slog.Error("failed to query fresh meter readings", "error", err)
 	} else if len(freshMeterReadings) > 1 {
 		err = d.handleReadings(freshMeterReadings)
 		if err != nil {
-			fmt.Printf("failed to handle fresh meter readings: %v\n", err)
+			slog.Error("failed to handle fresh meter readings", "error", err)
 		}
 	}
 
-	// then attempt to upload any old meter readings that have already failed an upload at least once
+	// then attempt to upload any old readings that have already failed an upload at least once
 	oldBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, false)
 	if err != nil {
-		fmt.Printf("failed to query old meter readings: %v\n", err)
+		slog.Error("failed to query old meter readings", "error", err)
 	} else if len(oldBessReadings) > 1 {
 		err = d.handleReadings(oldBessReadings)
 		if err != nil {
-			fmt.Printf("failed to handle old meter readings: %v\n", err)
+			slog.Error("failed to handle old meter readings", "error", err)
 		}
 	}
 	oldMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit, false)
 	if err != nil {
-		fmt.Printf("failed to query old meter readings: %v\n", err)
+		slog.Error("failed to query old meter readings", "error", err)
 	} else if len(oldMeterReadings) > 1 {
 		err = d.handleReadings(oldMeterReadings)
 		if err != nil {
-			fmt.Printf("failed to handle old meter readings: %v\n", err)
+			slog.Error("failed to handle old meter readings", "error", err)
 		}
 	}
 
@@ -121,7 +124,7 @@ func (d *DataPlatform) attemptUploadPending() {
 // unsuccessful, it increments the 'upload attempt count' column and leaves the reading in the database for another time.
 func (d *DataPlatform) handleReadings(readings interface{}) error {
 
-	convertedReadings, tableName := convertReadingsForSupabase(readings)
+	convertedReadings, tableName := getReadingsForSupabase(readings)
 	// TODO: organise error better
 	uploadErr := d.supaClient.DB.From(tableName).Insert(convertedReadings).Execute(nil)
 	if uploadErr != nil {
@@ -135,10 +138,10 @@ func (d *DataPlatform) handleReadings(readings interface{}) error {
 
 	deleteErr := d.repository.DeleteReadings(readings)
 	if deleteErr != nil {
-		return fmt.Errorf("delete meter readings: %w", deleteErr)
+		return fmt.Errorf("delete meter readings (%+v): %w", readings, deleteErr)
 	}
 
-	fmt.Printf("Uploaded %d readings to table %s\n", reflect.ValueOf(readings).Len(), tableName)
+	slog.Info("Uploaded readings", "db_table", tableName, "db_records", reflect.ValueOf(readings).Len())
 
 	// TODO: really think through this logic to handle edge cases, e.g. where the upload succeeds but the delete doesn't
 
