@@ -2,17 +2,17 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
+	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
 	"github.com/cepro/besscontroller/tesla"
-	timeutils "github.com/cepro/besscontroller/time_utils"
-	"github.com/google/uuid"
 )
 
 func main() {
@@ -20,61 +20,58 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
 
-	slog.Info("Starting controller...")
+	var configFilePath string
+	flag.StringVar(&configFilePath, "f", "./config.json", "Specify config file path")
+	flag.Parse()
 
-	// TODO: read these kind of things from config file
-	telemetryPollInterval := 1 * time.Second
-	siteMeterHost := "localhost:1502" // "192.168.8.69:502" //
-	bessMeterHost := "localhost:1503" // "192.168.8.78:502" //
-	supabaseUrl := "https://hiffuporsxuzdmvgbtyp.supabase.co"
-	supabaseKey := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZmZ1cG9yc3h1emRtdmdidHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI3MTc5OTAsImV4cCI6MjAwODI5Mzk5MH0.4LBRWFK_qX0uu31uECrVqfMP8uGOCuTXr3DB3aA7zic"
-	siteMeterID := uuid.MustParse("64d84428-b989-4443-9a5e-aed02c224ee7") // uuid.MustParse("82b441ad-4475-4caf-a715-48bb86cebd96")
-	bessMeterID := uuid.MustParse("f780594f-cbc2-462d-b845-4aa060d5bbe5") // uuid.MustParse("7994fdcc-7dfa-4ef9-a529-e9167317ddb3")
-	powePackID := uuid.MustParse("e2122808-1e75-4dd8-a67d-5a66ad54d433")
-	location, err := time.LoadLocation("Europe/London")
+	slog.Info("Starting", "config_file", configFilePath)
+
+	config, err := config.Read(configFilePath)
 	if err != nil {
-		slog.Error("Failed to load time location: %v", err)
+		slog.Error("Failed to read config", "error", err)
 		return
 	}
 
+	telemetryPollInterval := 1 * time.Second
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// importAvoidancePeriods defines the time ranges that we should not import power
-	importAvoidancePeriods := []timeutils.ClockTimePeriod{
-		{
-			Start: timeutils.ClockTime{Hour: 6, Minute: 0, Second: 0, Location: location},
-			End:   timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: location},
-		},
-		{
-			Start: timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: location},
-			End:   timeutils.ClockTime{Hour: 19, Minute: 0, Second: 0, Location: location},
-		},
-	}
-
-	siteMeter, err := acuvim2.New(siteMeterID, siteMeterHost, 400, 400, 800, 5)
-	// siteMeter, err := acuvim2.NewEmulated(siteMeterID)
+	siteMeter, err := acuvim2.New(
+		config.SiteMeter.ID,
+		config.SiteMeter.Host,
+		config.SiteMeter.Pt1,
+		config.SiteMeter.Pt2,
+		config.SiteMeter.Ct1,
+		config.SiteMeter.Ct2,
+	)
 	if err != nil {
 		slog.Error("Failed to create site meter", "error", err)
 		return
 	}
 	go siteMeter.Run(ctx, telemetryPollInterval)
 
-	bessMeter, err := acuvim2.New(bessMeterID, bessMeterHost, 400, 400, 400, 5)
-	// bessMeter, err := acuvim2.NewEmulated(bessMeterID)
+	bessMeter, err := acuvim2.New(
+		config.BessMeter.ID,
+		config.BessMeter.Host,
+		config.BessMeter.Pt1,
+		config.BessMeter.Pt2,
+		config.BessMeter.Ct1,
+		config.BessMeter.Ct2,
+	)
 	if err != nil {
 		slog.Error("Failed to create bess meter", "error", err)
 		return
 	}
 	go bessMeter.Run(ctx, telemetryPollInterval)
 
-	powerPack, err := tesla.NewPowerPack(powePackID, "localhost:1504")
+	powerPack, err := tesla.NewPowerPack(config.Bess.ID, config.Bess.Host)
 	if err != nil {
 		slog.Error("Failed to create power pack", "error", err)
 		return
 	}
 	go powerPack.Run(ctx, telemetryPollInterval)
 
-	dataPlatform, err := dataplatform.New(supabaseUrl, supabaseKey, "telemetry.sqlite")
+	dataPlatform, err := dataplatform.New(config.Supabase.Url, config.Supabase.Key, "telemetry.sqlite")
 	if err != nil {
 		slog.Error("Failed to create data platform", "error", err)
 		return
@@ -82,9 +79,9 @@ func main() {
 	go dataPlatform.Run(ctx)
 
 	ctrl := controller.New(controller.Config{
-		BessNameplatePower:     340e3,
-		BessNameplateEnergy:    444e3,
-		ImportAvoidancePeriods: importAvoidancePeriods,
+		BessNameplatePower:     config.Bess.NameplatePower,
+		BessNameplateEnergy:    config.Bess.NameplateEnergy,
+		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		BessCommands:           powerPack.Commands,
 	})
 	go ctrl.Run(ctx)

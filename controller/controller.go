@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -49,6 +50,14 @@ func New(config Config) *Controller {
 // Run loops forever, running the control loop every 5 seconds, and storing any neccesary data from the available meter and
 // bess readings whenever they become available.
 func (c *Controller) Run(ctx context.Context) {
+
+	slog.Info(
+		"Starting controller",
+		"bess_nameplate_power", c.config.BessNameplatePower,
+		"bess_nameplate_energy", c.config.BessNameplateEnergy,
+		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
+	)
+
 	ctrlLoopTicker := time.NewTicker(time.Second * 5)
 
 	for {

@@ -1,6 +1,6 @@
 {
     "siteMeter": {
-        "host": "192.168.8.69:502",
+        "host": "localhost:1502",
         "id": "64d84428-b989-4443-9a5e-aed02c224ee7",
         "pt1": 400,
         "pt2": 400,
@@ -8,7 +8,7 @@
         "ct2": 5
     },
     "bessMeter": {
-        "host": "192.168.8.78:502",
+        "host": "localhost:1503",
         "id": "f780594f-cbc2-462d-b845-4aa060d5bbe5",
         "pt1": 400,
         "pt2": 400,

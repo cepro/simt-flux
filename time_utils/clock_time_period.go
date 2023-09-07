@@ -3,8 +3,8 @@ package timeutils
 import "time"
 
 type ClockTimePeriod struct {
-	Start ClockTime
-	End   ClockTime
+	Start ClockTime `json:"start"`
+	End   ClockTime `json:"end"`
 }
 
 // Contains returns True if t is within the ClockTimePeriod
