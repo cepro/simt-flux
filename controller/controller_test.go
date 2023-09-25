@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -33,6 +34,7 @@ func TestImportAvoidance(test *testing.T) {
 		BessNameplatePower:     100,
 		BessNameplateEnergy:    200,
 		BessMinimumSoE:         200 * 0.05,
+		BessMaxSoe:             200 * 0.95,
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		BessCommands:           bessCommands,
 	})
@@ -52,7 +54,7 @@ func TestImportAvoidance(test *testing.T) {
 		{time: mustParseTime("2023-09-12T09:00:02+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:03+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
 
-		// A period of increasing demand - the controller should use the battery to match the demand
+		// A period of increasing demand - the controller should use the battery to match the demand - which should reduce site import
 		{time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
 		{time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
 		{time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
@@ -76,11 +78,23 @@ func TestImportAvoidance(test *testing.T) {
 		{time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
 
-		// Skip to a time where we are outside of any 'import avoidance periods' and import power, the controller should allow the import.
-		// Currently a discontinuity in time is not an issue for the controller, but might be better to split this into a seperate test long-term.
-		{time: mustParseTime("2023-09-12T10:00:01+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: 0},
-		{time: mustParseTime("2023-09-12T10:00:02+01:00"), bessSoe: 142, consumerDemand: 10, expectedBessTargetPower: 0},
-		{time: mustParseTime("2023-09-12T10:00:03+01:00"), bessSoe: 142, consumerDemand: 10, expectedBessTargetPower: 0},
+		// Currently a discontinuity in time is not an issue for the controller...
+
+		// Skip to a time where we are outside of any 'import avoidance periods', the controller should now start to recharge.
+		{time: mustParseTime("2023-09-12T10:00:01+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
+		{time: mustParseTime("2023-09-12T10:00:02+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
+		{time: mustParseTime("2023-09-12T10:00:03+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
+
+		// A period where the site is importing power outside of any 'import avoidance period'. Here the controller continues to recharge
+		// the battery and allows the site import
+		{time: mustParseTime("2023-09-12T10:00:04+01:00"), bessSoe: 142, consumerDemand: 10, expectedBessTargetPower: -2.1},
+		{time: mustParseTime("2023-09-12T10:00:05+01:00"), bessSoe: 142, consumerDemand: 20, expectedBessTargetPower: -2.1},
+
+		// It's now the next day, and we have been recharging constantly, so the SoE is approaching the maximum
+		{time: mustParseTime("2023-09-13T08:30:00+01:00"), bessSoe: 188.95, consumerDemand: 5, expectedBessTargetPower: -2.1},
+		{time: mustParseTime("2023-09-13T08:59:59+01:00"), bessSoe: 189.9994166667, consumerDemand: 5, expectedBessTargetPower: -2.1},
+		{time: mustParseTime("2023-09-13T09:00:00+01:00"), bessSoe: 190, consumerDemand: 5, expectedBessTargetPower: 5},
+		{time: mustParseTime("2023-09-13T09:00:01+01:00"), bessSoe: 190, consumerDemand: 5, expectedBessTargetPower: 5},
 	}
 
 	mock := microgridMock{
@@ -107,7 +121,7 @@ func TestImportAvoidance(test *testing.T) {
 			return
 		}
 
-		if mock.bessTargetPower != point.expectedBessTargetPower {
+		if !almostEqual(mock.bessTargetPower, point.expectedBessTargetPower, 0.1) {
 			test.Errorf("At time '%v' got unexpected bess target power: %f, expected: %f", point.time, mock.bessTargetPower, point.expectedBessTargetPower)
 			return
 		}
@@ -161,4 +175,10 @@ func mustParseTime(str string) time.Time {
 		panic(err)
 	}
 	return time
+}
+
+// almostEqual compares two floats, allowing for the given tolerance
+func almostEqual(a, b, tolerance float64) bool {
+	diff := math.Abs(a - b)
+	return diff < tolerance
 }

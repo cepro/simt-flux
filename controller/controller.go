@@ -33,6 +33,7 @@ type Config struct {
 	BessNameplatePower  float64 // power capability of the bess in kW
 	BessNameplateEnergy float64 // energy storage capability of the bess in kW
 	BessMinimumSoE      float64 // The minimum state of energy that the battery should hit
+	BessMaxSoe          float64 // The maximum state of energy that the battery should hit
 
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod // the periods of time to activate 'import avoidance'
 
@@ -78,28 +79,42 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 // 'import avoidance periods' by setting the battery power level appropriately.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	// TODO: rebalance
+	inImportAvoidancePeriod := timeIsInPeriods(t, c.config.ImportAvoidancePeriods)
 
-	inImportAvoidancePeriod := false
-	for _, period := range c.config.ImportAvoidancePeriods {
-		if period.Contains(t) {
-			inImportAvoidancePeriod = true
-			break
-		}
-	}
+	targetPower := 0.0
 
 	belowSoEThreshold := c.bessSoe < c.config.BessMinimumSoE
 
-	targetPower := 0.0
-	if inImportAvoidancePeriod && !belowSoEThreshold {
-		targetPower = c.sitePower + c.lastTargetPower
-	}
+	if inImportAvoidancePeriod {
+		// discharge the battery if there is a site import
 
-	if targetPower < 0 {
-		targetPower = 0
-	}
-	if targetPower > c.config.BessNameplatePower {
-		targetPower = c.config.BessNameplatePower
+		if inImportAvoidancePeriod && !belowSoEThreshold {
+			targetPower = c.sitePower + c.lastTargetPower
+		}
+
+		if targetPower < 0 {
+			targetPower = 0
+		}
+		if targetPower > c.config.BessNameplatePower {
+			targetPower = c.config.BessNameplatePower
+		}
+	} else {
+		// charge the battery to reach BessMaxSoe before the next import avoidance period
+		nextStartTimes := timeutils.NextStartTimes(t, c.config.ImportAvoidancePeriods)
+		if len(nextStartTimes) < 1 {
+			slog.Warn("No import avoidance periods, skipping rebalancing")
+		} else {
+			targetFullyChargedTime := nextStartTimes[0]
+			energyToRecharge := c.config.BessMaxSoe - c.bessSoe
+			durationToRecharge := targetFullyChargedTime.Sub(t)
+			targetPower = -energyToRecharge / durationToRecharge.Hours()
+		}
+		if targetPower > 0 {
+			targetPower = 0
+		}
+		if targetPower < -c.config.BessNameplatePower {
+			targetPower = -c.config.BessNameplatePower
+		}
 	}
 
 	slog.Info(
@@ -116,4 +131,14 @@ func (c *Controller) runControlLoop(t time.Time) {
 		TargetPower: targetPower,
 	}
 	c.lastTargetPower = targetPower
+}
+
+// timeIsInPeriods returns true if the given time is within one of the given periods
+func timeIsInPeriods(t time.Time, periods []timeutils.ClockTimePeriod) bool {
+	for _, period := range periods {
+		if period.Contains(t) {
+			return true
+		}
+	}
+	return false
 }
