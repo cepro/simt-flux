@@ -4,10 +4,10 @@ After=multi-user.target
 
 [Service]
 Type=idle
-ExecStart=/home/pi/bess_controller/bess_controller_rpi
+ExecStart=/home/pi/bess_controller/bess_controller_rpi -f /home/pi/bess_controller/config.json
 Restart=always
 RestartSec=16
-StandardOutput=null
+StandardOutput=journal
 StandardError=journal
 
 [Install]
