@@ -18,7 +18,7 @@
         "ct2": 5
     },
     "bess": {
-        "host": "localhost:1502",
+        "host": "localhost:1504",
         "id": "e2122808-1e75-4dd8-a67d-5a66ad54d433",
         "pollIntervalMs": 1000,
         "nameplatePower": 340,

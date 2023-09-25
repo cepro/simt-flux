@@ -12,7 +12,7 @@ import (
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
-	"github.com/cepro/besscontroller/tesla"
+	"github.com/cepro/besscontroller/powerpack"
 )
 
 func main() {
@@ -62,7 +62,7 @@ func main() {
 	}
 	go bessMeter.Run(ctx, time.Millisecond*time.Duration(config.BessMeter.PollIntervalMs))
 
-	powerPack, err := tesla.NewPowerPack(config.Bess.ID, config.Bess.Host)
+	powerPack, err := powerpack.New(config.Bess.ID, config.Bess.Host)
 	if err != nil {
 		slog.Error("Failed to create power pack", "error", err)
 		return
