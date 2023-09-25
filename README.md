@@ -1,7 +1,11 @@
 
 # bess-controller
 
-Software to control batteries and associated metering.
+A Go service to control batteries and associated metering. The service is currently compiled and run as a systemd service, to build it run: `go build main.go -o controller`.
+
+The service accepts a JSON configuration file using the `-f` command line flag. An example configuration file is `./deployment/waterlilies_config.json`.
+
+The high-level architecture of the program is shown in the following illustration: ![high_level](docs/high_level.png)
 
 
 ## Testing
