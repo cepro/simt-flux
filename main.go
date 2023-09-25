@@ -91,15 +91,14 @@ func main() {
 			case <-ctx.Done():
 				return
 			case siteMeterReading := <-siteMeter.Telemetry:
-				dataPlatform.MeterReadings <- siteMeterReading
-				ctrl.SiteMeterReadings <- siteMeterReading
-			case bessMeterReading := <-bessMeter.Telemetry:
-				dataPlatform.MeterReadings <- bessMeterReading
+				sendIfNonBlocking(ctrl.SiteMeterReadings, siteMeterReading, "Controller site meter readings")
+				sendIfNonBlocking(dataPlatform.MeterReadings, siteMeterReading, "Dataplatform meter readings")
+			// case bessMeterReading := <-bessMeter.Telemetry:
+			// 	sendIfNonBlocking(dataPlatform.MeterReadings, bessMeterReading, "Dataplatform meter readings")
 			case bessReading := <-powerPack.Telemetry:
-				dataPlatform.BessReadings <- bessReading
-				ctrl.BessReadings <- bessReading
+				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
+				sendIfNonBlocking(dataPlatform.BessReadings, bessReading, "Dataplatform bess readings")
 			}
-
 		}
 	}()
 
@@ -114,4 +113,14 @@ func main() {
 
 	slog.Info("Exiting")
 	os.Exit(0)
+}
+
+// sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
+// is non-blocking, otherwise it logs a warning message and returns.
+func sendIfNonBlocking[V any](ch chan V, val V, debugInfo string) {
+	select {
+	case ch <- val:
+	default:
+		slog.Warn("Dropped message", "message_target", debugInfo)
+	}
 }

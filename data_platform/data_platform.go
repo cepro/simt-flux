@@ -34,8 +34,7 @@ func New(supabaseUrl string, supabaseKey string, bufferRepositoryFilename string
 	}
 
 	return &DataPlatform{
-		// TODO: properly consider bufferring behaviour of channels and alerting / error conditions
-		BessReadings:  make(chan telemetry.BessReading, 25),
+		BessReadings:  make(chan telemetry.BessReading, 25), // a small buffer to allow SQLite to catch up in case the disk is slow
 		MeterReadings: make(chan telemetry.MeterReading, 25),
 		repository:    repository,
 		supaClient:    supaClient,
