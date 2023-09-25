@@ -10,8 +10,9 @@ import (
 )
 
 type DeviceConfig struct {
-	Host string    `json:"host"`
-	ID   uuid.UUID `json:"id"`
+	Host           string    `json:"host"`
+	ID             uuid.UUID `json:"id"`
+	PollIntervalMs int       `json:"pollIntervalMs"`
 }
 
 type Acuvim2MeterConfig struct {

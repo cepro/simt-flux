@@ -32,8 +32,6 @@ func main() {
 		return
 	}
 
-	telemetryPollInterval := 1 * time.Second
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	siteMeter, err := acuvim2.New(
@@ -48,7 +46,7 @@ func main() {
 		slog.Error("Failed to create site meter", "error", err)
 		return
 	}
-	go siteMeter.Run(ctx, telemetryPollInterval)
+	go siteMeter.Run(ctx, time.Millisecond*time.Duration(config.SiteMeter.PollIntervalMs))
 
 	bessMeter, err := acuvim2.New(
 		config.BessMeter.ID,
@@ -62,14 +60,14 @@ func main() {
 		slog.Error("Failed to create bess meter", "error", err)
 		return
 	}
-	go bessMeter.Run(ctx, telemetryPollInterval)
+	go bessMeter.Run(ctx, time.Millisecond*time.Duration(config.BessMeter.PollIntervalMs))
 
 	powerPack, err := tesla.NewPowerPack(config.Bess.ID, config.Bess.Host)
 	if err != nil {
 		slog.Error("Failed to create power pack", "error", err)
 		return
 	}
-	go powerPack.Run(ctx, telemetryPollInterval)
+	go powerPack.Run(ctx, time.Millisecond*time.Duration(config.Bess.PollIntervalMs))
 
 	dataPlatform, err := dataplatform.New(config.Supabase.Url, config.Supabase.Key, "telemetry.sqlite")
 	if err != nil {
@@ -84,7 +82,7 @@ func main() {
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		BessCommands:           powerPack.Commands,
 	})
-	go ctrl.Run(ctx)
+	go ctrl.Run(ctx, time.NewTicker(time.Second*5).C)
 
 	// the meter and bess readings are sent to both the controller and the data platform
 	go func() {
