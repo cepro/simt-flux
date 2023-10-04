@@ -117,10 +117,10 @@ func main() {
 
 // sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
 // is non-blocking, otherwise it logs a warning message and returns.
-func sendIfNonBlocking[V any](ch chan V, val V, debugInfo string) {
+func sendIfNonBlocking[V any](ch chan V, val V, messageTargetLogStr string) {
 	select {
 	case ch <- val:
 	default:
-		slog.Warn("Dropped message", "message_target", debugInfo)
+		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
 	}
 }
