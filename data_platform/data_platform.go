@@ -24,11 +24,12 @@ type DataPlatform struct {
 	supaClient *supa.Client
 }
 
-func New(supabaseUrl string, supabaseKey string, bufferRepositoryFilename string) (*DataPlatform, error) {
+func New(supabaseUrl string, supabaseKey string, schema string, bufferRepositoryFilename string) (*DataPlatform, error) {
 
 	supaClient := supa.CreateClient(supabaseUrl, supabaseKey)
 
-	schema := "marcus"
+	// The supabase client library doesn't have a nice interface to specify the schema, but we can specify it here by
+	// adding headers to the postgrest requests.
 	supaClient.DB.AddHeader("Accept-Profile", schema)
 	supaClient.DB.AddHeader("Content-Profile", schema)
 

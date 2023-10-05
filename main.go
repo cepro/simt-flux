@@ -71,7 +71,7 @@ func main() {
 	}
 	go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PollIntervalSecs))
 
-	dataPlatform, err := dataplatform.New(config.Supabase.Url, supabaseKey, "telemetry.sqlite")
+	dataPlatform, err := dataplatform.New(config.Supabase.Url, supabaseKey, config.Supabase.Schema, "telemetry.sqlite")
 	if err != nil {
 		slog.Error("Failed to create data platform", "error", err)
 		return
