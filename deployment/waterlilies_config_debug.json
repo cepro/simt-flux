@@ -1,34 +1,47 @@
 {
-    "siteMeter": {
-        "host": "localhost:1502",
-        "id": "64d84428-b989-4443-9a5e-aed02c224ee7",
-        "pollIntervalMs": 1000,
-        "pt1": 400,
-        "pt2": 400,
-        "ct1": 800,
-        "ct2": 5
-    },
-    "bessMeter": {
-        "host": "localhost:1503",
-        "id": "f780594f-cbc2-462d-b845-4aa060d5bbe5",
-        "pollIntervalMs": 1000,
-        "pt1": 400,
-        "pt2": 400,
-        "ct1": 400,
-        "ct2": 5
+    "meters": {
+        "Mains incomer": {
+            "id": "067beccd-e143-4a4b-a40c-bd842369e0ed",
+            "host": "192.168.8.110:502",
+            "pollIntervalSecs": 2,
+            "pt1": 400,
+            "pt2": 400,
+            "ct1": 800,
+            "ct2": 5
+        },
+        "Tesla battery inverter": {
+            "id": "03bdd37e-8cf8-472d-9825-6f54206f4126",
+            "host": "192.168.8.111:502",
+            "pollIntervalSecs": 2,
+            "pt1": 400,
+            "pt2": 400,
+            "ct1": 400,
+            "ct2": 5
+        },
+        "Changeover panel 1 meter": {
+            "id": "051fdd51-547b-41e1-a9e4-eb24c6103071",
+            "host": "192.168.8.112:502",
+            "pollIntervalSecs": 2,
+            "pt1": 400,
+            "pt2": 400,
+            "ct1": 400,
+            "ct2": 5
+        }
     },
     "bess": {
-        "host": "localhost:1504",
-        "id": "e2122808-1e75-4dd8-a67d-5a66ad54d433",
-        "pollIntervalMs": 1000,
+        "host": "192.168.10.64:502",
+        "id": "08c52275-0929-4a54-a7f2-c56c98ddfe42",
+        "pollIntervalSecs": 2,
         "nameplatePower": 340,
         "nameplateEnergy": 444
     },
     "supabase": {
-        "url": "https://hiffuporsxuzdmvgbtyp.supabase.co",
-        "key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZmZ1cG9yc3h1emRtdmdidHlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI3MTc5OTAsImV4cCI6MjAwODI5Mzk5MH0.4LBRWFK_qX0uu31uECrVqfMP8uGOCuTXr3DB3aA7zic"
+        "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
+        "schema": "marcus"
     },
     "controller": {
+        "siteMeter": "067beccd-e143-4a4b-a40c-bd842369e0ed",
+        "bessMeter": "03bdd37e-8cf8-472d-9825-6f54206f4126",
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",

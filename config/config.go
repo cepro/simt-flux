@@ -30,8 +30,8 @@ type BessConfig struct {
 }
 
 type SupabaseConfig struct {
-	Url    string `json:"url"`
-	Key    string `json:"key"`
+	Url string `json:"url"`
+	// key is specified via env var
 	Schema string `json:"schema"`
 }
 
