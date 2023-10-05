@@ -26,6 +26,9 @@ To compile a binary that will run on a 32bit ARM processor like the RPi:
 
 To deploy the service and config files onto a RPi over SSH:
 
+`scp deployment/bess_controller_rpi pi@waterlillies-rpi:~/bess_controller/bess_controller_rpi`
+
 `scp deployment/waterlilies_config.json pi@waterlillies-rpi:~/bess_controller/config.json`
 
 `scp deployment/bess_controller.service pi@waterlillies-rpi:/lib/systemd/system`
+
