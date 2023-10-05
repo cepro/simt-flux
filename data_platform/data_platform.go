@@ -78,7 +78,7 @@ func (d *DataPlatform) Run(ctx context.Context) {
 func (d *DataPlatform) attemptUpload() {
 
 	// uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
-	uploadChunkLimit := 50
+	uploadChunkLimit := 100
 
 	// first attempt to upload any new readings that have not been seen before
 	freshBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit, true)
