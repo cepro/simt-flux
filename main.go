@@ -62,7 +62,7 @@ func main() {
 	}
 	go bessMeter.Run(ctx, time.Millisecond*time.Duration(config.BessMeter.PollIntervalMs))
 
-	powerPack, err := powerpack.New(config.Bess.ID, config.Bess.Host)
+	powerPack, err := powerpack.NewMock(config.Bess.ID, config.Bess.Host)
 	if err != nil {
 		slog.Error("Failed to create power pack", "error", err)
 		return
