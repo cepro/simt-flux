@@ -13,6 +13,8 @@ import (
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
 	"github.com/cepro/besscontroller/powerpack"
+	"github.com/cepro/besscontroller/telemetry"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -34,40 +36,34 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	siteMeter, err := acuvim2.New(
-		config.SiteMeter.ID,
-		config.SiteMeter.Host,
-		config.SiteMeter.Pt1,
-		config.SiteMeter.Pt2,
-		config.SiteMeter.Ct1,
-		config.SiteMeter.Ct2,
-	)
-	if err != nil {
-		slog.Error("Failed to create site meter", "error", err)
-		return
-	}
-	go siteMeter.Run(ctx, time.Millisecond*time.Duration(config.SiteMeter.PollIntervalMs))
+	meterReadings := make(chan telemetry.MeterReading, 1)
 
-	bessMeter, err := acuvim2.New(
-		config.BessMeter.ID,
-		config.BessMeter.Host,
-		config.BessMeter.Pt1,
-		config.BessMeter.Pt2,
-		config.BessMeter.Ct1,
-		config.BessMeter.Ct2,
-	)
-	if err != nil {
-		slog.Error("Failed to create bess meter", "error", err)
-		return
+	meters := make(map[uuid.UUID]*acuvim2.Acuvim2MeterMock, len(config.Meters))
+
+	for _, meterConfig := range config.Meters {
+		meter, err := acuvim2.NewMock(
+			meterReadings,
+			meterConfig.ID,
+			meterConfig.Host,
+			meterConfig.Pt1,
+			meterConfig.Pt2,
+			meterConfig.Ct1,
+			meterConfig.Ct2,
+		)
+		if err != nil {
+			slog.Error("Failed to create meter", "meter_id", meterConfig.ID, "error", err)
+			return
+		}
+		go meter.Run(ctx, time.Second*time.Duration(meterConfig.PollIntervalSecs))
+		meters[meterConfig.ID] = meter
 	}
-	go bessMeter.Run(ctx, time.Millisecond*time.Duration(config.BessMeter.PollIntervalMs))
 
 	powerPack, err := powerpack.NewMock(config.Bess.ID, config.Bess.Host)
 	if err != nil {
 		slog.Error("Failed to create power pack", "error", err)
 		return
 	}
-	go powerPack.Run(ctx, time.Millisecond*time.Duration(config.Bess.PollIntervalMs))
+	go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PollIntervalSecs))
 
 	dataPlatform, err := dataplatform.New(config.Supabase.Url, config.Supabase.Key, "telemetry.sqlite")
 	if err != nil {
@@ -90,11 +86,11 @@ func main() {
 			select {
 			case <-ctx.Done():
 				return
-			case siteMeterReading := <-siteMeter.Telemetry:
-				sendIfNonBlocking(ctrl.SiteMeterReadings, siteMeterReading, "Controller site meter readings")
-				sendIfNonBlocking(dataPlatform.MeterReadings, siteMeterReading, "Dataplatform meter readings")
-			// case bessMeterReading := <-bessMeter.Telemetry:
-			// 	sendIfNonBlocking(dataPlatform.MeterReadings, bessMeterReading, "Dataplatform meter readings")
+			case meterReading := <-meterReadings:
+				if meterReading.DeviceID == config.Controller.SiteMeterID {
+					sendIfNonBlocking(ctrl.SiteMeterReadings, meterReading, "Controller site meter readings")
+				}
+				sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, "Dataplatform meter readings")
 			case bessReading := <-powerPack.Telemetry:
 				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
 				sendIfNonBlocking(dataPlatform.BessReadings, bessReading, "Dataplatform bess readings")

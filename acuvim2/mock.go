@@ -9,14 +9,14 @@ import (
 )
 
 type Acuvim2MeterMock struct {
-	Telemetry chan telemetry.MeterReading
-	id        uuid.UUID
+	readings chan<- telemetry.MeterReading
+	id       uuid.UUID
 }
 
-func NewMock(id uuid.UUID, otherArgs ...interface{}) (*Acuvim2MeterMock, error) {
+func NewMock(readings chan<- telemetry.MeterReading, id uuid.UUID, otherArgs ...interface{}) (*Acuvim2MeterMock, error) {
 	return &Acuvim2MeterMock{
-		Telemetry: make(chan telemetry.MeterReading),
-		id:        id,
+		readings: readings,
+		id:       id,
 	}, nil
 }
 
@@ -28,7 +28,7 @@ func (a *Acuvim2MeterMock) Run(ctx context.Context, period time.Duration) error 
 		case <-ctx.Done():
 			return ctx.Err()
 		case t := <-readingTicker.C:
-			a.Telemetry <- telemetry.MeterReading{
+			a.readings <- telemetry.MeterReading{
 				ReadingMeta: telemetry.ReadingMeta{
 					ID:       uuid.New(),
 					DeviceID: a.id,

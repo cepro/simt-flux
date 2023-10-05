@@ -16,19 +16,18 @@ import (
 // Acuvim2Meter handles Modbus communications with the three phase Acuvim 2 meters.
 // Meter readings are taken regularly and sent onto the `Telemetry` channel.
 type Acuvim2Meter struct {
-	Telemetry chan telemetry.MeterReading
-
-	host   string
-	id     uuid.UUID
-	pt1    float64 // installed potential transformer 1 rating
-	pt2    float64 // installed potential transformer 2 rating
-	ct1    float64 // installed current transformer 1 rating
-	ct2    float64 // installed current transformer 2 rating
-	client modbus.Client
-	logger *slog.Logger
+	readings chan<- telemetry.MeterReading
+	host     string
+	id       uuid.UUID
+	pt1      float64 // installed potential transformer 1 rating
+	pt2      float64 // installed potential transformer 2 rating
+	ct1      float64 // installed current transformer 1 rating
+	ct2      float64 // installed current transformer 2 rating
+	client   modbus.Client
+	logger   *slog.Logger
 }
 
-func New(id uuid.UUID, host string, pt1 float64, pt2 float64, ct1 float64, ct2 float64) (*Acuvim2Meter, error) {
+func New(readings chan<- telemetry.MeterReading, id uuid.UUID, host string, pt1 float64, pt2 float64, ct1 float64, ct2 float64) (*Acuvim2Meter, error) {
 
 	logger := slog.Default().With("meter_id", id, "host", host)
 
@@ -51,15 +50,15 @@ func New(id uuid.UUID, host string, pt1 float64, pt2 float64, ct1 float64, ct2 f
 	// TODO: PT and CT values could be read over modbus on initialisation rather then set by configuration
 
 	return &Acuvim2Meter{
-		Telemetry: make(chan telemetry.MeterReading),
-		id:        id,
-		host:      host,
-		pt1:       pt1,
-		pt2:       pt2,
-		ct1:       ct1,
-		ct2:       ct2,
-		client:    client,
-		logger:    logger,
+		readings: readings,
+		id:       id,
+		host:     host,
+		pt1:      pt1,
+		pt2:      pt2,
+		ct1:      ct1,
+		ct2:      ct2,
+		client:   client,
+		logger:   logger,
 	}, nil
 }
 
@@ -86,7 +85,7 @@ func (a *Acuvim2Meter) Run(ctx context.Context, period time.Duration) error {
 				continue
 			}
 
-			a.Telemetry <- meterReading
+			a.readings <- meterReading
 		}
 	}
 }

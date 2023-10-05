@@ -10,9 +10,9 @@ import (
 )
 
 type DeviceConfig struct {
-	Host           string    `json:"host"`
-	ID             uuid.UUID `json:"id"`
-	PollIntervalMs int       `json:"pollIntervalMs"`
+	Host             string    `json:"host"`
+	ID               uuid.UUID `json:"id"`
+	PollIntervalSecs int       `json:"pollIntervalSecs"`
 }
 
 type Acuvim2MeterConfig struct {
@@ -30,21 +30,22 @@ type BessConfig struct {
 }
 
 type SupabaseConfig struct {
-	Url string `json:"url"`
-	Key string `json:"key"`
+	Url    string `json:"url"`
+	Key    string `json:"key"`
+	Schema string `json:"schema"`
 }
 
 type ControllerConfig struct {
-	Timezone               string                      `json:"timezone"`
+	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
+	BessMeterID            uuid.UUID                   `json:"bessMeter"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 }
 
 type Config struct {
-	SiteMeter  Acuvim2MeterConfig `json:"siteMeter"`
-	BessMeter  Acuvim2MeterConfig `json:"bessMeter"`
-	Bess       BessConfig         `json:"bess"`
-	Supabase   SupabaseConfig     `json:"supabase"`
-	Controller ControllerConfig   `json:"controller"`
+	Meters     map[string]Acuvim2MeterConfig `json:"meters"`
+	Bess       BessConfig                    `json:"bess"`
+	Supabase   SupabaseConfig                `json:"supabase"`
+	Controller ControllerConfig              `json:"controller"`
 }
 
 func Read(path string) (Config, error) {
