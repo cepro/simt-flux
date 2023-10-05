@@ -28,6 +28,10 @@ func New(supabaseUrl string, supabaseKey string, bufferRepositoryFilename string
 
 	supaClient := supa.CreateClient(supabaseUrl, supabaseKey)
 
+	schema := "marcus"
+	supaClient.DB.AddHeader("Accept-Profile", schema)
+	supaClient.DB.AddHeader("Content-Profile", schema)
+
 	repository, err := repository.New(bufferRepositoryFilename)
 	if err != nil {
 		return nil, fmt.Errorf("create repository: %w", err)
