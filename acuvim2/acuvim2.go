@@ -80,8 +80,6 @@ func (a *Acuvim2Meter) Run(ctx context.Context, period time.Duration) error {
 				continue // TODO: is this the right error handling
 			}
 
-			fmt.Printf("acuvim readings: %+v\n", metrics)
-
 			meterReading, err := a.metricsToMeterReading(metrics, t)
 			if err != nil {
 				a.logger.Error("Failed to convert metrics", "error", err)
