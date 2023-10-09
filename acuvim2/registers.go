@@ -83,16 +83,26 @@ var blocks = []modbusaccess.RegisterBlock{
 	{
 		Name:         "Energy",
 		StartAddr:    16456,
-		NumRegisters: 4,
+		NumRegisters: 8,
 		Registers: map[string]modbusaccess.Register{
-			"EnergyImported": {
+			"EnergyImportedActive": {
 				StartAddr:   16456,
-				DataType:    modbusaccess.FloatType,
+				DataType:    modbusaccess.Int32Type,
 				ScalingFunc: scaleEnergy,
 			},
-			"EnergyExported": {
+			"EnergyExportedActive": {
 				StartAddr:   16458,
-				DataType:    modbusaccess.FloatType,
+				DataType:    modbusaccess.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyImportedReactive": {
+				StartAddr:   16460,
+				DataType:    modbusaccess.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyExportedReactive": {
+				StartAddr:   16462,
+				DataType:    modbusaccess.Int32Type,
 				ScalingFunc: scaleEnergy,
 			},
 		},
@@ -115,5 +125,5 @@ func scalePower(scaler modbusaccess.Scaler, val interface{}) interface{} {
 }
 
 func scaleEnergy(scaler modbusaccess.Scaler, val interface{}) interface{} {
-	return val.(float64) / 1000
+	return val.(int32) / 10
 }

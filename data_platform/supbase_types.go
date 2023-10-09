@@ -66,20 +66,22 @@ func getReadingsForSupabase(readings interface{}) (interface{}, string) {
 		var supabaseReadings []supabaseMeterReading
 		for _, reading := range readingsTyped {
 			supabaseReadings = append(supabaseReadings, supabaseMeterReading{
-				SupabaseReadingMeta: SupabaseReadingMeta(reading.ReadingMeta),
-				Frequency:           reading.Frequency,
-				VoltageLineAverage:  reading.VoltageLineAverage,
-				CurrentPhA:          reading.CurrentPhA,
-				CurrentPhB:          reading.CurrentPhB,
-				CurrentPhC:          reading.CurrentPhC,
-				CurrentPhAverage:    reading.CurrentPhAverage,
-				PowerPhAActive:      reading.PowerPhAActive,
-				PowerPhBActive:      reading.PowerPhBActive,
-				PowerPhCActive:      reading.PowerPhCActive,
-				PowerTotalActive:    reading.PowerTotalActive,
-				PowerTotalReactive:  reading.PowerTotalReactive,
-				PowerTotalApparent:  reading.PowerTotalApparent,
-				PowerFactorTotal:    reading.PowerFactorTotal,
+				SupabaseReadingMeta:  SupabaseReadingMeta(reading.ReadingMeta),
+				Frequency:            reading.Frequency,
+				VoltageLineAverage:   reading.VoltageLineAverage,
+				CurrentPhA:           reading.CurrentPhA,
+				CurrentPhB:           reading.CurrentPhB,
+				CurrentPhC:           reading.CurrentPhC,
+				CurrentPhAverage:     reading.CurrentPhAverage,
+				PowerPhAActive:       reading.PowerPhAActive,
+				PowerPhBActive:       reading.PowerPhBActive,
+				PowerPhCActive:       reading.PowerPhCActive,
+				PowerTotalActive:     reading.PowerTotalActive,
+				PowerTotalReactive:   reading.PowerTotalReactive,
+				PowerTotalApparent:   reading.PowerTotalApparent,
+				PowerFactorTotal:     reading.PowerFactorTotal,
+				EnergyImportedActive: reading.EnergyImportedActive,
+				EnergyExportedActive: reading.EnergyExportedActive,
 			})
 		}
 		return supabaseReadings, SUPABASE_METER_READING_TABLE_NAME
