@@ -34,9 +34,15 @@ func main() {
 		return
 	}
 
-	supabaseKey, ok := os.LookupEnv("SUPABASE_KEY")
+	supabaseAnonKey, ok := os.LookupEnv("SUPABASE_ANON_KEY")
 	if !ok {
-		slog.Error("SUPABASE_KEY environment variable not specified")
+		slog.Error("SUPABASE_ANON_KEY environment variable not specified")
+		return
+	}
+
+	supabaseUserKey, ok := os.LookupEnv("SUPABASE_USER_KEY")
+	if !ok {
+		slog.Error("SUPABASE_USER_KEY environment variable not specified")
 		return
 	}
 
@@ -71,7 +77,7 @@ func main() {
 	}
 	go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PollIntervalSecs))
 
-	dataPlatform, err := dataplatform.New(config.Supabase.Url, supabaseKey, config.Supabase.Schema, "telemetry.sqlite")
+	dataPlatform, err := dataplatform.New(config.DataPlatform.Supabase.Url, supabaseAnonKey, supabaseUserKey, config.DataPlatform.Supabase.Schema, "telemetry.sqlite")
 	if err != nil {
 		slog.Error("Failed to create data platform", "error", err)
 		return
