@@ -2,29 +2,11 @@
     "meters": {
         "Mains incomer": {
             "id": "067beccd-e143-4a4b-a40c-bd842369e0ed",
-            "host": "192.168.8.110:502",
+            "host": "localhost:1502",
             "pollIntervalSecs": 2,
             "pt1": 400,
             "pt2": 400,
             "ct1": 800,
-            "ct2": 5
-        },
-        "Tesla battery inverter": {
-            "id": "03bdd37e-8cf8-472d-9825-6f54206f4126",
-            "host": "192.168.8.111:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 400,
-            "ct2": 5
-        },
-        "Changeover panel 1 meter": {
-            "id": "051fdd51-547b-41e1-a9e4-eb24c6103071",
-            "host": "192.168.8.112:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 400,
             "ct2": 5
         }
     },
@@ -35,13 +17,15 @@
         "nameplatePower": 340,
         "nameplateEnergy": 444
     },
-    "supabase": {
-        "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-        "schema": "marcus"
+    "dataPlatform": {
+        "uploadIntervalSecs": 10,
+        "supabase": {
+            "url": "https://scxiewnmslfhghxhkzaq.supabase.co",
+            "schema": "marcus4"
+        }
     },
     "controller": {
         "siteMeter": "067beccd-e143-4a4b-a40c-bd842369e0ed",
-        "bessMeter": "03bdd37e-8cf8-472d-9825-6f54206f4126",
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",

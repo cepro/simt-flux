@@ -35,9 +35,12 @@
         "nameplatePower": 340,
         "nameplateEnergy": 444
     },
-    "supabase": {
-        "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-        "schema": "marcus"
+    "dataPlatform": {
+        "uploadIntervalSecs": 60,
+        "supabase": {
+            "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
+            "schema": "marcus"
+        }
     },
     "controller": {
         "siteMeter": "7e2b6ad8-662f-4d31-96b6-fe72d102468a",

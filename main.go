@@ -40,7 +40,7 @@ func main() {
 		return
 	}
 
-	supabaseUserKey, ok := os.LookupEnv("SUPABASE_USER_KEY")
+	supabaseUserKey := os.Getenv("SUPABASE_USER_KEY")
 	if !ok {
 		slog.Error("SUPABASE_USER_KEY environment variable not specified")
 		return
@@ -50,10 +50,10 @@ func main() {
 
 	meterReadings := make(chan telemetry.MeterReading, 1)
 
-	meters := make(map[uuid.UUID]*acuvim2.Acuvim2MeterMock, len(config.Meters))
+	meters := make(map[uuid.UUID]*acuvim2.Acuvim2Meter, len(config.Meters))
 
 	for _, meterConfig := range config.Meters {
-		meter, err := acuvim2.NewMock(
+		meter, err := acuvim2.New(
 			meterReadings,
 			meterConfig.ID,
 			meterConfig.Host,
@@ -82,7 +82,7 @@ func main() {
 		slog.Error("Failed to create data platform", "error", err)
 		return
 	}
-	go dataPlatform.Run(ctx)
+	go dataPlatform.Run(ctx, time.Second*time.Duration(config.DataPlatform.UploadIntervalSecs))
 
 	ctrl := controller.New(controller.Config{
 		BessNameplatePower:     config.Bess.NameplatePower,

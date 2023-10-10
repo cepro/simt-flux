@@ -35,6 +35,11 @@ type SupabaseConfig struct {
 	Schema string `json:"schema"`
 }
 
+type DataPlatformConfig struct {
+	UploadIntervalSecs int            `json:"uploadIntervalSecs"`
+	Supabase           SupabaseConfig `json:"supabase"`
+}
+
 type ControllerConfig struct {
 	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
 	BessMeterID            uuid.UUID                   `json:"bessMeter"`
@@ -42,10 +47,10 @@ type ControllerConfig struct {
 }
 
 type Config struct {
-	Meters     map[string]Acuvim2MeterConfig `json:"meters"`
-	Bess       BessConfig                    `json:"bess"`
-	Supabase   SupabaseConfig                `json:"supabase"`
-	Controller ControllerConfig              `json:"controller"`
+	Meters       map[string]Acuvim2MeterConfig `json:"meters"`
+	Bess         BessConfig                    `json:"bess"`
+	DataPlatform DataPlatformConfig            `json:"dataPlatform"`
+	Controller   ControllerConfig              `json:"controller"`
 }
 
 func Read(path string) (Config, error) {

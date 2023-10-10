@@ -9,6 +9,7 @@ import (
 
 	"github.com/cepro/besscontroller/repository"
 	"github.com/cepro/besscontroller/telemetry"
+	"github.com/google/uuid"
 
 	supa "github.com/nedpals/supabase-go"
 )
@@ -20,6 +21,10 @@ type DataPlatform struct {
 	BessReadings  chan telemetry.BessReading
 	MeterReadings chan telemetry.MeterReading
 
+	// these maps hold the last reading received, keyed by the device ID
+	latestBessReadings  map[uuid.UUID]telemetry.BessReading
+	latestMeterReadings map[uuid.UUID]telemetry.MeterReading
+
 	repository *repository.Repository
 	supaClient *supa.Client
 }
@@ -30,13 +35,13 @@ func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, sch
 
 	// The supabase client library doesn't have a fully featured interface, here we specify options directly by
 	// adding headers to the postgrest requests.
-
 	// Use the appropriate schema:
 	supaClient.DB.AddHeader("Accept-Profile", schema)
 	supaClient.DB.AddHeader("Content-Profile", schema)
-
 	// Use a user JWT:
-	supaClient.DB.AddHeader("Authorization", fmt.Sprintf("Bearer %s", supabaseUserKey))
+	if supabaseUserKey != "" {
+		supaClient.DB.AddHeader("Authorization", fmt.Sprintf("Bearer %s", supabaseUserKey))
+	}
 
 	repository, err := repository.New(bufferRepositoryFilename)
 	if err != nil {
@@ -44,44 +49,64 @@ func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, sch
 	}
 
 	return &DataPlatform{
-		BessReadings:  make(chan telemetry.BessReading, 25), // a small buffer to allow SQLite to catch up in case the disk is slow
-		MeterReadings: make(chan telemetry.MeterReading, 25),
-		repository:    repository,
-		supaClient:    supaClient,
+		BessReadings:        make(chan telemetry.BessReading, 25), // a small buffer to allow SQLite to catch up in case the disk is slow
+		MeterReadings:       make(chan telemetry.MeterReading, 25),
+		latestBessReadings:  make(map[uuid.UUID]telemetry.BessReading),
+		latestMeterReadings: make(map[uuid.UUID]telemetry.MeterReading),
+		repository:          repository,
+		supaClient:          supaClient,
 	}, nil
 }
 
 // Run loops forever waiting for meter or bess readings, when they are available they are uploaded.
-func (d *DataPlatform) Run(ctx context.Context) {
+func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 
-	uploadTicker := time.NewTicker(time.Second * 5)
+	// TODO: would be nice if this was "on the minute"
+	uploadTicker := time.NewTicker(uploadInterval)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case reading := <-d.BessReadings:
-			err := d.repository.AddBessReading(reading)
-			if err != nil {
-				slog.Error("failed to persist bess reading", "error", err)
-			}
-			slog.Debug("Stored bess reading")
+			d.latestBessReadings[reading.DeviceID] = reading
 
 		case reading := <-d.MeterReadings:
-			err := d.repository.AddMeterReading(reading)
-			if err != nil {
-				slog.Error("failed to persist meter reading", "error", err)
-			}
-			slog.Debug("Stored meter reading")
+			d.latestMeterReadings[reading.DeviceID] = reading
 
 		case _ = <-uploadTicker.C:
-			d.attemptUpload()
+			d.runUpload()
+
 		}
 	}
 }
 
-// attemptUpload attempts to upload the telemetry from the repository into Supabase.
-func (d *DataPlatform) attemptUpload() {
+func (d *DataPlatform) runUpload() {
+
+	slog.Debug("Running data platform upload...")
+
+	for _, reading := range d.latestBessReadings {
+		err := d.repository.AddBessReading(reading)
+		if err != nil {
+			slog.Error("failed to persist bess reading", "error", err)
+		}
+	}
+	d.latestBessReadings = make(map[uuid.UUID]telemetry.BessReading)
+
+	for _, reading := range d.latestMeterReadings {
+		err := d.repository.AddMeterReading(reading)
+		if err != nil {
+			slog.Error("failed to persist meter reading", "error", err)
+		}
+	}
+	d.latestMeterReadings = make(map[uuid.UUID]telemetry.MeterReading)
+
+	// TODO: we could attempt the first upload before storing to disk, and only store to disk if the upload fails
+	d.uploadRepository()
+}
+
+// uploadRepository attempts to upload the telemetry from the repository into Supabase.
+func (d *DataPlatform) uploadRepository() {
 
 	// uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
 	uploadChunkLimit := 100
