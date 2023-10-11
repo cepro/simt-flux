@@ -26,6 +26,15 @@
             "pt2": 400,
             "ct1": 400,
             "ct2": 5
+        },
+        "Future EV pillar supply ": {
+            "id": "35aad38a-d9c9-4bd1-a9f1-88f0bee388bb",
+            "host": "192.168.8.113:502",
+            "pollIntervalSecs": 2,
+            "pt1": 400,
+            "pt2": 400,
+            "ct1": 400,
+            "ct2": 5
         }
     },
     "bess": {
