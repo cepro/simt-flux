@@ -1,36 +1,82 @@
 package modbusaccess
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
 )
 
 // Type represents the different types of data that can be queried over modbus.
 type Type struct {
-	name            string                   // the name of the data type
-	dataLength      uint16                   // the number of underlying bytes to represent the data type
-	bytesToTypeFunc func([]byte) interface{} // function to convert the bytes to the concrete data type
+	name          string                   // the name of the data type
+	dataLength    uint16                   // the number of underlying bytes to represent the data type
+	fromBytesFunc func([]byte) interface{} // function to convert the bytes to the concrete data type (used to read from modbus)
+	toBytesFunc   func(interface{}) []byte // function to convert the concrete data type into bytes (used to write to modbus)
 }
 
 // FloatType represents the float data type.
 var FloatType = Type{
-	name:            "float",
-	dataLength:      4,
-	bytesToTypeFunc: byteToFloat,
+	name:       "float",
+	dataLength: 4,
+	fromBytesFunc: func(bytes []byte) interface{} {
+		valUint32 := binary.BigEndian.Uint32(bytes)
+		valFloat32 := math.Float32frombits(valUint32)
+		return float64(valFloat32)
+	},
+	toBytesFunc: nil,
 }
 
 // Int32Type represents the 32 bit signed integer data type on Modbus.
 var Int32Type = Type{
-	name:            "int32",
-	dataLength:      4,
-	bytesToTypeFunc: byteToInt32,
+	name:       "int32",
+	dataLength: 4,
+	fromBytesFunc: func(bytes []byte) interface{} {
+		valUint32 := binary.BigEndian.Uint32(bytes)
+		valInt32 := int32(valUint32)
+		return valInt32
+	},
+	toBytesFunc: func(val interface{}) []byte {
+		bytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(bytes, val.(uint32))
+		return bytes
+	},
+}
+
+// Uint16Type represents the 16 bit unsigned integer data type on Modbus.
+var Uint16Type = Type{
+	name:       "uint16",
+	dataLength: 2,
+	fromBytesFunc: func(bytes []byte) interface{} {
+		valUint16 := binary.BigEndian.Uint16(bytes)
+		return valUint16
+	},
+	toBytesFunc: func(val interface{}) []byte {
+		bytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(bytes, val.(uint16))
+		return bytes
+	},
 }
 
 // Int16Type represents the 16 bit signed integer data type on Modbus.
 var Int16Type = Type{
-	name:            "int16",
-	dataLength:      2,
-	bytesToTypeFunc: byteToInt16,
+	name:       "int16",
+	dataLength: 2,
+	fromBytesFunc: func(bytes []byte) interface{} {
+		valUint16 := binary.BigEndian.Uint16(bytes)
+		valInt16 := int16(valUint16)
+		return valInt16
+	},
+	toBytesFunc: nil,
+}
+
+// String32Type represents a 32 byte long, null terminated string
+var String32Type = Type{
+	name:       "string32",
+	dataLength: 32,
+	fromBytesFunc: func(b []byte) interface{} {
+		return string(bytes.Trim(b, "\x00"))
+	},
+	toBytesFunc: nil,
 }
 
 // Scaler can be any object used to help scale modbus values.
@@ -54,25 +100,4 @@ type RegisterBlock struct {
 	StartAddr    uint16              // the first register address of the block
 	NumRegisters uint16              // the number of registers in this block (each register is two bytes)
 	Registers    map[string]Register // details of all the registers of interest in this block, keyed by unique name
-}
-
-// byteToFloat converts 4 bytes into a float value (using big endian)
-func byteToFloat(bytes []byte) interface{} {
-	valUint32 := binary.BigEndian.Uint32(bytes)
-	valFloat32 := math.Float32frombits(valUint32)
-	return float64(valFloat32)
-}
-
-// byteToInt32 converts 4 bytes into a int32 value (using big endian)
-func byteToInt32(bytes []byte) interface{} {
-	valUint32 := binary.BigEndian.Uint32(bytes)
-	valInt32 := int32(valUint32)
-	return valInt32
-}
-
-// byteToInt16 converts 2 bytes into a int16 value (using big endian)
-func byteToInt16(bytes []byte) interface{} {
-	valUint16 := binary.BigEndian.Uint16(bytes)
-	valInt16 := int16(valUint16)
-	return valInt16
 }

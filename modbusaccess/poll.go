@@ -51,7 +51,7 @@ func PollBlock(client modbus.Client, scaler Scaler, block RegisterBlock) (map[st
 		registerBytes := bytes[offset:(offset + int(register.DataType.dataLength))]
 
 		// convert the bytes into the concrete data type (mostly these are floats)
-		val := register.DataType.bytesToTypeFunc(registerBytes)
+		val := register.DataType.fromBytesFunc(registerBytes)
 
 		// scale the value as required by the products modbus specification
 		if register.ScalingFunc != nil {
