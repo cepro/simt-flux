@@ -16,9 +16,10 @@ type ReadingMeta struct {
 // BessReading holds data pulled from a battery energy storage system
 type BessReading struct {
 	ReadingMeta
-	Soe         float64
-	TargetPower float64
-	// TODO: other data...
+	TargetPower             float64 // how much active power the bess is trying to deliver/consume
+	Soe                     float64 // state of energy
+	AvailableInverterBlocks uint16  // how many inverter blocks are available for power delivery
+	CommandSource           uint16  // enum determining how the bess is being controlled
 }
 
 // MeterReading holds data pulled from a meter
