@@ -33,7 +33,7 @@ func TestImportAvoidance(test *testing.T) {
 	ctrl := New(Config{
 		BessNameplatePower:     100,
 		BessNameplateEnergy:    200,
-		BessMinimumSoE:         200 * 0.05,
+		BessMinSoe:             200 * 0.05,
 		BessMaxSoe:             200 * 0.95,
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		BessCommands:           bessCommands,

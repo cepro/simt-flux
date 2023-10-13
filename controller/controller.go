@@ -32,7 +32,7 @@ type Controller struct {
 type Config struct {
 	BessNameplatePower  float64 // power capability of the bess in kW
 	BessNameplateEnergy float64 // energy storage capability of the bess in kW
-	BessMinimumSoE      float64 // The minimum state of energy that the battery should hit
+	BessMinSoe          float64 // The minimum state of energy that the battery should hit
 	BessMaxSoe          float64 // The maximum state of energy that the battery should hit
 
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod // the periods of time to activate 'import avoidance'
@@ -82,7 +82,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 
 	targetPower := 0.0
 
-	belowSoEThreshold := c.bessSoe < c.config.BessMinimumSoE
+	belowSoEThreshold := c.bessSoe < c.config.BessMinSoe
 
 	if inImportAvoidancePeriod {
 		// discharge the battery if there is a site import

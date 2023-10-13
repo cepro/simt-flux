@@ -126,10 +126,12 @@ func main() {
 	go dataPlatform.Run(ctx, time.Second*time.Duration(config.DataPlatform.UploadIntervalSecs))
 
 	ctrl := controller.New(controller.Config{
-		BessNameplatePower:     config.Bess.NameplatePower,
-		BessNameplateEnergy:    config.Bess.NameplateEnergy,
+		BessNameplatePower:     bess.NameplatePower(),
+		BessNameplateEnergy:    bess.NameplateEnergy(),
+		BessMinSoe:             bess.NameplateEnergy() * 0.05,
+		BessMaxSoe:             bess.NameplateEnergy() * 0.95,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
-		BessCommands:           powerPack.Commands,
+		BessCommands:           bess.Commands(),
 	})
 	go ctrl.Run(ctx, time.NewTicker(time.Second*5).C)
 
