@@ -1,24 +1,24 @@
 {
     "meters": {
-        "Mains incomer": {
-            "id": "067beccd-e143-4a4b-a40c-bd842369e0ed",
-            "host": "localhost:1502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 800,
-            "ct2": 5
+        "mock": {
+            "Mains incomer": {
+                "host": null,
+                "id": "067beccd-e143-4a4b-a40c-bd842369e0ed",
+                "pollIntervalSecs": 2
+            }
         }
     },
     "bess": {
-        "host": "192.168.10.64:502",
-        "id": "08c52275-0929-4a54-a7f2-c56c98ddfe42",
-        "pollIntervalSecs": 2,
-        "nameplatePower": 340,
-        "nameplateEnergy": 444
+        "mock": {
+            "host": "localhost:1504",
+            "id": "08c52275-0929-4a54-a7f2-c56c98ddfe42",
+            "pollIntervalSecs": 2,
+            "nameplatePower": 340,
+            "nameplateEnergy": 444
+        }
     },
     "dataPlatform": {
-        "uploadIntervalSecs": 10,
+        "uploadIntervalSecs": 5,
         "supabase": {
             "url": "https://scxiewnmslfhghxhkzaq.supabase.co",
             "schema": "marcus4"

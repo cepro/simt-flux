@@ -30,13 +30,57 @@ func New(path string) (*Repository, error) {
 	}, nil
 }
 
-func (r *Repository) AddMeterReading(reading telemetry.MeterReading) error {
-	result := r.db.Create(newStoredMeterReading(reading))
-	return result.Error
+// convertReadingsForStorage returns the equivilent "stored type" (which includes an 'upload attempt count') for the given readings
+func (r *Repository) convertReadingsForStorage(readings interface{}) interface{} {
+	switch readingsTyped := readings.(type) {
+
+	case []telemetry.BessReading:
+		storedReading := make([]StoredBessReading, 0, len(readingsTyped))
+		for _, reading := range readingsTyped {
+			storedReading = append(storedReading, newStoredBessReading(reading))
+		}
+		return storedReading
+
+	case []telemetry.MeterReading:
+		storedReading := make([]StoredMeterReading, 0, len(readingsTyped))
+		for _, reading := range readingsTyped {
+			storedReading = append(storedReading, newStoredMeterReading(reading))
+		}
+		return storedReading
+
+	default:
+		panic(fmt.Sprintf("Unknown readings type: '%T'", readings))
+	}
 }
 
-func (r *Repository) AddBessReading(reading telemetry.BessReading) error {
-	result := r.db.Create(newStoredBessReading(reading))
+// ConvertStoredToReadings returns the "original reading" from teh given stored readings
+func (r *Repository) ConvertStoredToReadings(storedReadings interface{}) interface{} {
+	switch storedReadingsTyped := storedReadings.(type) {
+
+	case []StoredBessReading:
+		readings := make([]telemetry.BessReading, 0, len(storedReadingsTyped))
+		for _, storedReading := range storedReadingsTyped {
+			readings = append(readings, storedReading.BessReading)
+		}
+		return readings
+
+	case []StoredMeterReading:
+		readings := make([]telemetry.MeterReading, 0, len(storedReadingsTyped))
+		for _, storedReading := range storedReadingsTyped {
+			readings = append(readings, storedReading.MeterReading)
+		}
+		return readings
+
+	default:
+		panic(fmt.Sprintf("Unknown stored readings type: '%T'", storedReadings))
+	}
+}
+
+// StoreReadings adds the given readings (which can be of any reading type) into the database and
+// sets the 'upload attempt count' to 1.
+func (r *Repository) StoreReadings(readings interface{}) error {
+	storedReadings := r.convertReadingsForStorage(readings)
+	result := r.db.Create(storedReadings)
 	return result.Error
 }
 
@@ -45,16 +89,10 @@ func (r *Repository) DeleteReadings(readings interface{}) error {
 	return result.Error
 }
 
-func (r *Repository) GetMeterReadings(limit int, fresh bool) ([]StoredMeterReading, error) {
+func (r *Repository) GetMeterReadings(limit int) ([]StoredMeterReading, error) {
 	var readings []StoredMeterReading
 
 	query := r.db.Limit(limit).Order("upload_attempt_count asc, time desc")
-	if fresh {
-		query = query.Where("upload_attempt_count = ?", 0)
-	} else {
-		query = query.Where("upload_attempt_count > ?", 0)
-		// TODO: do we want to give up after a certain amount of attempts?
-	}
 	result := query.Find(&readings)
 	if result.Error != nil {
 		return nil, result.Error
@@ -62,16 +100,11 @@ func (r *Repository) GetMeterReadings(limit int, fresh bool) ([]StoredMeterReadi
 	return readings, nil
 }
 
-func (r *Repository) GetBessReadings(limit int, fresh bool) ([]StoredBessReading, error) {
+func (r *Repository) GetBessReadings(limit int) ([]StoredBessReading, error) {
 	var readings []StoredBessReading
 
+	// TODO: do we want to give up after a certain amount of attempts?
 	query := r.db.Limit(limit).Order("upload_attempt_count asc, time desc")
-	if fresh {
-		query = query.Where("upload_attempt_count = ?", 0)
-	} else {
-		query = query.Where("upload_attempt_count > ?", 0)
-		// TODO: do we want to give up after a certain amount of attempts?
-	}
 	result := query.Find(&readings)
 	if result.Error != nil {
 		return nil, result.Error

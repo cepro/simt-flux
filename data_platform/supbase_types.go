@@ -1,9 +1,10 @@
 package dataplatform
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/cepro/besscontroller/repository"
+	"github.com/cepro/besscontroller/telemetry"
 	"github.com/google/uuid"
 )
 
@@ -46,13 +47,13 @@ type supabaseMeterReading struct {
 	EnergyExportedActive float64 `json:"energy_exported_active"`
 }
 
-// getReadingsForSupabase returns the equivilent "supbase type" for the given readings (which include supabase json tags) and the
+// convertReadingsForSupabase returns the equivilent "supbase type" for the given readings (which include supabase json tags) and the
 // associated supabase table name.
-func getReadingsForSupabase(readings interface{}) (interface{}, string) {
+func convertReadingsForSupabase(readings interface{}) (interface{}, string) {
 	switch readingsTyped := readings.(type) {
 
-	case []repository.StoredBessReading:
-		var supabaseReadings []supabaseBessReading
+	case []telemetry.BessReading:
+		supabaseReadings := make([]supabaseBessReading, 0, len(readingsTyped))
 		for _, reading := range readingsTyped {
 			supabaseReadings = append(supabaseReadings, supabaseBessReading{
 				SupabaseReadingMeta: SupabaseReadingMeta(reading.ReadingMeta),
@@ -62,8 +63,8 @@ func getReadingsForSupabase(readings interface{}) (interface{}, string) {
 		}
 		return supabaseReadings, SUPABASE_BESS_READING_TABLE_NAME
 
-	case []repository.StoredMeterReading:
-		var supabaseReadings []supabaseMeterReading
+	case []telemetry.MeterReading:
+		supabaseReadings := make([]supabaseMeterReading, 0, len(readingsTyped))
 		for _, reading := range readingsTyped {
 			supabaseReadings = append(supabaseReadings, supabaseMeterReading{
 				SupabaseReadingMeta:  SupabaseReadingMeta(reading.ReadingMeta),
@@ -87,6 +88,6 @@ func getReadingsForSupabase(readings interface{}) (interface{}, string) {
 		return supabaseReadings, SUPABASE_METER_READING_TABLE_NAME
 
 	default:
-		return nil, ""
+		panic(fmt.Sprintf("Unknown readings type: '%T'", readings))
 	}
 }

@@ -15,6 +15,11 @@ type DeviceConfig struct {
 	PollIntervalSecs int       `json:"pollIntervalSecs"`
 }
 
+type MetersConfig struct {
+	Acuvim2 map[string]Acuvim2MeterConfig `json:"acuvim2"`
+	Mock    map[string]Acuvim2MeterConfig `json:"mock"`
+}
+
 type Acuvim2MeterConfig struct {
 	DeviceConfig
 	Pt1 float64 `json:"pt1"`
@@ -23,10 +28,25 @@ type Acuvim2MeterConfig struct {
 	Ct2 float64 `json:"ct2"`
 }
 
-type BessConfig struct {
+type MockMeterConfig struct {
+	DeviceConfig
+}
+
+type PowerPackBessConfig struct {
 	DeviceConfig
 	NameplatePower  float64 `json:"nameplatePower"`
 	NameplateEnergy float64 `json:"nameplateEnergy"`
+}
+
+type MockBessConfig struct {
+	DeviceConfig
+	NameplatePower  float64 `json:"nameplatePower"`
+	NameplateEnergy float64 `json:"nameplateEnergy"`
+}
+
+type BessConfig struct {
+	PowerPack *PowerPackBessConfig `json:"powerPack"`
+	Mock      *MockBessConfig      `json:"mock"`
 }
 
 type SupabaseConfig struct {
@@ -47,10 +67,10 @@ type ControllerConfig struct {
 }
 
 type Config struct {
-	Meters       map[string]Acuvim2MeterConfig `json:"meters"`
-	Bess         BessConfig                    `json:"bess"`
-	DataPlatform DataPlatformConfig            `json:"dataPlatform"`
-	Controller   ControllerConfig              `json:"controller"`
+	Meters       MetersConfig       `json:"meters"`
+	Bess         BessConfig         `json:"bess"`
+	DataPlatform DataPlatformConfig `json:"dataPlatform"`
+	Controller   ControllerConfig   `json:"controller"`
 }
 
 func Read(path string) (Config, error) {

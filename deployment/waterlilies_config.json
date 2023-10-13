@@ -1,48 +1,52 @@
 {
     "meters": {
-        "Mains incomer": {
-            "id": "7e2b6ad8-662f-4d31-96b6-fe72d102468a",
-            "host": "192.168.8.110:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 800,
-            "ct2": 5
-        },
-        "Tesla battery inverter": {
-            "id": "4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5",
-            "host": "192.168.8.111:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 400,
-            "ct2": 5
-        },
-        "Changeover panel 1 meter": {
-            "id": "f8db31ad-f017-4953-bff5-8e1456f08e38",
-            "host": "192.168.8.112:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 400,
-            "ct2": 5
-        },
-        "Future EV pillar supply ": {
-            "id": "35aad38a-d9c9-4bd1-a9f1-88f0bee388bb",
-            "host": "192.168.8.113:502",
-            "pollIntervalSecs": 2,
-            "pt1": 400,
-            "pt2": 400,
-            "ct1": 400,
-            "ct2": 5
+        "acuvim2": {
+            "Mains incomer": {
+                "id": "7e2b6ad8-662f-4d31-96b6-fe72d102468a",
+                "host": "192.168.8.110:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 800,
+                "ct2": 5
+            },
+            "Tesla battery inverter": {
+                "id": "4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5",
+                "host": "192.168.8.111:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            },
+            "Changeover panel 1 meter": {
+                "id": "f8db31ad-f017-4953-bff5-8e1456f08e38",
+                "host": "192.168.8.112:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            },
+            "Future EV pillar supply": {
+                "id": "35aad38a-d9c9-4bd1-a9f1-88f0bee388bb",
+                "host": "192.168.8.113:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            }
         }
     },
     "bess": {
-        "host": "192.168.10.64:502",
-        "id": "6340b165-1da2-48af-9b33-891e443b1695",
-        "pollIntervalSecs": 2,
-        "nameplatePower": 340,
-        "nameplateEnergy": 444
+        "powerPack": {
+            "host": "192.168.10.64:502",
+            "id": "6340b165-1da2-48af-9b33-891e443b1695",
+            "pollIntervalSecs": 2,
+            "nameplatePower": 222,
+            "nameplateEnergy": 444
+        }
     },
     "dataPlatform": {
         "uploadIntervalSecs": 60,
@@ -61,7 +65,7 @@
             },
             {
                 "start": "16:00:00:Europe/London",
-                "end": "19:00:00:Europe/London"
+                "end": "20:00:00:Europe/London"
             }
         ]
     }

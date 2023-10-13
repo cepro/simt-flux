@@ -17,13 +17,13 @@ type StoredBessReading struct {
 func newStoredMeterReading(reading telemetry.MeterReading) StoredMeterReading {
 	return StoredMeterReading{
 		MeterReading:       reading,
-		UploadAttemptCount: 0,
+		UploadAttemptCount: 1,
 	}
 }
 
 func newStoredBessReading(reading telemetry.BessReading) StoredBessReading {
 	return StoredBessReading{
 		BessReading:        reading,
-		UploadAttemptCount: 0,
+		UploadAttemptCount: 1,
 	}
 }

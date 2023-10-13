@@ -65,7 +65,6 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		case <-ctx.Done():
 			return
 		case t := <-tickerChan:
-			slog.Debug("Running controller loop")
 			c.runControlLoop(t)
 		case reading := <-c.SiteMeterReadings:
 			c.sitePower = reading.PowerTotalActive
@@ -127,9 +126,10 @@ func (c *Controller) runControlLoop(t time.Time) {
 		"bess_target_power", targetPower,
 	)
 
-	c.config.BessCommands <- telemetry.BessCommand{
+	command := telemetry.BessCommand{
 		TargetPower: targetPower,
 	}
+	sendIfNonBlocking(c.config.BessCommands, command, "PowerPack commands")
 	c.lastTargetPower = targetPower
 }
 
@@ -141,4 +141,14 @@ func timeIsInPeriods(t time.Time, periods []timeutils.ClockTimePeriod) bool {
 		}
 	}
 	return false
+}
+
+// sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
+// is non-blocking, otherwise it logs a warning message and returns.
+func sendIfNonBlocking[V any](ch chan<- V, val V, messageTargetLogStr string) {
+	select {
+	case ch <- val:
+	default:
+		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
+	}
 }

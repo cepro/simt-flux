@@ -10,16 +10,20 @@ import (
 )
 
 type PowerPackMock struct {
-	Telemetry chan telemetry.BessReading
-	Commands  chan telemetry.BessCommand
-	id        uuid.UUID
+	id              uuid.UUID
+	telemetry       chan telemetry.BessReading
+	commands        chan telemetry.BessCommand
+	nameplateEnergy float64
+	nameplatePower  float64
 }
 
-func NewMock(id uuid.UUID, otherArgs ...interface{}) (*PowerPackMock, error) {
+func NewMock(id uuid.UUID, nameplateEnergy, nameplatePower float64) (*PowerPackMock, error) {
 	return &PowerPackMock{
-		Telemetry: make(chan telemetry.BessReading),
-		Commands:  make(chan telemetry.BessCommand),
-		id:        id,
+		id:              id,
+		telemetry:       make(chan telemetry.BessReading, 1),
+		commands:        make(chan telemetry.BessCommand, 1),
+		nameplateEnergy: nameplateEnergy,
+		nameplatePower:  nameplatePower,
 	}, nil
 }
 
@@ -31,7 +35,7 @@ func (p *PowerPackMock) Run(ctx context.Context, period time.Duration) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case t := <-readingTicker.C:
-			p.Telemetry <- telemetry.BessReading{
+			p.telemetry <- telemetry.BessReading{
 				ReadingMeta: telemetry.ReadingMeta{
 					ID:       uuid.New(),
 					DeviceID: p.id,
@@ -40,9 +44,25 @@ func (p *PowerPackMock) Run(ctx context.Context, period time.Duration) error {
 				TargetPower: 30,
 				Soe:         100,
 			}
-		case command := <-p.Commands:
+		case command := <-p.commands:
 			slog.Info("Issue command to BESS", "bess_command", command)
 		}
 
 	}
+}
+
+func (p *PowerPackMock) NameplateEnergy() float64 {
+	return p.nameplateEnergy
+}
+
+func (p *PowerPackMock) NameplatePower() float64 {
+	return p.nameplatePower
+}
+
+func (p *PowerPackMock) Commands() chan<- telemetry.BessCommand {
+	return p.commands
+}
+
+func (p *PowerPackMock) Telemetry() <-chan telemetry.BessReading {
+	return p.telemetry
 }

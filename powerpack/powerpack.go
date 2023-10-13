@@ -18,19 +18,20 @@ const (
 )
 
 type PowerPack struct {
-	Telemetry chan telemetry.BessReading
-	Commands  chan telemetry.BessCommand
+	host            string
+	id              uuid.UUID
+	nameplateEnergy float64
+	nameplatePower  float64
 
-	host   string
-	id     uuid.UUID
-	client modbus.Client
-	logger *slog.Logger
-
+	telemetry              chan telemetry.BessReading
+	commands               chan telemetry.BessCommand
+	client                 modbus.Client
 	heartbeatToggle        bool
 	haveIssuedFirstCommand bool
+	logger                 *slog.Logger
 }
 
-func New(id uuid.UUID, host string) (*PowerPack, error) {
+func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*PowerPack, error) {
 
 	logger := slog.Default().With("bess_id", id, "host", host)
 
@@ -51,14 +52,16 @@ func New(id uuid.UUID, host string) (*PowerPack, error) {
 	logger.Info("Connected, pulling PowerPack configuration....")
 
 	p := &PowerPack{
-		Telemetry:              make(chan telemetry.BessReading),
-		Commands:               make(chan telemetry.BessCommand),
-		id:                     id,
 		host:                   host,
+		id:                     id,
+		nameplateEnergy:        nameplateEnergy,
+		nameplatePower:         nameplatePower,
+		telemetry:              make(chan telemetry.BessReading, 1),
+		commands:               make(chan telemetry.BessCommand, 1),
 		client:                 client,
-		logger:                 logger,
 		heartbeatToggle:        false,
 		haveIssuedFirstCommand: false,
+		logger:                 logger,
 	}
 
 	// TODO: this failing will cause the whole app to fail - we might want something more resilient
@@ -84,7 +87,7 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case command := <-p.Commands:
+		case command := <-p.commands:
 			slog.Info("Issuing command to BESS", "bess_command", command)
 
 			// The PowerPack expects the heartbeat to be toggled regularly
@@ -108,9 +111,7 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 				continue // TODO: is this the right error handling
 			}
 
-			fmt.Printf("Got tesla metrics: %+v\n", metrics)
-
-			p.Telemetry <- telemetry.BessReading{
+			p.telemetry <- telemetry.BessReading{
 				ReadingMeta: telemetry.ReadingMeta{
 					ID:       uuid.New(),
 					DeviceID: p.id,
@@ -123,6 +124,22 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 			}
 		}
 	}
+}
+
+func (p *PowerPack) NameplateEnergy() float64 {
+	return p.nameplateEnergy
+}
+
+func (p *PowerPack) NameplatePower() float64 {
+	return p.nameplatePower
+}
+
+func (p *PowerPack) Commands() chan<- telemetry.BessCommand {
+	return p.commands
+}
+
+func (p *PowerPack) Telemetry() <-chan telemetry.BessReading {
+	return p.telemetry
 }
 
 // nextHeartbeat returns the heartbeat value to send to the PowerPack

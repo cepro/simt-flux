@@ -17,6 +17,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type Bess interface {
+	Run(ctx context.Context, period time.Duration) error
+	NameplateEnergy() float64
+	NameplatePower() float64
+	Commands() chan<- telemetry.BessCommand
+	Telemetry() <-chan telemetry.BessReading
+}
+
 func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -34,12 +42,12 @@ func main() {
 		return
 	}
 
+	// Read secrets from env vars
 	supabaseAnonKey, ok := os.LookupEnv("SUPABASE_ANON_KEY")
 	if !ok {
 		slog.Error("SUPABASE_ANON_KEY environment variable not specified")
 		return
 	}
-
 	supabaseUserKey := os.Getenv("SUPABASE_USER_KEY")
 	if !ok {
 		slog.Error("SUPABASE_USER_KEY environment variable not specified")
@@ -50,9 +58,10 @@ func main() {
 
 	meterReadings := make(chan telemetry.MeterReading, 1)
 
-	meters := make(map[uuid.UUID]*acuvim2.Acuvim2Meter, len(config.Meters))
-
-	for _, meterConfig := range config.Meters {
+	// Create Acuvim2 'real' meters
+	acuvimMeters := make(map[uuid.UUID]*acuvim2.Acuvim2Meter, len(config.Meters.Acuvim2))
+	for _, meterConfig := range config.Meters.Acuvim2 {
+		slog.Debug("Creating real acuvim2 meter", "meter_id", meterConfig.ID)
 		meter, err := acuvim2.New(
 			meterReadings,
 			meterConfig.ID,
@@ -67,15 +76,47 @@ func main() {
 			return
 		}
 		go meter.Run(ctx, time.Second*time.Duration(meterConfig.PollIntervalSecs))
-		meters[meterConfig.ID] = meter
+		acuvimMeters[meterConfig.ID] = meter
 	}
 
-	powerPack, err := powerpack.NewMock(config.Bess.ID, config.Bess.Host)
-	if err != nil {
-		slog.Error("Failed to create power pack", "error", err)
-		return
+	// Create Acuvim2 mock meters
+	mockMeters := make(map[uuid.UUID]*acuvim2.Acuvim2MeterMock, len(config.Meters.Mock))
+	for _, meterConfig := range config.Meters.Mock {
+		slog.Debug("Creating mock meter", "meter_id", meterConfig.ID)
+		meter, err := acuvim2.NewMock(
+			meterReadings,
+			meterConfig.ID,
+		)
+		if err != nil {
+			slog.Error("Failed to create mock meter", "meter_id", meterConfig.ID, "error", err)
+			return
+		}
+		go meter.Run(ctx, time.Second*time.Duration(meterConfig.PollIntervalSecs))
+		mockMeters[meterConfig.ID] = meter
 	}
-	go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PollIntervalSecs))
+
+	var bess Bess
+	if config.Bess.PowerPack != nil {
+		ppConfig := config.Bess.PowerPack
+		slog.Debug("Creating real powerpack", "bess_id", ppConfig.ID)
+		powerPack, err := powerpack.New(ppConfig.ID, ppConfig.Host, ppConfig.NameplateEnergy, ppConfig.NameplatePower)
+		if err != nil {
+			slog.Error("Failed to create power pack", "error", err)
+			return
+		}
+		bess = powerPack
+		go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PowerPack.PollIntervalSecs))
+	} else if config.Bess.Mock != nil {
+		mockConfig := config.Bess.Mock
+		slog.Debug("Creating mock powerpack", "bess_id", mockConfig.ID)
+		powerPackMock, err := powerpack.NewMock(mockConfig.ID, mockConfig.NameplateEnergy, mockConfig.NameplatePower)
+		if err != nil {
+			slog.Error("Failed to create mock power pack", "error", err)
+			return
+		}
+		bess = powerPackMock
+		go powerPackMock.Run(ctx, time.Second*time.Duration(config.Bess.Mock.PollIntervalSecs))
+	}
 
 	dataPlatform, err := dataplatform.New(config.DataPlatform.Supabase.Url, supabaseAnonKey, supabaseUserKey, config.DataPlatform.Supabase.Schema, "telemetry.sqlite")
 	if err != nil {
@@ -103,7 +144,7 @@ func main() {
 					sendIfNonBlocking(ctrl.SiteMeterReadings, meterReading, "Controller site meter readings")
 				}
 				sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, "Dataplatform meter readings")
-			case bessReading := <-powerPack.Telemetry:
+			case bessReading := <-bess.Telemetry():
 				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
 				sendIfNonBlocking(dataPlatform.BessReadings, bessReading, "Dataplatform bess readings")
 			}
