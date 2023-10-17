@@ -80,28 +80,17 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 
 	readingTicker := time.NewTicker(period)
 
-	// configure the heartbeat timeout for "direct real power commands" on the modbus connection
-	modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Timeout"], MODBUS_TIMEOUT_SECS)
-
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case command := <-p.commands:
-			slog.Info("Issuing command to BESS", "bess_command", command)
-
-			// The PowerPack expects the heartbeat to be toggled regularly
-			modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Heartbeat"], p.nextHeartbeat())
-
-			// The PowerPack expects power in units of Watts
-			modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Power"], uint32(math.Round(command.TargetPower*1000)))
-
-			// If this is the first power command we have issued, then set the "real power command mode" to "direct" (which means we will tell the PowerPack
-			// direclty how much power to import/export)
-			if !p.haveIssuedFirstCommand {
-				modbusaccess.WriteRegister(p.client, realPowerCommandBlock.Registers["Mode"], uint16(1))
-				p.haveIssuedFirstCommand = true
+			err := p.issueCommand(command)
+			if err != nil {
+				p.logger.Error("Failed to issue command to bess", "bess_command", command, "error", err)
+				continue
 			}
+			p.logger.Info("Issued command to BESS", "bess_command", command)
 
 		case t := <-readingTicker.C:
 
@@ -124,6 +113,38 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 			}
 		}
 	}
+}
+
+// issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
+func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
+	// The PowerPack expects the heartbeat to be toggled regularly
+	err := modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Heartbeat"], p.nextHeartbeat())
+	if err != nil {
+		return fmt.Errorf("write heartbeat: %w", err)
+	}
+
+	// The PowerPack expects power in units of Watts
+	modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Power"], uint32(math.Round(command.TargetPower*1000)))
+	if err != nil {
+		return fmt.Errorf("write real power: %w", err)
+	}
+
+	// If this is the first power command we have issued, then set the "real power command mode" to "direct" (which means we will tell the PowerPack
+	// direclty how much power to import/export)
+	if !p.haveIssuedFirstCommand {
+		// configure the heartbeat timeout for "direct real power commands" on the modbus connection
+		err = modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Timeout"], MODBUS_TIMEOUT_SECS)
+		if err != nil {
+			return fmt.Errorf("write timeout: %w", err)
+		}
+		err = modbusaccess.WriteRegister(p.client, realPowerCommandBlock.Registers["Mode"], uint16(1))
+		if err != nil {
+			return fmt.Errorf("write real power mode: %w", err)
+		}
+		p.haveIssuedFirstCommand = true
+	}
+
+	return nil
 }
 
 func (p *PowerPack) NameplateEnergy() float64 {
