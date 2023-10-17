@@ -14,20 +14,15 @@ type Client struct {
 	host string
 
 	subClient       *modbus.ModbusClient // the raw client of the underlying modbus library we are using
-	shouldReconnect bool                 // when true, the subClient is 'dirty' and will be re-created
+	shouldReconnect bool                 // when true, the subClient is 'dirty' and will be re-created next time a read or write call is made
 	logger          *slog.Logger
 }
 
 func NewClient(host string) (*Client, error) {
 	client := &Client{
 		host:            host,
-		shouldReconnect: false,
+		shouldReconnect: true,
 		logger:          slog.Default().With("host", host),
-	}
-
-	err := client.createSubClient()
-	if err != nil {
-		return nil, err
 	}
 
 	return client, nil
@@ -65,7 +60,9 @@ func (c *Client) reconnectIfNeccesary() error {
 	}
 
 	// Ignore errors from Close() as we will continue with the reconnect anyway and start a new connection.
-	c.subClient.Close()
+	if c.subClient != nil {
+		c.subClient.Close()
+	}
 
 	err := c.createSubClient()
 	if err != nil {
@@ -74,7 +71,7 @@ func (c *Client) reconnectIfNeccesary() error {
 
 	c.shouldReconnect = false
 
-	c.logger.Info("Reconnected modbus client")
+	c.logger.Info("Connected modbus client")
 
 	return nil
 }

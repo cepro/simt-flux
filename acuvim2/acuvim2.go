@@ -30,14 +30,10 @@ func New(readings chan<- telemetry.MeterReading, id uuid.UUID, host string, pt1 
 
 	logger := slog.Default().With("meter_id", id, "host", host)
 
-	logger.Info("Connecting to Acuvim meter...")
-
 	client, err := modbus.NewClient(host)
 	if err != nil {
 		return nil, fmt.Errorf("create modbus client: %w", err)
 	}
-
-	logger.Info("Connected")
 
 	// TODO: PT and CT values could be read over modbus on initialisation rather then set by configuration
 

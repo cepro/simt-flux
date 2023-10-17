@@ -34,14 +34,10 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 
 	logger := slog.Default().With("bess_id", id, "host", host)
 
-	logger.Info("Connecting to Tesla PowerPack...")
-
 	client, err := modbus.NewClient(host)
 	if err != nil {
 		return nil, fmt.Errorf("create modbus client: %w", err)
 	}
-
-	logger.Info("Connected, pulling PowerPack configuration....")
 
 	p := &PowerPack{
 		host:                   host,
@@ -56,19 +52,13 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 		logger:                 logger,
 	}
 
-	// TODO: this failing will cause the whole app to fail - we might want something more resilient
-	metrics, err := p.client.PollBlock(nil, configBlock)
-	if err != nil {
-		return nil, fmt.Errorf("poll config block: %w", err)
-	}
-
-	logger.Info(fmt.Sprintf("Retrieved PowerPack configuration: %+v", metrics))
-
 	return p, nil
 }
 
 // Run loops forever polling telemetry from the meter every `period`. Exits when the context is cancelled.
 func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
+
+	p.logConfigParameters()
 
 	readingTicker := time.NewTicker(period)
 
@@ -105,6 +95,17 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 			}
 		}
 	}
+}
+
+// logConfigParameters reads the PowerPacks configuration parameters over modbus and logs them, errors are swallowed.
+func (p *PowerPack) logConfigParameters() {
+	metrics, err := p.client.PollBlock(nil, configBlock)
+	if err != nil {
+		p.logger.Error("Failed to retrieve PowerPack configuration", "error", err)
+		return
+	}
+
+	p.logger.Info(fmt.Sprintf("Retrieved PowerPack configuration: %+v", metrics))
 }
 
 // issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
