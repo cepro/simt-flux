@@ -130,6 +130,7 @@ func main() {
 		BessNameplateEnergy:    bess.NameplateEnergy(),
 		BessMinSoe:             bess.NameplateEnergy() * 0.05,
 		BessMaxSoe:             bess.NameplateEnergy() * 0.95,
+		BessIsEmulated:         config.Controller.BessIsEmulated,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		BessCommands:           bess.Commands(),
 	})

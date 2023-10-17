@@ -35,6 +35,7 @@ type Config struct {
 	BessMinSoe          float64 // The minimum state of energy that the battery should hit
 	BessMaxSoe          float64 // The maximum state of energy that the battery should hit
 
+	BessIsEmulated         bool                        // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod // the periods of time to activate 'import avoidance'
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
@@ -84,11 +85,20 @@ func (c *Controller) runControlLoop(t time.Time) {
 
 	belowSoEThreshold := c.bessSoe < c.config.BessMinSoe
 
+	sitePower := c.sitePower
+	if c.config.BessIsEmulated {
+		// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
+		// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
+		// controller will increase BESS output to the maximum and empty the battery.
+		// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
+		sitePower = c.sitePower - c.lastTargetPower
+	}
+
 	if inImportAvoidancePeriod {
 		// discharge the battery if there is a site import
 
 		if inImportAvoidancePeriod && !belowSoEThreshold {
-			targetPower = c.sitePower + c.lastTargetPower
+			targetPower = sitePower + c.lastTargetPower
 		}
 
 		if targetPower < 0 {

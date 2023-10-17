@@ -63,6 +63,7 @@ type DataPlatformConfig struct {
 type ControllerConfig struct {
 	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
 	BessMeterID            uuid.UUID                   `json:"bessMeter"`
+	BessIsEmulated         bool                        `json:"bessIsEmulated"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 }
 
