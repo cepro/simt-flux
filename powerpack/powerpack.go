@@ -7,10 +7,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/cepro/besscontroller/modbusaccess"
+	"github.com/cepro/besscontroller/modbus"
 	"github.com/cepro/besscontroller/telemetry"
 	"github.com/google/uuid"
-	"github.com/grid-x/modbus"
 )
 
 const (
@@ -25,7 +24,7 @@ type PowerPack struct {
 
 	telemetry              chan telemetry.BessReading
 	commands               chan telemetry.BessCommand
-	client                 modbus.Client
+	client                 *modbus.Client
 	heartbeatToggle        bool
 	haveIssuedFirstCommand bool
 	logger                 *slog.Logger
@@ -35,19 +34,12 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 
 	logger := slog.Default().With("bess_id", id, "host", host)
 
-	handler := modbus.NewTCPClientHandler(host)
-	handler.Timeout = 10 * time.Second
-	handler.SlaveID = 0x01
-
 	logger.Info("Connecting to Tesla PowerPack...")
 
-	err := handler.Connect()
+	client, err := modbus.NewClient(host)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create modbus client: %w", err)
 	}
-	defer handler.Close()
-
-	client := modbus.NewClient(handler)
 
 	logger.Info("Connected, pulling PowerPack configuration....")
 
@@ -65,7 +57,7 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 	}
 
 	// TODO: this failing will cause the whole app to fail - we might want something more resilient
-	metrics, err := modbusaccess.PollBlock(p.client, p, configBlock)
+	metrics, err := p.client.PollBlock(nil, configBlock)
 	if err != nil {
 		return nil, fmt.Errorf("poll config block: %w", err)
 	}
@@ -94,7 +86,7 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 
 		case t := <-readingTicker.C:
 
-			metrics, err := modbusaccess.PollBlock(p.client, p, statusBlock)
+			metricVals, err := p.client.PollBlock(nil, statusBlock)
 			if err != nil {
 				p.logger.Error("Failed to poll BESS", "error", err)
 				continue // TODO: is this the right error handling
@@ -106,10 +98,10 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 					DeviceID: p.id,
 					Time:     t,
 				},
-				TargetPower:             float64(metrics["BatteryTargetP"].(int32)) / 1000.0,
-				Soe:                     float64(metrics["NominalEnergy"].(int32)) / 1000.0,
-				AvailableInverterBlocks: metrics["AvailableBlocks"].(uint16),
-				CommandSource:           metrics["CommandSource"].(uint16),
+				TargetPower:             float64(metricVals["BatteryTargetP"].(int32)) / 1000.0,
+				Soe:                     float64(metricVals["NominalEnergy"].(int32)) / 1000.0,
+				AvailableInverterBlocks: metricVals["AvailableBlocks"].(uint16),
+				CommandSource:           metricVals["CommandSource"].(uint16),
 			}
 		}
 	}
@@ -118,13 +110,13 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 // issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
 func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 	// The PowerPack expects the heartbeat to be toggled regularly
-	err := modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Heartbeat"], p.nextHeartbeat())
+	err := p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Heartbeat"], p.nextHeartbeat())
 	if err != nil {
 		return fmt.Errorf("write heartbeat: %w", err)
 	}
 
 	// The PowerPack expects power in units of Watts
-	modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Power"], uint32(math.Round(command.TargetPower*1000)))
+	p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Power"], uint32(math.Round(command.TargetPower*1000)))
 	if err != nil {
 		return fmt.Errorf("write real power: %w", err)
 	}
@@ -133,11 +125,11 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 	// direclty how much power to import/export)
 	if !p.haveIssuedFirstCommand {
 		// configure the heartbeat timeout for "direct real power commands" on the modbus connection
-		err = modbusaccess.WriteRegister(p.client, directRealPowerCommandBlock.Registers["Timeout"], MODBUS_TIMEOUT_SECS)
+		err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
 		if err != nil {
 			return fmt.Errorf("write timeout: %w", err)
 		}
-		err = modbusaccess.WriteRegister(p.client, realPowerCommandBlock.Registers["Mode"], uint16(1))
+		err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(1))
 		if err != nil {
 			return fmt.Errorf("write real power mode: %w", err)
 		}

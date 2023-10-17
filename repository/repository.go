@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/cepro/besscontroller/telemetry"
 	"github.com/glebarez/sqlite"
@@ -79,6 +80,11 @@ func (r *Repository) ConvertStoredToReadings(storedReadings interface{}) interfa
 // StoreReadings adds the given readings (which can be of any reading type) into the database and
 // sets the 'upload attempt count' to 1.
 func (r *Repository) StoreReadings(readings interface{}) error {
+
+	if reflect.ValueOf(readings).Len() < 1 {
+		return nil
+	}
+
 	storedReadings := r.convertReadingsForStorage(readings)
 	result := r.db.Create(storedReadings)
 	return result.Error

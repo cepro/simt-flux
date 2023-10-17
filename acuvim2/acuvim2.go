@@ -6,10 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/cepro/besscontroller/modbusaccess"
+	"github.com/cepro/besscontroller/modbus"
 	"github.com/cepro/besscontroller/telemetry"
 	"github.com/google/uuid"
-	"github.com/grid-x/modbus"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -23,7 +22,7 @@ type Acuvim2Meter struct {
 	pt2      float64 // installed potential transformer 2 rating
 	ct1      float64 // installed current transformer 1 rating
 	ct2      float64 // installed current transformer 2 rating
-	client   modbus.Client
+	client   *modbus.Client
 	logger   *slog.Logger
 }
 
@@ -31,19 +30,12 @@ func New(readings chan<- telemetry.MeterReading, id uuid.UUID, host string, pt1 
 
 	logger := slog.Default().With("meter_id", id, "host", host)
 
-	handler := modbus.NewTCPClientHandler(host)
-	handler.Timeout = 10 * time.Second
-	handler.SlaveID = 0x01
-
 	logger.Info("Connecting to Acuvim meter...")
 
-	err := handler.Connect()
+	client, err := modbus.NewClient(host)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create modbus client: %w", err)
 	}
-	defer handler.Close()
-
-	client := modbus.NewClient(handler)
 
 	logger.Info("Connected")
 
@@ -73,7 +65,7 @@ func (a *Acuvim2Meter) Run(ctx context.Context, period time.Duration) error {
 			return ctx.Err()
 		case t := <-readingTicker.C:
 
-			metrics, err := modbusaccess.PollBlocks(a.client, a, blocks)
+			metrics, err := a.client.PollBlocks(a, blocks)
 			if err != nil {
 				a.logger.Error("Failed to poll meter", "error", err)
 				continue // TODO: is this the right error handling

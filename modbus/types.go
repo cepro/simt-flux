@@ -1,4 +1,4 @@
-package modbusaccess
+package modbus
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"math"
 )
 
-// Type represents the different types of data that can be queried over modbus.
+// Type represents the different types of metrics that can be queried, or written to, over modbus.
 type Type struct {
 	name          string                   // the name of the data type
 	dataLength    uint16                   // the number of underlying bytes to represent the data type
@@ -87,17 +87,17 @@ type Scaler interface{}
 // valueScalingFunc is a prototype for a function that scales a modbus value.
 type valueScalingFunc func(Scaler, interface{}) interface{}
 
-// Register holds a value on the modbus slave at the given address
-type Register struct {
+// Metric holds a value on the modbus slave, which may cover a single register or many
+type Metric struct {
 	StartAddr   uint16
 	DataType    Type
 	ScalingFunc valueScalingFunc // a function to scale the recieved value to get it's 'true' value (transmitting scaled values is common in Modbus)
 }
 
-// RegisterBlock represents a contigous block of modbus registers that are read in one chunk.
-type RegisterBlock struct {
-	Name         string              // name of the block used for context/logging
-	StartAddr    uint16              // the first register address of the block
-	NumRegisters uint16              // the number of registers in this block (each register is two bytes)
-	Registers    map[string]Register // details of all the registers of interest in this block, keyed by unique name
+// MetricBlock represents a contigous block of modbus metrics that are read in one chunk.
+type MetricBlock struct {
+	Name         string            // name of the block used for context/logging
+	StartAddr    uint16            // the first register address of the block
+	NumRegisters uint16            // the number of registers in this block (each register is two bytes)
+	Metrics      map[string]Metric // details of all the registers of interest in this block, keyed by unique name
 }
