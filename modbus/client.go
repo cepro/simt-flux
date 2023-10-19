@@ -9,7 +9,7 @@ import (
 )
 
 // Client provides an interface onto Modbus devices.
-// It hides the underlying open source modbus library and provides functionality to map metrics to their assigned registers.
+// It hides the underlying open source modbus library and adds reconnection logic and functionality to map metrics to their assigned registers.
 type Client struct {
 	host string
 
@@ -21,7 +21,7 @@ type Client struct {
 func NewClient(host string) (*Client, error) {
 	client := &Client{
 		host:            host,
-		shouldReconnect: true,
+		shouldReconnect: true, // shouldReconnect is marked as true from instantiation so the connection will be made lazily on the first request to read or write
 		logger:          slog.Default().With("host", host),
 	}
 
