@@ -17,7 +17,7 @@ func (c *Client) WriteMetric(metric Metric, val interface{}) error {
 	nBytes := len(bytes)
 	registerVals := make([]uint16, 0, nBytes/2)
 	for i := 0; i < int(nBytes); i = i + 2 {
-		registerVals = append(registerVals, binary.BigEndian.Uint16(bytes[i:i+1]))
+		registerVals = append(registerVals, binary.BigEndian.Uint16(bytes[i:i+2]))
 	}
 
 	err = c.subClient.WriteRegisters(metric.StartAddr, registerVals)
