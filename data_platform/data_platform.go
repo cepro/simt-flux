@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"reflect"
 	"time"
 
@@ -35,6 +36,12 @@ type DataPlatform struct {
 
 func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, schema string, bufferRepositoryFilename string) (*DataPlatform, error) {
 
+	// The supabase client library uses the postgrest-go library which itself uses the default HTTP client that does not
+	// have a timeout configured by default. Here we update the default HTTP client to have a timeout:
+	// TODO: futher testing of this.
+	http.DefaultClient = &http.Client{
+		Timeout: time.Second * 20,
+	}
 	supaClient := supa.CreateClient(supabaseUrl, supabaseAnonKey)
 
 	// The supabase client library doesn't have a fully featured interface, here we specify options directly by
