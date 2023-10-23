@@ -2,9 +2,9 @@ package dataplatform
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"reflect"
 	"time"
 
@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	uploadChunkLimit = 100 // uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
+	uploadChunkLimit      = 100 // uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
+	supabaseUploadTimeout = time.Second * 10
 )
 
 // DataPlatform handles the streaming of telemetry to Supabase.
@@ -36,12 +37,6 @@ type DataPlatform struct {
 
 func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, schema string, bufferRepositoryFilename string) (*DataPlatform, error) {
 
-	// The supabase client library uses the postgrest-go library which itself uses the default HTTP client that does not
-	// have a timeout configured by default. Here we update the default HTTP client to have a timeout:
-	// TODO: futher testing of this.
-	http.DefaultClient = &http.Client{
-		Timeout: time.Second * 20,
-	}
 	supaClient := supa.CreateClient(supabaseUrl, supabaseAnonKey)
 
 	// The supabase client library doesn't have a fully featured interface, here we specify options directly by
@@ -90,21 +85,25 @@ func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 			nFreshBess, err := d.processFreshBessReadings()
 			if err != nil {
 				slog.Error("Failed to process fresh BESS readings", "error", err)
+				continue
 			}
 
 			nFreshMeter, err := d.processFreshMeterReadings()
 			if err != nil {
 				slog.Error("Failed to process fresh meter readings", "error", err)
+				continue
 			}
 
 			nOldBess, err := d.processOldBessReadings()
 			if err != nil {
 				slog.Error("Failed to process old BESS readings", "error", err)
+				continue
 			}
 
 			nOldMeter, err := d.processOldMeterReadings()
 			if err != nil {
 				slog.Error("Failed to process old meter readings", "error", err)
+				continue
 			}
 
 			slog.Info("Uploaded to supabase", "bess_readings_fresh", nFreshBess, "meter_readings_fresh", nFreshMeter, "bess_readings_old", nOldBess, "meter_readings_old", nOldMeter)
@@ -216,7 +215,18 @@ func (d *DataPlatform) processOldReadings(storedReadings interface{}) (int, erro
 // uploadReadingsToSupabase takes the given readings of any type, and attempts to upload to the relevant supabase table.
 func (d *DataPlatform) uploadReadingsToSupabase(readings interface{}) error {
 
-	// Convert the 'original readings' (e.g. telemetry.BessReading) into the supabase types (e.g. supabaseBessReading)
-	supabaseReadings, supabaseTableName := convertReadingsForSupabase(readings)
-	return d.supaClient.DB.From(supabaseTableName).Insert(supabaseReadings).Execute(nil)
+	// The supabase client library doesn't have good timeout support, so here we wrap the call in a timeout
+	result := make(chan error, 1)
+	go func() {
+		// Convert the 'original readings' (e.g. telemetry.BessReading) into the supabase types (e.g. supabaseBessReading)
+		supabaseReadings, supabaseTableName := convertReadingsForSupabase(readings)
+		result <- d.supaClient.DB.From(supabaseTableName).Insert(supabaseReadings).Execute(nil)
+	}()
+
+	select {
+	case <-time.After(supabaseUploadTimeout):
+		return errors.New("timed out")
+	case result := <-result:
+		return result
+	}
 }
