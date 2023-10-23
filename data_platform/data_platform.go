@@ -2,22 +2,19 @@ package dataplatform
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
 	"time"
 
 	"github.com/cepro/besscontroller/repository"
+	"github.com/cepro/besscontroller/supabase"
 	"github.com/cepro/besscontroller/telemetry"
 	"github.com/google/uuid"
-
-	supa "github.com/nedpals/supabase-go"
 )
 
 const (
-	uploadChunkLimit      = 100 // uploadChunkLimit defines how many data points we can upload in one supabase HTTP request
-	supabaseUploadTimeout = time.Second * 10
+	maxUploadAttempts = 5
 )
 
 // DataPlatform handles the streaming of telemetry to Supabase.
@@ -32,21 +29,14 @@ type DataPlatform struct {
 	latestMeterReadings map[uuid.UUID]telemetry.MeterReading
 
 	repository *repository.Repository
-	supaClient *supa.Client
+	supaClient *supabase.Client
 }
 
 func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, schema string, bufferRepositoryFilename string) (*DataPlatform, error) {
 
-	supaClient := supa.CreateClient(supabaseUrl, supabaseAnonKey)
-
-	// The supabase client library doesn't have a fully featured interface, here we specify options directly by
-	// adding headers to the postgrest requests.
-	// Use the appropriate schema:
-	supaClient.DB.AddHeader("Accept-Profile", schema)
-	supaClient.DB.AddHeader("Content-Profile", schema)
-	// Use a user JWT:
-	if supabaseUserKey != "" {
-		supaClient.DB.AddHeader("Authorization", fmt.Sprintf("Bearer %s", supabaseUserKey))
+	supaClient, err := supabase.New(supabaseUrl, supabaseAnonKey, supabaseUserKey, schema)
+	if err != nil {
+		return nil, fmt.Errorf("create supabase client: %w", err)
 	}
 
 	repository, err := repository.New(bufferRepositoryFilename)
@@ -82,31 +72,41 @@ func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 
 		case _ = <-uploadTicker.C:
 
-			nFreshBess, err := d.processFreshBessReadings()
+			var err error
+			attemptToProcessOldReadings := true
+			nFreshBess := 0
+			nFreshMeter := 0
+			nOldBess := 0
+			nOldMeter := 0
+
+			// Process all the fresh readings. A best-effort approach is taken so that, even if there are failures, they are stored to disk
+			nFreshBess, err = d.processFreshBessReadings()
 			if err != nil {
 				slog.Error("Failed to process fresh BESS readings", "error", err)
-				continue
+				attemptToProcessOldReadings = false
 			}
-
-			nFreshMeter, err := d.processFreshMeterReadings()
+			nFreshMeter, err = d.processFreshMeterReadings()
 			if err != nil {
 				slog.Error("Failed to process fresh meter readings", "error", err)
-				continue
+				attemptToProcessOldReadings = false
 			}
 
-			nOldBess, err := d.processOldBessReadings()
-			if err != nil {
-				slog.Error("Failed to process old BESS readings", "error", err)
-				continue
+			// Only attempt to re-upload old readings if the fresh readings were successfully uploaded. This approach prevents the 'upload attempt
+			// count' from being incremented regularly when the network is down (if the network is down than the fresh readings would fail to upload).
+			if attemptToProcessOldReadings {
+
+				nOldBess, err = d.processOldBessReadings()
+				if err != nil {
+					slog.Error("Failed to process old BESS readings", "error", err)
+				}
+
+				nOldMeter, err = d.processOldMeterReadings()
+				if err != nil {
+					slog.Error("Failed to process old meter readings", "error", err)
+				}
 			}
 
-			nOldMeter, err := d.processOldMeterReadings()
-			if err != nil {
-				slog.Error("Failed to process old meter readings", "error", err)
-				continue
-			}
-
-			slog.Info("Uploaded to supabase", "bess_readings_fresh", nFreshBess, "meter_readings_fresh", nFreshMeter, "bess_readings_old", nOldBess, "meter_readings_old", nOldMeter)
+			slog.Info("Finished supabase upload routine", "bess_readings_fresh", nFreshBess, "meter_readings_fresh", nFreshMeter, "bess_readings_old", nOldBess, "meter_readings_old", nOldMeter)
 		}
 	}
 }
@@ -147,7 +147,9 @@ func (d *DataPlatform) processFreshMeterReadings() (int, error) {
 
 // processOldBessReadings attempts to upload any stored Bess readings
 func (d *DataPlatform) processOldBessReadings() (int, error) {
-	oldBessReadings, err := d.repository.GetBessReadings(uploadChunkLimit)
+
+	// Only attempt to upload one old reading at a time, this is in case there is a 'bad apple' that is causing the batch uploads to fail
+	oldBessReadings, err := d.repository.GetBessReadings(1, maxUploadAttempts)
 	if err != nil {
 		return 0, fmt.Errorf("retrieve bess readings: %w", err)
 	}
@@ -157,7 +159,9 @@ func (d *DataPlatform) processOldBessReadings() (int, error) {
 
 // processOldMeterReadings attempts to upload any stored Meter readings
 func (d *DataPlatform) processOldMeterReadings() (int, error) {
-	oldMeterReadings, err := d.repository.GetMeterReadings(uploadChunkLimit)
+
+	// Only attempt to upload one old reading at a time, this is in case there is a 'bad apple' that is causing the batch uploads to fail
+	oldMeterReadings, err := d.repository.GetMeterReadings(1, maxUploadAttempts)
 	if err != nil {
 		return 0, fmt.Errorf("retrieve meter readings: %w", err)
 	}
@@ -168,7 +172,7 @@ func (d *DataPlatform) processOldMeterReadings() (int, error) {
 // processFreshReadings attempts to upload the given new readings, which can be of any type.
 // If upload fails, then the readings will be stored in an on-disk repository until they can be uploaded.
 func (d *DataPlatform) processFreshReadings(readings interface{}) error {
-	uploadErr := d.uploadReadingsToSupabase(readings)
+	uploadErr := d.supaClient.UploadReadings(readings)
 	if uploadErr != nil {
 		uploadErr := fmt.Errorf("upload failed: %w", uploadErr)
 		storeErr := d.repository.StoreReadings(readings)
@@ -193,7 +197,7 @@ func (d *DataPlatform) processOldReadings(storedReadings interface{}) (int, erro
 	originalReadings := d.repository.ConvertStoredToReadings(storedReadings)
 
 	// TODO: organise error better
-	uploadErr := d.uploadReadingsToSupabase(originalReadings)
+	uploadErr := d.supaClient.UploadReadings(originalReadings)
 	if uploadErr != nil {
 		uploadErr := fmt.Errorf("upload failed: %w", uploadErr)
 		errInc := d.repository.IncrementUploadAttemptCount(storedReadings)
@@ -210,23 +214,4 @@ func (d *DataPlatform) processOldReadings(storedReadings interface{}) (int, erro
 		return 0, fmt.Errorf("delete bess readings (%+v): %w", storedReadings, deleteErr)
 	}
 	return len, nil
-}
-
-// uploadReadingsToSupabase takes the given readings of any type, and attempts to upload to the relevant supabase table.
-func (d *DataPlatform) uploadReadingsToSupabase(readings interface{}) error {
-
-	// The supabase client library doesn't have good timeout support, so here we wrap the call in a timeout
-	result := make(chan error, 1)
-	go func() {
-		// Convert the 'original readings' (e.g. telemetry.BessReading) into the supabase types (e.g. supabaseBessReading)
-		supabaseReadings, supabaseTableName := convertReadingsForSupabase(readings)
-		result <- d.supaClient.DB.From(supabaseTableName).Insert(supabaseReadings).Execute(nil)
-	}()
-
-	select {
-	case <-time.After(supabaseUploadTimeout):
-		return errors.New("timed out")
-	case result := <-result:
-		return result
-	}
 }

@@ -95,10 +95,10 @@ func (r *Repository) DeleteReadings(readings interface{}) error {
 	return result.Error
 }
 
-func (r *Repository) GetMeterReadings(limit int) ([]StoredMeterReading, error) {
+func (r *Repository) GetMeterReadings(limit int, max_upload_attempts int) ([]StoredMeterReading, error) {
 	var readings []StoredMeterReading
 
-	query := r.db.Limit(limit).Order("upload_attempt_count asc, time desc")
+	query := r.db.Limit(limit).Where("upload_attempt_count < ?", max_upload_attempts).Order("upload_attempt_count asc, time desc")
 	result := query.Find(&readings)
 	if result.Error != nil {
 		return nil, result.Error
@@ -106,11 +106,11 @@ func (r *Repository) GetMeterReadings(limit int) ([]StoredMeterReading, error) {
 	return readings, nil
 }
 
-func (r *Repository) GetBessReadings(limit int) ([]StoredBessReading, error) {
+func (r *Repository) GetBessReadings(record_limit int, max_upload_attempts int) ([]StoredBessReading, error) {
 	var readings []StoredBessReading
 
 	// TODO: do we want to give up after a certain amount of attempts?
-	query := r.db.Limit(limit).Order("upload_attempt_count asc, time desc")
+	query := r.db.Limit(record_limit).Where("upload_attempt_count < ?", max_upload_attempts).Order("upload_attempt_count asc, time desc")
 	result := query.Find(&readings)
 	if result.Error != nil {
 		return nil, result.Error
