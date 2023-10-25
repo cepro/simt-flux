@@ -89,17 +89,21 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 	}
 }
 
+func (c *Controller) EmulatedSitePower() float64 {
+	// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
+	// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
+	// controller will increase BESS output to the maximum and empty the battery.
+	// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
+	return c.sitePower - c.lastTargetPower
+}
+
 // runControlLoop inspects the latest telemetry and attempts to bring the microgrid site power level to <=0 during
 // 'import avoidance periods' by setting the battery power level appropriately.
 func (c *Controller) runControlLoop(t time.Time) {
 
 	sitePower := c.sitePower
 	if c.config.BessIsEmulated {
-		// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
-		// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
-		// controller will increase BESS output to the maximum and empty the battery.
-		// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
-		sitePower = c.sitePower - c.lastTargetPower
+		sitePower = c.EmulatedSitePower()
 	}
 
 	// Calculate the different control signals from the different modes of operation

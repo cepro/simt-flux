@@ -26,6 +26,10 @@
     },
     "controller": {
         "siteMeter": "067beccd-e143-4a4b-a40c-bd842369e0ed",
+        "emulation": {
+            "bessIsEmulated": true,
+            "emulatedSiteMeter": "0cfb18b2-ad73-4809-af18-6c550796bc1b"
+        },
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",

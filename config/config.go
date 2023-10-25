@@ -65,10 +65,15 @@ type DataPlatformConfig struct {
 	Supabase           SupabaseConfig `json:"supabase"`
 }
 
+type EmulationConfig struct {
+	BessIsEmulated    bool      `json:"bessIsEmulated"`
+	EmulatedSiteMeter uuid.UUID `json:"emulatedSiteMeter"`
+}
+
 type ControllerConfig struct {
 	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
 	BessMeterID            uuid.UUID                   `json:"bessMeter"`
-	BessIsEmulated         bool                        `json:"bessIsEmulated"`
+	Emulation              EmulationConfig             `json:"emulation"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`

@@ -128,7 +128,7 @@ func main() {
 	ctrl := controller.New(controller.Config{
 		BessNameplatePower:     bess.NameplatePower(),
 		BessNameplateEnergy:    bess.NameplateEnergy(),
-		BessIsEmulated:         config.Controller.BessIsEmulated,
+		BessIsEmulated:         config.Controller.Emulation.BessIsEmulated,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
 		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,
@@ -144,7 +144,21 @@ func main() {
 				return
 			case meterReading := <-meterReadings:
 				if meterReading.DeviceID == config.Controller.SiteMeterID {
+
 					sendIfNonBlocking(ctrl.SiteMeterReadings, meterReading, "Controller site meter readings")
+
+					// If the bess is emulated then for every 'real' site meter reading we generate a new emulated meter reading, which shows what the site power would be
+					// if the bess was really delivering power
+					if config.Controller.Emulation.BessIsEmulated {
+						meterReadings <- telemetry.MeterReading{
+							ReadingMeta: telemetry.ReadingMeta{
+								ID:       uuid.New(),
+								DeviceID: config.Controller.Emulation.EmulatedSiteMeter,
+								Time:     meterReading.Time,
+							},
+							PowerTotalActive: ctrl.EmulatedSitePower(),
+						}
+					}
 				}
 				sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, "Dataplatform meter readings")
 			case bessReading := <-bess.Telemetry():
