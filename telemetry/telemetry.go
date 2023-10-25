@@ -25,23 +25,29 @@ type BessReading struct {
 // MeterReading holds data pulled from a meter
 type MeterReading struct {
 	ReadingMeta
-	Frequency              float64
-	VoltageLineAverage     float64
-	CurrentPhA             float64
-	CurrentPhB             float64
-	CurrentPhC             float64
-	CurrentPhAverage       float64
-	PowerPhAActive         float64
-	PowerPhBActive         float64
-	PowerPhCActive         float64
-	PowerTotalActive       float64
-	PowerTotalReactive     float64
-	PowerTotalApparent     float64
-	PowerFactorTotal       float64
-	EnergyImportedActive   float64
-	EnergyExportedActive   float64
-	EnergyImportedReactive float64
-	EnergyExportedReactive float64
+	Frequency               float64
+	VoltageLineAverage      float64
+	CurrentPhA              float64
+	CurrentPhB              float64
+	CurrentPhC              float64
+	CurrentPhAverage        float64
+	PowerPhAActive          float64
+	PowerPhBActive          float64
+	PowerPhCActive          float64
+	PowerTotalActive        float64
+	PowerTotalReactive      float64
+	PowerTotalApparent      float64
+	PowerFactorTotal        float64
+	EnergyImportedActive    float64
+	EnergyExportedActive    float64
+	EnergyImportedReactive  float64
+	EnergyExportedReactive  float64
+	EnergyImportedPhAActive float64
+	EnergyExportedPhAActive float64
+	EnergyImportedPhBActive float64
+	EnergyExportedPhBActive float64
+	EnergyImportedPhCActive float64
+	EnergyExportedPhCActive float64
 }
 
 // BessCommand holds control data that is sent to a battery energy storage system

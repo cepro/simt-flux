@@ -107,6 +107,43 @@ var blocks = []modbus.MetricBlock{
 			},
 		},
 	},
+	{
+		Name:         "EnergyPerPhase",
+		StartAddr:    17952,
+		NumRegisters: 12,
+		Metrics: map[string]modbus.Metric{
+			"EnergyImportedPhAActive": {
+				StartAddr:   17952,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyExportedPhAActive": {
+				StartAddr:   17954,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyImportedPhBActive": {
+				StartAddr:   17956,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyExportedPhBActive": {
+				StartAddr:   17958,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyImportedPhCActive": {
+				StartAddr:   17960,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+			"EnergyExportedPhCActive": {
+				StartAddr:   17962,
+				DataType:    modbus.Int32Type,
+				ScalingFunc: scaleEnergy,
+			},
+		},
+	},
 }
 
 func scaleVoltage(scaler modbus.Scaler, val interface{}) interface{} {
