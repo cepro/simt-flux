@@ -128,10 +128,10 @@ func main() {
 	ctrl := controller.New(controller.Config{
 		BessNameplatePower:     bess.NameplatePower(),
 		BessNameplateEnergy:    bess.NameplateEnergy(),
-		BessMinSoe:             bess.NameplateEnergy() * 0.05,
-		BessMaxSoe:             bess.NameplateEnergy() * 0.95,
 		BessIsEmulated:         config.Controller.BessIsEmulated,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
+		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
+		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,
 		BessCommands:           bess.Commands(),
 	})
 	go ctrl.Run(ctx, time.NewTicker(time.Second*5).C)
