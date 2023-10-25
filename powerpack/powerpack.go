@@ -72,7 +72,6 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 				p.logger.Error("Failed to issue command to bess", "bess_command", command, "error", err)
 				continue
 			}
-			p.logger.Info("Issued command to BESS", "bess_command", command)
 
 		case t := <-readingTicker.C:
 
