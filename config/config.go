@@ -9,6 +9,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type ClockTimePeriodWithSoe struct {
+	Period timeutils.ClockTimePeriod `json:"period"`
+	Soe    float64                   `json:"soe"`
+}
+
 type DeviceConfig struct {
 	Host             string    `json:"host"`
 	ID               uuid.UUID `json:"id"`
@@ -65,6 +70,8 @@ type ControllerConfig struct {
 	BessMeterID            uuid.UUID                   `json:"bessMeter"`
 	BessIsEmulated         bool                        `json:"bessIsEmulated"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
+	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
+	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
 }
 
 type Config struct {

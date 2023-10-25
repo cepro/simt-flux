@@ -11,9 +11,9 @@ import (
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
-// TestImportAvoidance is a high level test of the controllers ability to issue BessCommands to avoid importing power.
+// TestController is a high level test of the controllers ability to issue BessCommands to service the "import avoidance", "export avoidance" and "charge to min" modes.
 // It feeds the controller with a pre-defined/static timeseries of consumer demand to ensure that it reacts correctly to changes in demand.
-func TestImportAvoidance(test *testing.T) {
+func TestController(test *testing.T) {
 
 	ctx := context.Background()
 
@@ -26,16 +26,50 @@ func TestImportAvoidance(test *testing.T) {
 			Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
 		},
+		{
+			Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+		},
+	}
+	exportAvoidancePeriods := []timeutils.ClockTimePeriod{
+		{
+			Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
+		},
+		{
+			Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+		},
+		{
+			Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+		},
+	}
+	chargeToMinPeriods := []ClockTimePeriodWithSoe{
+		{
+			Soe: 160,
+			Period: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
+			},
+		},
+		{
+			Soe: 190,
+			Period: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+			},
+		},
 	}
 
-	bessCommands := make(chan telemetry.BessCommand)
-	ctrlTickerChan := make(chan time.Time)
+	bessCommands := make(chan telemetry.BessCommand, 1)
+	ctrlTickerChan := make(chan time.Time, 1)
 	ctrl := New(Config{
 		BessNameplatePower:     100,
 		BessNameplateEnergy:    200,
-		BessMinSoe:             200 * 0.05,
-		BessMaxSoe:             200 * 0.95,
 		ImportAvoidancePeriods: importAvoidancePeriods,
+		ExportAvoidancePeriods: exportAvoidancePeriods,
+		ChargeToMinPeriods:     chargeToMinPeriods,
 		BessCommands:           bessCommands,
 	})
 	go ctrl.Run(ctx, ctrlTickerChan)
@@ -54,47 +88,61 @@ func TestImportAvoidance(test *testing.T) {
 		{time: mustParseTime("2023-09-12T09:00:02+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:03+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
 
-		// A period of increasing demand - the controller should use the battery to match the demand - which should reduce site import
+		// A period of increasing demand whilst we are in 'import avoidance' - the controller should use the battery to match the demand - which should reduce site import
 		{time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
 		{time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
 		{time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
 		{time: mustParseTime("2023-09-12T09:00:07+01:00"), bessSoe: 145, consumerDemand: 100, expectedBessTargetPower: 100},
 
-		// A period where the demand exceeds the batteries power capability - the controller should stick to the maximum power of the battery
+		// A period where the demand exceeds the batteries power capability whilst we are in 'import avoidance' - the controller should stick to the maximum power of the battery
 		{time: mustParseTime("2023-09-12T09:00:08+01:00"), bessSoe: 143, consumerDemand: 110, expectedBessTargetPower: 100},
 		{time: mustParseTime("2023-09-12T09:00:09+01:00"), bessSoe: 141, consumerDemand: 120, expectedBessTargetPower: 100},
 		{time: mustParseTime("2023-09-12T09:00:10+01:00"), bessSoe: 139, consumerDemand: 101, expectedBessTargetPower: 100},
 
-		// A period of decreasing demand - the controller should back off to match the demand
+		// A period of decreasing demand whilst we are in 'import avoidance' - the controller should back off to match the demand
 		{time: mustParseTime("2023-09-12T09:00:11+01:00"), bessSoe: 144, consumerDemand: 50, expectedBessTargetPower: 50},
 		{time: mustParseTime("2023-09-12T09:00:12+01:00"), bessSoe: 142, consumerDemand: 25, expectedBessTargetPower: 25},
 
-		// Another period of zero demand
+		// Another period of zero demand whilst we are in 'import avoidance'
 		{time: mustParseTime("2023-09-12T09:00:13+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:14+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:15+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
 
-		// A period of solar surplus - the controller should allow this to be exported
+		// A period of solar surplus whilst we are in 'import avoidance' - the controller should allow this to be exported
 		{time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
 
 		// Currently a discontinuity in time is not an issue for the controller...
 
-		// Skip to a time where we are outside of any 'import avoidance periods', the controller should now start to recharge.
-		{time: mustParseTime("2023-09-12T10:00:01+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
-		{time: mustParseTime("2023-09-12T10:00:02+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
-		{time: mustParseTime("2023-09-12T10:00:03+01:00"), bessSoe: 142, consumerDemand: 0, expectedBessTargetPower: -2.1},
+		// Skip to a time where we are outside of any configured acivity, the controller should do nothing
+		{time: mustParseTime("2023-09-12T10:00:16+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:17+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:18+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:19+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
 
-		// A period where the site is importing power outside of any 'import avoidance period'. Here the controller continues to recharge
-		// the battery and allows the site import
-		{time: mustParseTime("2023-09-12T10:00:04+01:00"), bessSoe: 142, consumerDemand: 10, expectedBessTargetPower: -2.1},
-		{time: mustParseTime("2023-09-12T10:00:05+01:00"), bessSoe: 142, consumerDemand: 20, expectedBessTargetPower: -2.1},
+		// Skip to a time wher we are in 'export avoidance' - the controller should prevent export
+		{time: mustParseTime("2023-09-12T11:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T11:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T11:00:02+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: -10},
+		{time: mustParseTime("2023-09-12T11:00:03+01:00"), bessSoe: 101, consumerDemand: -50, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
+		{time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
 
-		// It's now the next day, and we have been recharging constantly, so the SoE is approaching the maximum
-		{time: mustParseTime("2023-09-13T08:30:00+01:00"), bessSoe: 188.95, consumerDemand: 5, expectedBessTargetPower: -2.1},
-		{time: mustParseTime("2023-09-13T08:59:59+01:00"), bessSoe: 189.9994166667, consumerDemand: 5, expectedBessTargetPower: -2.1},
-		{time: mustParseTime("2023-09-13T09:00:00+01:00"), bessSoe: 190, consumerDemand: 5, expectedBessTargetPower: 5},
-		{time: mustParseTime("2023-09-13T09:00:01+01:00"), bessSoe: 190, consumerDemand: 5, expectedBessTargetPower: 5},
+		// Skip to a time wher we are in 'charge to min' - the controller should charge to reach the minimum soe
+		{time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+
+		// Skip to a time when both 'export avoidance' and 'import avoidance' are active
+		{time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
+		{time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
+
+		// Skip to a time when both 'export avoidance' and 'charge to min' are active - the controller should prioritise 'charge to min'
+		{time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
 	}
 
 	mock := microgridMock{

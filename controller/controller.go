@@ -6,14 +6,21 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
+const (
+	chargeEfficiency = 0.95 // how efficiently the battery charges
+)
+
 // Controller manages the power/energy levels of a BESS.
 //
-// At the moment it only supports basic 'import avoidance' during the given `ImportAvoidancePeriods` whereby
-// it discharges power into the microgrid if it detects an import from the national grid during a designated time period.
+// It supports the following modes:
+// Import Avoidance: discharges power into the microgrid if it detects an import from the national grid.
+// Export Avoidance: takes power from the microgrid if it detects an export onto the national grid.
+// Charge to min: If the SoE of the battery is below a minimum then it is charged up to that minimum.
 //
 // Put new site meter and bess readings onto the `SiteMeterReadings` and `BessReadings` channels. Instruction commands for
 // the BESS will be output onto the `BessCommands` channel.
@@ -29,14 +36,19 @@ type Controller struct {
 	lastTargetPower float64
 }
 
+type PeriodWithSoe struct {
+	Period timeutils.Period
+	Soe    float64
+}
+
 type Config struct {
 	BessNameplatePower  float64 // power capability of the bess in kW
 	BessNameplateEnergy float64 // energy storage capability of the bess in kW
-	BessMinSoe          float64 // The minimum state of energy that the battery should hit
-	BessMaxSoe          float64 // The maximum state of energy that the battery should hit
 
-	BessIsEmulated         bool                        // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
-	ImportAvoidancePeriods []timeutils.ClockTimePeriod // the periods of time to activate 'import avoidance'
+	BessIsEmulated         bool                            // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
+	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
+	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
+	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
 }
@@ -58,6 +70,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_nameplate_power", c.config.BessNameplatePower,
 		"bess_nameplate_energy", c.config.BessNameplateEnergy,
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
+		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
+		"charge_to_min_periods", fmt.Sprintf("%+v", c.config.ChargeToMinPeriods),
 	)
 
 	slog.Info("Controller running")
@@ -79,12 +93,6 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 // 'import avoidance periods' by setting the battery power level appropriately.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	inImportAvoidancePeriod := timeIsInPeriods(t, c.config.ImportAvoidancePeriods)
-
-	targetPower := 0.0
-
-	belowSoEThreshold := c.bessSoe < c.config.BessMinSoe
-
 	sitePower := c.sitePower
 	if c.config.BessIsEmulated {
 		// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
@@ -94,44 +102,36 @@ func (c *Controller) runControlLoop(t time.Time) {
 		sitePower = c.sitePower - c.lastTargetPower
 	}
 
-	if inImportAvoidancePeriod {
-		// discharge the battery if there is a site import
+	// Calculate the different control signals from the different modes of operation
+	importAvoidancePower, importAvoidanceActive := importAvoidance(t, c.config.ImportAvoidancePeriods, sitePower, c.lastTargetPower)
+	exportAvoidancePower, exportAvoidanceActive := exportAvoidance(t, c.config.ExportAvoidancePeriods, sitePower, c.lastTargetPower)
+	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe)
 
-		if inImportAvoidancePeriod && !belowSoEThreshold {
-			targetPower = sitePower + c.lastTargetPower
-		}
+	// Calculate the target power for the BESS by applying a priority order to the different control signals
+	targetPower := 0.0
+	if chargeToMinActive {
+		targetPower = chargeToMinPower
+	} else if exportAvoidanceActive {
+		targetPower = exportAvoidancePower
+	} else if importAvoidanceActive {
+		targetPower = importAvoidancePower
+	}
 
-		if targetPower < 0 {
-			targetPower = 0
-		}
-		if targetPower > c.config.BessNameplatePower {
-			targetPower = c.config.BessNameplatePower
-		}
-	} else {
-		// charge the battery to reach BessMaxSoe before the next import avoidance period
-		nextStartTimes := timeutils.NextStartTimes(t, c.config.ImportAvoidancePeriods)
-		if len(nextStartTimes) < 1 {
-			slog.Warn("No import avoidance periods, skipping rebalancing")
-		} else {
-			targetFullyChargedTime := nextStartTimes[0]
-			energyToRecharge := c.config.BessMaxSoe - c.bessSoe
-			durationToRecharge := targetFullyChargedTime.Sub(t)
-			targetPower = -energyToRecharge / durationToRecharge.Hours()
-		}
-		if targetPower > 0 {
-			targetPower = 0
-		}
-		if targetPower < -c.config.BessNameplatePower {
-			targetPower = -c.config.BessNameplatePower
-		}
+	// Dont try to exceed the nameplate power of the BESS
+	if targetPower > c.config.BessNameplatePower {
+		targetPower = c.config.BessNameplatePower
+	}
+	if targetPower < -c.config.BessNameplatePower {
+		targetPower = -c.config.BessNameplatePower
 	}
 
 	slog.Info(
 		"Controlling BESS",
 		"bess_soe", c.bessSoe,
 		"site_power", c.sitePower,
-		"import_avoidance_active", inImportAvoidancePeriod,
-		"bess_below_soe_threshold", belowSoEThreshold,
+		"import_avoidance_active", importAvoidanceActive,
+		"export_avoidance_active", exportAvoidanceActive,
+		"charge_to_min_active", chargeToMinActive,
 		"bess_last_target_power", c.lastTargetPower,
 		"bess_target_power", targetPower,
 	)
@@ -143,14 +143,86 @@ func (c *Controller) runControlLoop(t time.Time) {
 	c.lastTargetPower = targetPower
 }
 
-// timeIsInPeriods returns true if the given time is within one of the given periods
-func timeIsInPeriods(t time.Time, periods []timeutils.ClockTimePeriod) bool {
-	for _, period := range periods {
-		if period.Contains(t) {
-			return true
+// importAvoidance returns the power level that should be applied to the battery for import avoidance, and a boolean indicating if import avoidance is active.
+func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) (float64, bool) {
+
+	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
+	if importAvoidancePeriod == nil {
+		return 0.0, false
+	}
+
+	importAvoidancePower := sitePower + lastTargetPower
+	if importAvoidancePower < 0 {
+		return 0.0, false
+	}
+
+	return importAvoidancePower, true
+}
+
+// exportAvoidance returns the power level that should be applied to the battery for import avoidance, and a boolean indicating if import avoidance is active.
+func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) (float64, bool) {
+
+	exportAvoidancePeriod := periodContainingTime(t, exportAvoidancePeriods)
+	if exportAvoidancePeriod == nil {
+		return 0.0, false
+	}
+
+	exportAvoidancePower := sitePower + lastTargetPower
+	if exportAvoidancePower > 0 {
+		return 0.0, false
+	}
+
+	return exportAvoidancePower, true
+}
+
+// chargeToMin returns the power level that should be applied to the battery for "charge to min" functionality, and a boolean indicating if "charge to min" is active.
+func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe float64) (float64, bool) {
+
+	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
+	if periodWithSoe == nil {
+		return 0.0, false
+	}
+
+	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
+	energyToRecharge := (periodWithSoe.Soe - bessSoe) / chargeEfficiency
+	if energyToRecharge <= 0 {
+		return 0.0, false
+	}
+
+	durationToRecharge := periodWithSoe.Period.End.Sub(t)
+	chargeToMinPower := -energyToRecharge / durationToRecharge.Hours()
+	if chargeToMinPower > 0 {
+		return 0.0, false
+	}
+
+	return chargeToMinPower, true
+}
+
+// periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
+// If there is more than one overlapping period than the first is returned.
+func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.ClockTimePeriodWithSoe) *PeriodWithSoe {
+	for _, ctPeriodWithSoe := range ctPeriodsWithSoe {
+		period, ok := ctPeriodWithSoe.Period.AbsolutePeriod(t)
+		if ok {
+			return &PeriodWithSoe{
+				Period: period,
+				Soe:    ctPeriodWithSoe.Soe,
+			}
 		}
 	}
-	return false
+	return nil
+}
+
+// periodContainingTime returns the first period that overlaps the given time if there is one, otherwise it returns nil.
+// If there is more than one overlapping period than the first is returned.
+func periodContainingTime(t time.Time, clockTimePeriods []timeutils.ClockTimePeriod) *timeutils.Period {
+	for _, clockTimePeriod := range clockTimePeriods {
+		period, ok := clockTimePeriod.AbsolutePeriod(t)
+		if ok {
+			return &period
+		}
+	}
+	return nil
 }
 
 // sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation

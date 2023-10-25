@@ -1,17 +1,25 @@
 package timeutils
 
 import (
-	"sort"
 	"time"
 )
 
+// ClockTimePeriod represents a period of time that is defined by local clock time, without any date information,  e.g. "4pm to 6pm".
 type ClockTimePeriod struct {
 	Start ClockTime `json:"start"`
 	End   ClockTime `json:"end"`
 }
 
-// Contains returns True if t is within the ClockTimePeriod
-func (p *ClockTimePeriod) Contains(t time.Time) bool {
+// AbsolutePeriod returns the equivilent `Period` instance for the given `ClockTimePeriod`, using `t` as the
+// reference time that must be within the `ClockTimePeriod`.
+// If `t` is outside of the `ClockTimePeriod` then the `ok` boolean is returned as false.
+//
+// For example, calling on a ClockTimePeriod of "4pm to 6pm" using a reference `t` of "2023/10/19 16:53:00" would
+// yield the period: "2023/10/19 16:00:00 to 2023/10/19 18:00:00".
+//
+// Another example, calling on a ClockTimePeriod of "4pm to 6pm" using a reference `t` of "2023/10/19 10:00:00" would
+// result in false being returned as the given time is outside of the ClockTimePeriod.
+func (p *ClockTimePeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 
 	year, month, day := t.Date()
 
@@ -20,31 +28,11 @@ func (p *ClockTimePeriod) Contains(t time.Time) bool {
 	startDateTime := p.Start.OnDate(year, month, day)
 	endDateTime := p.End.OnDate(year, month, day)
 
-	return (startDateTime.Before(t) && endDateTime.After(t)) || t.Equal(startDateTime) || t.Equal(endDateTime)
-}
+	isContained := (startDateTime.Before(t) && endDateTime.After(t)) || t.Equal(startDateTime) || t.Equal(endDateTime)
 
-// NextStartTimes returns the next times at which the given ClockTimePeriods will start, given the current time as `t`.
-// Absolute time.Time instances are calculated from the 'relative clock times', all of which are guaranteed to be in the future (relative to `t`).
-// The returned times are sorted into ascending order.
-func NextStartTimes(t time.Time, periods []ClockTimePeriod) []time.Time {
-	startTimes := make([]time.Time, 0, len(periods))
-	for _, period := range periods {
-
-		// convert the 'relative clock time' into an 'absolute time'
-		start := time.Date(t.Year(), t.Month(), t.Day(), period.Start.Hour, period.Start.Minute, period.Start.Second, 0, period.Start.Location)
-
-		// if the 'absolute time' is in the past, push it into the future by adding a day
-		if start.Before(t) {
-			start = start.AddDate(0, 0, 1)
-		}
-
-		startTimes = append(startTimes, start)
+	if !isContained {
+		return Period{}, false
 	}
 
-	// sort the startTimes into ascending order
-	sort.Slice(startTimes, func(i, j int) bool {
-		return startTimes[i].Before(startTimes[j])
-	})
-
-	return startTimes
+	return Period{Start: startDateTime, End: endDateTime}, true
 }
