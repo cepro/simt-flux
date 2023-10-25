@@ -10,6 +10,7 @@ Restart=always
 RestartSec=16
 StandardOutput=journal
 StandardError=journal
+WorkingDirectory=/home/pi/bess_controller
 
 [Install]
 WantedBy=multi-user.target
