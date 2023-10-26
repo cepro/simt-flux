@@ -82,7 +82,11 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		case t := <-tickerChan:
 			c.runControlLoop(t)
 		case reading := <-c.SiteMeterReadings:
-			c.sitePower = reading.PowerTotalActive
+			if reading.PowerTotalActive == nil {
+				slog.Error("No active power available in site meter reading")
+				continue
+			}
+			c.sitePower = *reading.PowerTotalActive
 		case reading := <-c.BessReadings:
 			c.bessSoe = reading.Soe
 		}

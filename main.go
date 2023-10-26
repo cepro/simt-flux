@@ -151,12 +151,13 @@ func main() {
 					// if the bess was really delivering power
 					if config.Controller.Emulation.BessIsEmulated {
 						meterReadings <- telemetry.MeterReading{
+						emulatedPower := ctrl.EmulatedSitePower()
 							ReadingMeta: telemetry.ReadingMeta{
 								ID:       uuid.New(),
 								DeviceID: config.Controller.Emulation.EmulatedSiteMeter,
 								Time:     meterReading.Time,
 							},
-							PowerTotalActive: ctrl.EmulatedSitePower(),
+							PowerTotalActive: &emulatedPower,
 						}
 					}
 				}

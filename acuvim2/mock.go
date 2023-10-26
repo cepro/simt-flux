@@ -23,6 +23,9 @@ func NewMock(readings chan<- telemetry.MeterReading, id uuid.UUID, otherArgs ...
 func (a *Acuvim2MeterMock) Run(ctx context.Context, period time.Duration) error {
 	readingTicker := time.NewTicker(period)
 
+	freq := 50.0
+	powerTotalActive := 10.0
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -34,21 +37,8 @@ func (a *Acuvim2MeterMock) Run(ctx context.Context, period time.Duration) error 
 					DeviceID: a.id,
 					Time:     t,
 				},
-				Frequency:            50.0,
-				VoltageLineAverage:   230.0,
-				CurrentPhA:           10.1,
-				CurrentPhB:           10.2,
-				CurrentPhC:           10.3,
-				CurrentPhAverage:     10.4,
-				PowerPhAActive:       11.1,
-				PowerPhBActive:       11.2,
-				PowerPhCActive:       11.3,
-				PowerTotalActive:     11.4,
-				PowerTotalReactive:   12.5,
-				PowerTotalApparent:   12.6,
-				PowerFactorTotal:     1.0,
-				EnergyImportedActive: 10000,
-				EnergyExportedActive: 20000,
+				Frequency:        &freq,
+				PowerTotalActive: &powerTotalActive,
 			}
 		}
 	}
