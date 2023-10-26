@@ -56,7 +56,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	meterReadings := make(chan telemetry.MeterReading, 1)
+	meterReadings := make(chan telemetry.MeterReading, 5)
 
 	// Create Acuvim2 'real' meters
 	acuvimMeters := make(map[uuid.UUID]*acuvim2.Acuvim2Meter, len(config.Meters.Acuvim2))
@@ -150,8 +150,8 @@ func main() {
 					// If the bess is emulated then for every 'real' site meter reading we generate a new emulated meter reading, which shows what the site power would be
 					// if the bess was really delivering power
 					if config.Controller.Emulation.BessIsEmulated {
-						meterReadings <- telemetry.MeterReading{
 						emulatedPower := ctrl.EmulatedSitePower()
+						emulatedReading := telemetry.MeterReading{
 							ReadingMeta: telemetry.ReadingMeta{
 								ID:       uuid.New(),
 								DeviceID: config.Controller.Emulation.EmulatedSiteMeter,
@@ -159,6 +159,7 @@ func main() {
 							},
 							PowerTotalActive: &emulatedPower,
 						}
+						sendIfNonBlocking(meterReadings, emulatedReading, "Emulated meter reading")
 					}
 				}
 				sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, "Dataplatform meter readings")
