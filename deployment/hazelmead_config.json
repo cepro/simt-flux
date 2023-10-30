@@ -1,0 +1,107 @@
+{
+    "meters": {
+        "acuvim2": {
+            "Mains incomer": {
+                "id": "9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c",
+                "host": "192.168.8.110:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 1250,
+                "ct2": 5
+            },
+            "Tesla battery inverter": {
+                "id": "8333c68b-d5e0-4caf-94f7-0e97c78b913a",
+                "host": "192.168.8.111:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 1000,
+                "ct2": 5
+            },
+            "EV": {
+                "id": "39666f1c-8165-478b-92be-b9941cf46d4d",
+                "host": "192.168.8.113:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            },
+            "Housing feeder 1": {
+                "id": "b4cf6c49-c577-48f0-8a49-9d3c5c3764c9",
+                "host": "192.168.8.112:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            },
+            "Housing feeder 2": {
+                "id": "f46075b4-3a8b-4a6a-a9ca-1022902b335b",
+                "host": "192.168.8.114:502",
+                "pollIntervalSecs": 2,
+                "pt1": 400,
+                "pt2": 400,
+                "ct1": 400,
+                "ct2": 5
+            }
+        }
+    },
+    "bess": {
+        "powerPack": {
+            "host": "192.168.10.51:502",
+            "id": "539cab31-6c7f-44ae-bd6a-744af19d8d0c",
+            "pollIntervalSecs": 2,
+            "nameplatePower": 583,
+            "nameplateEnergy": 1609
+        }
+    },
+    "dataPlatform": {
+        "uploadIntervalSecs": 60,
+        "supabase": {
+            "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
+            "schema": "marcus"
+        }
+    },
+    "controller": {
+        "siteMeter": "9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c",
+        "bessMeter": "8333c68b-d5e0-4caf-94f7-0e97c78b913a",
+        "emulation": {
+            "bessIsEmulated": false,
+            "emulatedSiteMeter": null
+        },
+        "importAvoidancePeriods": [
+            {
+                "start": "06:00:00:Europe/London",
+                "end": "10:00:00:Europe/London"
+            },
+            {
+                "start": "16:00:00:Europe/London",
+                "end": "20:00:00:Europe/London"
+            }
+        ],
+        "exportAvoidancePeriods": [
+            {
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
+            }
+        ],
+        "chargeToMinPeriods": [
+            {
+                "Soe": 200,
+                "period": {
+                    "start": "01:00:00:Europe/London",
+                    "end": "03:00:00:Europe/London"
+                }
+            },
+            {
+                "Soe": 200,
+                "period": {
+                    "start": "15:00:00:Europe/London",
+                    "end": "16:00:00:Europe/London"
+                }
+            }
+        ]
+    }
+}
