@@ -148,8 +148,8 @@ func (d *DataPlatform) processFreshMeterReadings() (int, error) {
 // processOldBessReadings attempts to upload any stored Bess readings
 func (d *DataPlatform) processOldBessReadings() (int, error) {
 
-	// Only attempt to upload one old reading at a time, this is in case there is a 'bad apple' that is causing the batch uploads to fail
-	oldBessReadings, err := d.repository.GetBessReadings(1, maxUploadAttempts)
+	// Only attempt to upload a handful of readings at a time, this is in case there is a 'bad apple' that is causing a whole batch to fail
+	oldBessReadings, err := d.repository.GetBessReadings(10, maxUploadAttempts)
 	if err != nil {
 		return 0, fmt.Errorf("retrieve bess readings: %w", err)
 	}
@@ -160,8 +160,8 @@ func (d *DataPlatform) processOldBessReadings() (int, error) {
 // processOldMeterReadings attempts to upload any stored Meter readings
 func (d *DataPlatform) processOldMeterReadings() (int, error) {
 
-	// Only attempt to upload one old reading at a time, this is in case there is a 'bad apple' that is causing the batch uploads to fail
-	oldMeterReadings, err := d.repository.GetMeterReadings(1, maxUploadAttempts)
+	// Only attempt to upload a handful of readings at a time, this is in case there is a 'bad apple' that is causing a whole batch to fail
+	oldMeterReadings, err := d.repository.GetMeterReadings(10, maxUploadAttempts)
 	if err != nil {
 		return 0, fmt.Errorf("retrieve meter readings: %w", err)
 	}
