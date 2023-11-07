@@ -2,6 +2,7 @@ package acuvim2
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	"github.com/cepro/besscontroller/telemetry"
@@ -25,6 +26,8 @@ func (a *Acuvim2MeterMock) Run(ctx context.Context, period time.Duration) error 
 
 	freq := 50.0
 	powerTotalActive := 10.0
+	energyImportedActive := 0.0
+	energyExportedActive := 0.0
 
 	for {
 		select {
@@ -37,9 +40,13 @@ func (a *Acuvim2MeterMock) Run(ctx context.Context, period time.Duration) error 
 					DeviceID: a.id,
 					Time:     t,
 				},
-				Frequency:        &freq,
-				PowerTotalActive: &powerTotalActive,
+				Frequency:            &freq,
+				PowerTotalActive:     &powerTotalActive,
+				EnergyImportedActive: &energyImportedActive,
+				EnergyExportedActive: &energyExportedActive,
 			}
+			energyImportedActive += rand.Float64()
+			energyExportedActive += rand.Float64()
 		}
 	}
 }
