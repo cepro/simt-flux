@@ -162,5 +162,5 @@ func scalePower(scaler modbus.Scaler, val interface{}) interface{} {
 }
 
 func scaleEnergy(scaler modbus.Scaler, val interface{}) interface{} {
-	return val.(int32) / 10
+	return float64(val.(int32)) / 10.0
 }
