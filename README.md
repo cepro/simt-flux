@@ -27,6 +27,11 @@ To compile a binary that will run on a 32bit ARM processor like the RPi:
 
 `env GOARCH=arm GOARM=5 GOOS=linux go build -o ./deployment/bess_controller_rpi main.go`
 
+Or for 64bit ARM like the newer RevPis:
+`env GOARCH=arm64 GOOS=linux go build -o ./deployment/bess_controller_rpi_64 main.go`
+
+## JWT generation:
+`jwt encode --secret=$JWT_SECRET "$(cat deployment/jwt_claims.json)" > deployment/jwt`
 
 ## Deployment onto RPi
 
@@ -38,3 +43,8 @@ To deploy the service and config files onto a RPi over SSH:
 
 `scp deployment/bess_controller.service pi@waterlillies-rpi:/lib/systemd/system/`
 
+
+
+`scp -P 6788 deployment/bess_controller_rpi pi@wlce-robustel:~/bess_controller/bess_controller_rpi`
+
+`scp -P 6788 deployment/waterlilies_config.json pi@wlce-robustel:~/bess_controller/config.json`
