@@ -9,7 +9,14 @@
             "mode": "debug",
             "type": "go",
             "request": "launch",
-            "program": "${workspaceFolder}"
+            "program": "${workspaceFolder}",
+            "args": [
+                "-f", "deployment/waterlilies_config_debug.json"
+              ],
+            "env": {
+                "SUPABASE_ANON_KEY": "${env:SUPABASE_ANON_KEY}",
+                "SUPABASE_USER_KEY": "${env:SUPABASE_USER_KEY}"
+            }
         }
     ]
 }
