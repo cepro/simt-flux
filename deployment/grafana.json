@@ -539,8 +539,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -819,6 +818,315 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": 300000,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kwatt"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg f8db31ad-f017-4953-bff5-8e1456f08e38"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Housing Feeder 1"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 7e2b6ad8-662f-4d31-96b6-fe72d102468a"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Whole site"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "PowerPack"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 35aad38a-d9c9-4bd1-a9f1-88f0bee388bb"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "EV"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 4032e6d5-65f9-43d5-85c3-a9d100a5de7a"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Housing Feeder 2"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 39666f1c-8165-478b-92be-b9941cf46d4d"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "EV"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg b4cf6c49-c577-48f0-8a49-9d3c5c3764c9"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Housing feeder 1"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg f46075b4-3a8b-4a6a-a9ca-1022902b335b"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Housing feeder 2"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Whole site"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg 8333c68b-d5e0-4caf-94f7-0e97c78b913a"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "PowerPack"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time,\n  device_id,\n  delta_energy_imported_active,\n  delta_energy_exported_active\nFROM\n  meter_readings_rollup_5m\nWHERE\n  $__timeFilter(time)\n  AND device_id != (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\n  AND device_id NOT IN (\n    SELECT device_id from marcus.device_registry where site='$site' AND type!='meter'\n  )\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      device_registry\n    WHERE\n      site = '$site'\n  )\nORDER BY\n  time",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Metered Power Stacked - testing 5minute rollups",
+      "transformations": [
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "multi"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
             "drawStyle": "line",
             "fillOpacity": 0,
             "gradientMode": "none",
@@ -849,8 +1157,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -866,7 +1173,7 @@
         "h": 12,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 50
       },
       "id": 3,
       "options": {
@@ -968,8 +1275,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -985,7 +1291,7 @@
         "h": 12,
         "w": 12,
         "x": 12,
-        "y": 37
+        "y": 50
       },
       "id": 2,
       "options": {
@@ -1087,8 +1393,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -1103,7 +1408,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 62
       },
       "id": 1,
       "options": {
@@ -1192,6 +1497,6 @@
   "timezone": "",
   "title": "Microgrid Overview",
   "uid": "a9751005-02ce-460a-8d7d-3537cec882ee",
-  "version": 78,
+  "version": 79,
   "weekStart": ""
 }
