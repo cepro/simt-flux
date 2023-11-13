@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -82,14 +82,10 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg f8db31ad-f017-4953-bff5-8e1456f08e38"
+              "id": "byRegexp",
+              "options": "/.feeder 1/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing Feeder 1"
-              },
               {
                 "id": "color",
                 "value": {
@@ -101,14 +97,10 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 7e2b6ad8-662f-4d31-96b6-fe72d102468a"
+              "id": "byRegexp",
+              "options": "/.Main incomer*/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
               {
                 "id": "color",
                 "value": {
@@ -120,33 +112,10 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5"
+              "id": "byRegexp",
+              "options": "/.EV charging*/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "PowerPack"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "purple",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 35aad38a-d9c9-4bd1-a9f1-88f0bee388bb"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
               {
                 "id": "color",
                 "value": {
@@ -158,113 +127,29 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 4032e6d5-65f9-43d5-85c3-a9d100a5de7a"
+              "id": "byRegexp",
+              "options": "/.Battery inverter*/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing Feeder 2"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 39666f1c-8165-478b-92be-b9941cf46d4d"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg b4cf6c49-c577-48f0-8a49-9d3c5c3764c9"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 1"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg f46075b4-3a8b-4a6a-a9ca-1022902b335b"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 2"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 8333c68b-d5e0-4caf-94f7-0e97c78b913a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "PowerPack"
-              },
               {
                 "id": "color",
                 "value": {
                   "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.feeder 2/"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
                   "mode": "fixed"
                 }
               }
@@ -295,12 +180,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  device_id,\n  avg(power_total_active)\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND device_id != '024306e6-f276-4233-9550-7b1ea69c1f37'\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      device_registry\n    WHERE\n      site = '$site'\n  )\nGROUP BY\n  time_bucket,\n  device_id\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  device_registry.name,\n  power_total_active as power\nFROM\n  marcus.meter_readings_cagg_5m\nINNER JOIN marcus.device_registry ON device_registry.device_id=meter_readings_cagg_5m.device_id\nWHERE\n  $__timeFilter(\"time_b\")\n  AND meter_readings_cagg_5m.device_id != '024306e6-f276-4233-9550-7b1ea69c1f37'\n  AND device_registry.site = '$site'\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -335,7 +220,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -434,13 +319,13 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  avg(soe) as avg_soe,\n  avg(target_power) as avg_target_power\nFROM\n  bess_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      marcus.device_registry\n    where\n      site = '$site'\n  )\nGROUP BY\n  time_bucket\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  soe as avg_soe,\n  target_power as avg_target_power\nFROM\n  bess_readings_cagg_5m\nWHERE\n  $__timeFilter(\"time_b\")\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      marcus.device_registry\n    where\n      site = '$site'\n  )\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -463,13 +348,13 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  device_id,\n  avg(power_total_active) as emulated_site_power\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND\n  device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Emulated site meter'\n  )\nGROUP BY\n  time_bucket,\n  device_id\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  device_id,\n  power_total_active as emulated_site_power\nFROM\n  meter_readings_cagg_5m \nWHERE\n  $__timeFilter(\"time_b\")\n  AND\n  device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Emulated site meter'\n  )\nORDER BY\n  time_b",
           "refId": "B",
           "sql": {
             "columns": [
@@ -496,7 +381,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -539,7 +424,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -552,14 +438,22 @@
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg f8db31ad-f017-4953-bff5-8e1456f08e38"
+              "id": "byRegexp",
+              "options": "/.*export*/"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Housing Feeder 1"
-              },
+                "id": "custom.transform",
+                "value": "negative-Y"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.feeder 1/"
+            },
+            "properties": [
               {
                 "id": "color",
                 "value": {
@@ -571,14 +465,10 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 7e2b6ad8-662f-4d31-96b6-fe72d102468a"
+              "id": "byRegexp",
+              "options": "/.Main incomer*/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
               {
                 "id": "color",
                 "value": {
@@ -590,14 +480,25 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5"
+              "id": "byRegexp",
+              "options": "/.EV charging*/"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "PowerPack"
-              },
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.Battery inverter*/"
+            },
+            "properties": [
               {
                 "id": "color",
                 "value": {
@@ -609,33 +510,10 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 35aad38a-d9c9-4bd1-a9f1-88f0bee388bb"
+              "id": "byRegexp",
+              "options": "/.feeder 2/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 4032e6d5-65f9-43d5-85c3-a9d100a5de7a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing Feeder 2"
-              },
               {
                 "id": "color",
                 "value": {
@@ -647,96 +525,24 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "avg 39666f1c-8165-478b-92be-b9941cf46d4d"
+              "id": "byRegexp",
+              "options": "/Main/"
             },
             "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg b4cf6c49-c577-48f0-8a49-9d3c5c3764c9"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 1"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg f46075b4-3a8b-4a6a-a9ca-1022902b335b"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 2"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
               {
                 "id": "color",
                 "value": {
                   "fixedColor": "blue",
                   "mode": "fixed"
                 }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 8333c68b-d5e0-4caf-94f7-0e97c78b913a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "PowerPack"
               },
               {
-                "id": "color",
-                "value": {
-                  "fixedColor": "purple",
-                  "mode": "fixed"
-                }
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
               }
             ]
           }
@@ -765,12 +571,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time_bucket('5m', time) AS time_bucket,\n  device_id,\n  AVG(power_total_active)\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(time)\n  AND device_id != (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\n  AND device_id NOT IN (\n    SELECT device_id from marcus.device_registry where site='$site' AND type!='meter'\n  )\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      device_registry\n    WHERE\n      site = '$site'\n  )\nGROUP BY\n  time_bucket,\n  device_id\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  device_registry.name,\n  delta_energy_imported_active as import,\n  delta_energy_exported_active as export\nFROM\n  marcus.meter_readings_cagg_5m\nINNER JOIN marcus.device_registry ON device_registry.device_id=meter_readings_cagg_5m.device_id\nWHERE\n  $__timeFilter(time_b)\n  AND device_registry.site = '$site'\n  AND device_registry.type = 'meter'\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -791,7 +597,7 @@
           }
         }
       ],
-      "title": "Metered Power Stacked - BUGGY FOR NEGATIVE VALUES",
+      "title": "Metered Energy Stacked",
       "transformations": [
         {
           "id": "prepareTimeSeries",
@@ -805,316 +611,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": 300000,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "kwatt"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg f8db31ad-f017-4953-bff5-8e1456f08e38"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing Feeder 1"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 7e2b6ad8-662f-4d31-96b6-fe72d102468a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "PowerPack"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "purple",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 35aad38a-d9c9-4bd1-a9f1-88f0bee388bb"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 4032e6d5-65f9-43d5-85c3-a9d100a5de7a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing Feeder 2"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 39666f1c-8165-478b-92be-b9941cf46d4d"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "EV"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "green",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg b4cf6c49-c577-48f0-8a49-9d3c5c3764c9"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 1"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "yellow",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg f46075b4-3a8b-4a6a-a9ca-1022902b335b"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Housing feeder 2"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "orange",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Whole site"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "blue",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "avg 8333c68b-d5e0-4caf-94f7-0e97c78b913a"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "PowerPack"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "purple",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 37
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  time,\n  device_id,\n  delta_energy_imported_active,\n  delta_energy_exported_active\nFROM\n  meter_readings_rollup_5m\nWHERE\n  $__timeFilter(time)\n  AND device_id != (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\n  AND device_id NOT IN (\n    SELECT device_id from marcus.device_registry where site='$site' AND type!='meter'\n  )\n  AND device_id IN (\n    SELECT\n      device_id\n    from\n      device_registry\n    WHERE\n      site = '$site'\n  )\nORDER BY\n  time",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
-        }
-      ],
-      "title": "Metered Power Stacked - testing 5minute rollups",
-      "transformations": [
-        {
-          "id": "prepareTimeSeries",
-          "options": {
-            "format": "multi"
-          }
-        }
-      ],
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -1173,7 +670,7 @@
         "h": 12,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 37
       },
       "id": 3,
       "options": {
@@ -1192,12 +689,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  avg(energy_exported_active) as export,\n  device_id\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nGROUP BY\n  time_bucket,\n  device_id\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  energy_exported_active as export,\n  device_id\nFROM\n  meter_readings_cagg_5m \nWHERE\n  $__timeFilter(\"time_b\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1219,20 +716,13 @@
         }
       ],
       "title": "Site Energy Exports",
-      "transformations": [
-        {
-          "id": "prepareTimeSeries",
-          "options": {
-            "format": "multi"
-          }
-        }
-      ],
+      "transformations": [],
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -1291,7 +781,7 @@
         "h": 12,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 37
       },
       "id": 2,
       "options": {
@@ -1310,12 +800,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  avg(energy_imported_active) as import,\n  device_id\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nGROUP BY\n  time_bucket,\n  device_id\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  energy_imported_active as import,\n  device_id\nFROM\n  meter_readings_cagg_5m \nWHERE\n  $__timeFilter(\"time_b\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1337,20 +827,13 @@
         }
       ],
       "title": "Site Energy Imports",
-      "transformations": [
-        {
-          "id": "prepareTimeSeries",
-          "options": {
-            "format": "multi"
-          }
-        }
-      ],
+      "transformations": [],
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "postgres",
-        "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
       },
       "fieldConfig": {
         "defaults": {
@@ -1408,7 +891,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 49
       },
       "id": 1,
       "options": {
@@ -1427,12 +910,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(\"time\", '5m') as time_bucket,\n  avg(frequency) AS avg_frequency\nFROM\n  meter_readings\nWHERE\n  $__timeFilter(\"time\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nGROUP BY\n  time_bucket\nORDER BY\n  time_bucket",
+          "rawSql": "SELECT\n  time_b,\n  frequency AS avg_frequency\nFROM\n  meter_readings_cagg_5m\nWHERE\n  $__timeFilter(\"time_b\")\n  AND device_id = (\n    SELECT device_id from marcus.device_registry where site='$site' AND name='Main incomer'\n  )\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1497,6 +980,6 @@
   "timezone": "",
   "title": "Microgrid Overview",
   "uid": "a9751005-02ce-460a-8d7d-3537cec882ee",
-  "version": 79,
+  "version": 94,
   "weekStart": ""
 }
