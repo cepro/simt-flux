@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
@@ -45,7 +46,7 @@ func TestController(test *testing.T) {
 			End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
 		},
 	}
-	chargeToMinPeriods := []ClockTimePeriodWithSoe{
+	chargeToMinPeriods := []config.ClockTimePeriodWithSoe{
 		{
 			Soe: 160,
 			Period: timeutils.ClockTimePeriod{
@@ -194,7 +195,7 @@ func (m microgridMock) SimulateReadings(consumerDemand float64, bessSoe float64)
 	sitePower := consumerDemand - m.bessTargetPower
 
 	m.SiteMeterReadings <- telemetry.MeterReading{
-		PowerTotalActive: sitePower,
+		PowerTotalActive: &sitePower,
 	}
 
 	// generate a mock bess reading - currently we always have a static SoE

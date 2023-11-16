@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-func TestContains(t *testing.T) {
-
+func TestAbsolutePeriod(t *testing.T) {
 	london, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		t.Errorf("Failed to load London time: %v", err)
 	}
-	sixTo10Am := ClockTimePeriod{
+
+	sixToTenAm := ClockTimePeriod{
 		Start: ClockTime{
 			Hour:     6,
 			Minute:   0,
@@ -26,135 +26,37 @@ func TestContains(t *testing.T) {
 		},
 	}
 
-	type subTest struct {
-		name     string
-		period   ClockTimePeriod
-		t        time.Time
-		expected bool
-	}
-
-	subTests := []subTest{
-		{"OutsideBefore", sixTo10Am, time.Date(2023, 8, 22, 0, 0, 0, 0, london), false},
-		{"OutsideAfter", sixTo10Am, time.Date(2023, 8, 22, 11, 0, 0, 0, london), false},
-		{"ContainsOnStartBoundary", sixTo10Am, time.Date(2023, 8, 22, 6, 0, 0, 0, london), true},
-		{"ContainsOnEndBoundary", sixTo10Am, time.Date(2023, 8, 22, 10, 0, 0, 0, london), true},
-		{"ContainsInside", sixTo10Am, time.Date(2023, 8, 22, 9, 40, 0, 0, london), true},
-	}
-	for _, subTest := range subTests {
-		t.Run(subTest.name, func(t *testing.T) {
-			contains := subTest.period.Contains(subTest.t)
-			if contains != subTest.expected {
-				t.Errorf("got %t, expected %t", contains, subTest.expected)
-			}
-		})
-	}
-}
-
-func TestNextStartTimes(t *testing.T) {
-
-	london, err := time.LoadLocation("Europe/London")
-	if err != nil {
-		t.Errorf("Failed to load London time: %v", err)
-	}
-
-	periods := []ClockTimePeriod{
-		{
-			Start: ClockTime{
-				Hour:     6,
-				Minute:   0,
-				Second:   0,
-				Location: london,
-			},
-			End: ClockTime{
-				Hour:     10,
-				Minute:   0,
-				Second:   0,
-				Location: london,
-			},
-		},
-		{
-			Start: ClockTime{
-				Hour:     16,
-				Minute:   0,
-				Second:   0,
-				Location: london,
-			},
-			End: ClockTime{
-				Hour:     19,
-				Minute:   0,
-				Second:   0,
-				Location: london,
-			},
-		},
+	// An 'absolute' version of the above 'clock time period' that occurs on the 22nd of August 2023
+	sixTo10AmAbsolute := Period{
+		Start: time.Date(2023, 8, 22, 6, 0, 0, 0, london),
+		End:   time.Date(2023, 8, 22, 10, 0, 0, 0, london),
 	}
 
 	type subTest struct {
-		name     string
-		periods  []ClockTimePeriod
-		t        time.Time
-		expected []time.Time
+		name           string
+		ctPeriod       ClockTimePeriod
+		t              time.Time
+		expectedPeriod Period
+		expectedOK     bool
 	}
 
 	subTests := []subTest{
-		{
-			name:    "Before all periods",
-			periods: periods,
-			t:       time.Date(2023, 8, 22, 4, 0, 0, 0, london),
-			expected: []time.Time{
-				time.Date(2023, 8, 22, 6, 0, 0, 0, london),
-				time.Date(2023, 8, 22, 16, 0, 0, 0, london),
-			},
-		},
-		{
-			name:    "Within the first period",
-			periods: periods,
-			t:       time.Date(2023, 8, 22, 8, 0, 0, 0, london),
-			expected: []time.Time{
-				time.Date(2023, 8, 22, 16, 0, 0, 0, london),
-				time.Date(2023, 8, 23, 6, 0, 0, 0, london),
-			},
-		},
-		{
-			name:    "Between the first and second periods",
-			periods: periods,
-			t:       time.Date(2023, 8, 22, 13, 0, 0, 0, london),
-			expected: []time.Time{
-				time.Date(2023, 8, 22, 16, 0, 0, 0, london),
-				time.Date(2023, 8, 23, 6, 0, 0, 0, london),
-			},
-		},
-		{
-			name:    "Within the second period",
-			periods: periods,
-			t:       time.Date(2023, 8, 22, 19, 30, 0, 0, london),
-			expected: []time.Time{
-				time.Date(2023, 8, 23, 6, 0, 0, 0, london),
-				time.Date(2023, 8, 23, 16, 0, 0, 0, london),
-			},
-		},
-		{
-			name:    "After the second period",
-			periods: periods,
-			t:       time.Date(2023, 8, 22, 23, 30, 0, 0, london),
-			expected: []time.Time{
-				time.Date(2023, 8, 23, 6, 0, 0, 0, london),
-				time.Date(2023, 8, 23, 16, 0, 0, 0, london),
-			},
-		},
+		{"OutsideBefore", sixToTenAm, time.Date(2023, 8, 22, 0, 0, 0, 0, london), Period{}, false},
+		{"OutsideAfter", sixToTenAm, time.Date(2023, 8, 22, 11, 0, 0, 0, london), Period{}, false},
+		{"ContainsOnStartBoundary", sixToTenAm, time.Date(2023, 8, 22, 6, 0, 0, 0, london), sixTo10AmAbsolute, true},
+		{"ContainsOnEndBoundary", sixToTenAm, time.Date(2023, 8, 22, 10, 0, 0, 0, london), sixTo10AmAbsolute, true},
+		{"ContainsInside", sixToTenAm, time.Date(2023, 8, 22, 9, 40, 0, 0, london), sixTo10AmAbsolute, true},
 	}
 	for _, subTest := range subTests {
 		t.Run(subTest.name, func(t *testing.T) {
-			startTimes := NextStartTimes(subTest.t, subTest.periods)
-			if len(startTimes) != len(subTest.expected) {
-				t.Errorf("Length of got '%d', doesn't match expected '%d'", len(startTimes), len(subTest.expected))
-				return
+			period, ok := subTest.ctPeriod.AbsolutePeriod(subTest.t)
+			if ok != subTest.expectedOK {
+				t.Errorf("OK boolean got %t, expected %t", ok, subTest.expectedOK)
 			}
-
-			for i := range startTimes {
-				if startTimes[i] != subTest.expected[i] {
-					t.Errorf("At index %d got '%s', expected '%s'", i, startTimes[i].Format(time.RFC3339), subTest.expected[i].Format(time.RFC3339))
-				}
+			if ok && period != subTest.expectedPeriod {
+				t.Errorf("Period got %t, expected %t", ok, subTest.expectedOK)
 			}
 		})
 	}
+
 }
