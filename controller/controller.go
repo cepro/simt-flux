@@ -42,10 +42,11 @@ type PeriodWithSoe struct {
 }
 
 type Config struct {
-	BessNameplatePower  float64 // power capability of the bess in kW
-	BessNameplateEnergy float64 // energy storage capability of the bess in kW
-
+	BessNameplatePower     float64                         // power capability of the bess in kW
+	BessNameplateEnergy    float64                         // energy storage capability of the bess in kW
 	BessIsEmulated         bool                            // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
+	BessSoeMin             float64                         // The minimum SoE that the BESS will be allowed to fall to
+	BessSoeMax             float64                         // The maximum SoE that the BESS will be allowed to charge to
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
@@ -133,10 +134,24 @@ func (c *Controller) runControlLoop(t time.Time) {
 		targetPower = -c.config.BessNameplatePower
 	}
 
+	// Dont exceed the min/max SoE limits
+	soeMinActive := false
+	soeMaxActive := false
+	if targetPower > 0 && c.bessSoe <= c.config.BessSoeMin {
+		soeMinActive = true
+		targetPower = 0
+	}
+	if targetPower < 0 && c.bessSoe >= c.config.BessSoeMax {
+		soeMaxActive = true
+		targetPower = 0
+	}
+
 	slog.Info(
 		"Controlling BESS",
-		"bess_soe", c.bessSoe,
 		"site_power", c.sitePower,
+		"bess_soe", c.bessSoe,
+		"bess_soe_min_active", soeMinActive,
+		"bess_soe_max_active", soeMaxActive,
 		"import_avoidance_active", importAvoidanceActive,
 		"export_avoidance_active", exportAvoidanceActive,
 		"charge_to_min_active", chargeToMinActive,

@@ -76,6 +76,8 @@ type ControllerConfig struct {
 	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
 	BessMeterID            uuid.UUID                   `json:"bessMeter"`
 	Emulation              EmulationConfig             `json:"emulation"`
+	BessSoeMin             float64                     `json:"bessSoeMin"`
+	BessSoeMax             float64                     `json:"bessSoeMax"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`

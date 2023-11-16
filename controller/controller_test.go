@@ -31,6 +31,10 @@ func TestController(test *testing.T) {
 			Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
 		},
+		{
+			Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+		},
 	}
 	exportAvoidancePeriods := []timeutils.ClockTimePeriod{
 		{
@@ -44,6 +48,10 @@ func TestController(test *testing.T) {
 		{
 			Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+		},
+		{
+			Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
 		},
 	}
 	chargeToMinPeriods := []config.ClockTimePeriodWithSoe{
@@ -68,6 +76,8 @@ func TestController(test *testing.T) {
 	ctrl := New(Config{
 		BessNameplatePower:     100,
 		BessNameplateEnergy:    200,
+		BessSoeMin:             20,
+		BessSoeMax:             180,
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		ExportAvoidancePeriods: exportAvoidancePeriods,
 		ChargeToMinPeriods:     chargeToMinPeriods,
@@ -144,6 +154,17 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
+
+		// Ensure that the maximum bess soe is honored (import and export avoidance are active for these test points)
+		{time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T21:00:01+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:00:02+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:00:03+01:00"), bessSoe: 181, consumerDemand: -50, expectedBessTargetPower: 0},
+		// Ensure that the minimum bess soe is honored (import and export avoidance are active for these test points)
+		{time: mustParseTime("2023-09-12T21:30:00+01:00"), bessSoe: 21, consumerDemand: 10, expectedBessTargetPower: 10},
+		{time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
 	}
 
 	mock := microgridMock{
