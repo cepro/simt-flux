@@ -54,7 +54,9 @@
             "id": "6340b165-1da2-48af-9b33-891e443b1695",
             "pollIntervalSecs": 2,
             "nameplatePower": 222,
-            "nameplateEnergy": 444
+            "nameplateEnergy": 444,
+            "inverterRampRateUp": 50,
+            "inverterRampRateDown": 50
         }
     },
     "dataPlatform": {
@@ -71,6 +73,8 @@
             "bessIsEmulated": true,
             "emulatedSiteMeter": "024306e6-f276-4233-9550-7b1ea69c1f37"
         },
+        "bessSoeMin": 25,
+        "bessSoeMax": 420,
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",

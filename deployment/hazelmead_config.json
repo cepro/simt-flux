@@ -50,13 +50,13 @@
     },
     "bess": {
         "powerPack": {
-            "host": "192.168.10.51:502",
+            "host": "192.168.8.51:502",
             "id": "539cab31-6c7f-44ae-bd6a-744af19d8d0c",
             "pollIntervalSecs": 2,
             "nameplatePower": 30,
             "nameplateEnergy": 1609,
-            "inverterRampRateUp": 30,
-            "inverterRampRateDown": 30
+            "inverterRampRateUp": 20,
+            "inverterRampRateDown": 20
         }
     },
     "dataPlatform": {
@@ -73,6 +73,8 @@
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
         },
+        "bessSoeMin": 150,
+        "bessSoeMax": 1000,
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",
@@ -91,16 +93,16 @@
         ],
         "chargeToMinPeriods": [
             {
-                "Soe": 200,
+                "Soe": 300,
                 "period": {
                     "start": "01:00:00:Europe/London",
                     "end": "03:00:00:Europe/London"
                 }
             },
             {
-                "Soe": 200,
+                "Soe": 300,
                 "period": {
-                    "start": "15:00:00:Europe/London",
+                    "start": "14:00:00:Europe/London",
                     "end": "16:00:00:Europe/London"
                 }
             }
