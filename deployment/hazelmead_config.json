@@ -53,8 +53,10 @@
             "host": "192.168.10.51:502",
             "id": "539cab31-6c7f-44ae-bd6a-744af19d8d0c",
             "pollIntervalSecs": 2,
-            "nameplatePower": 583,
-            "nameplateEnergy": 1609
+            "nameplatePower": 30,
+            "nameplateEnergy": 1609,
+            "inverterRampRateUp": 30,
+            "inverterRampRateDown": 30
         }
     },
     "dataPlatform": {

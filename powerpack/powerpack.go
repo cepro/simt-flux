@@ -21,16 +21,19 @@ type PowerPack struct {
 	id              uuid.UUID
 	nameplateEnergy float64
 	nameplatePower  float64
+	rampRateUp      float64
+	rampRateDown    float64
 
 	telemetry              chan telemetry.BessReading
 	commands               chan telemetry.BessCommand
 	client                 *modbus.Client
 	heartbeatToggle        bool
+	haveInitializedBess    bool
 	haveIssuedFirstCommand bool
 	logger                 *slog.Logger
 }
 
-func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*PowerPack, error) {
+func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower, rampRateUp, rampRateDown float64) (*PowerPack, error) {
 
 	logger := slog.Default().With("bess_id", id, "host", host)
 
@@ -44,10 +47,13 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 		id:                     id,
 		nameplateEnergy:        nameplateEnergy,
 		nameplatePower:         nameplatePower,
+		rampRateUp:             rampRateUp,
+		rampRateDown:           rampRateDown,
 		telemetry:              make(chan telemetry.BessReading, 1),
 		commands:               make(chan telemetry.BessCommand, 1),
 		client:                 client,
 		heartbeatToggle:        false,
+		haveInitializedBess:    false,
 		haveIssuedFirstCommand: false,
 		logger:                 logger,
 	}
@@ -57,8 +63,6 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64) (*P
 
 // Run loops forever polling telemetry from the meter every `period`. Exits when the context is cancelled.
 func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
-
-	p.logConfigParameters()
 
 	readingTicker := time.NewTicker(period)
 
@@ -96,6 +100,31 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 	}
 }
 
+func (p *PowerPack) initializeBessIfRequired() error {
+
+	if p.haveInitializedBess {
+		return nil
+	}
+
+	err := p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampUp"], uint32(p.rampRateUp*1000)) // kW/s to W/s
+	if err != nil {
+		return fmt.Errorf("set ramp up rate: %w", err)
+	}
+
+	err = p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampDown"], uint32(p.rampRateDown*1000)) // kW/s to W/s
+	if err != nil {
+		return fmt.Errorf("set ramp down rate: %w", err)
+	}
+
+	p.logger.Info(fmt.Sprintf("Applied powerpack ramp settings"))
+
+	p.haveInitializedBess = true
+
+	p.logConfigParameters()
+
+	return nil
+}
+
 // logConfigParameters reads the PowerPacks configuration parameters over modbus and logs them, errors are swallowed.
 func (p *PowerPack) logConfigParameters() {
 	metrics, err := p.client.PollBlock(nil, configBlock)
@@ -103,14 +132,26 @@ func (p *PowerPack) logConfigParameters() {
 		p.logger.Error("Failed to retrieve PowerPack configuration", "error", err)
 		return
 	}
-
 	p.logger.Info(fmt.Sprintf("Retrieved PowerPack configuration: %+v", metrics))
+
+	metrics, err = p.client.PollBlock(nil, realPowerRampParametersBlock)
+	if err != nil {
+		p.logger.Error("Failed to retrieve PowerPack ramp configuration", "error", err)
+		return
+	}
+	p.logger.Info(fmt.Sprintf("Retrieved PowerPack ramp configuration: %+v", metrics))
 }
 
 // issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
 func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
+
+	err := p.initializeBessIfRequired()
+	if err != nil {
+		return fmt.Errorf("initialize bess: %w", err)
+	}
+
 	// The PowerPack expects the heartbeat to be toggled regularly
-	err := p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Heartbeat"], p.nextHeartbeat())
+	err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Heartbeat"], p.nextHeartbeat())
 	if err != nil {
 		return fmt.Errorf("write heartbeat: %w", err)
 	}

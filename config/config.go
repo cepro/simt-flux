@@ -39,8 +39,10 @@ type MockMeterConfig struct {
 
 type PowerPackBessConfig struct {
 	DeviceConfig
-	NameplatePower  float64 `json:"nameplatePower"`
-	NameplateEnergy float64 `json:"nameplateEnergy"`
+	NameplatePower       float64 `json:"nameplatePower"`
+	NameplateEnergy      float64 `json:"nameplateEnergy"`
+	InverterRampRateUp   float64 `json:"inverterRampRateUp"`
+	InverterRampRateDown float64 `json:"inverterRampRateDown"`
 }
 
 type MockBessConfig struct {

@@ -99,7 +99,14 @@ func main() {
 	if config.Bess.PowerPack != nil {
 		ppConfig := config.Bess.PowerPack
 		slog.Debug("Creating real powerpack", "bess_id", ppConfig.ID)
-		powerPack, err := powerpack.New(ppConfig.ID, ppConfig.Host, ppConfig.NameplateEnergy, ppConfig.NameplatePower)
+		powerPack, err := powerpack.New(
+			ppConfig.ID,
+			ppConfig.Host,
+			ppConfig.NameplateEnergy,
+			ppConfig.NameplatePower,
+			ppConfig.InverterRampRateUp,
+			ppConfig.InverterRampRateDown,
+		)
 		if err != nil {
 			slog.Error("Failed to create power pack", "error", err)
 			return

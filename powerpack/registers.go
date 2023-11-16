@@ -51,29 +51,6 @@ var configBlock = modbus.MetricBlock{
 	},
 }
 
-var realPowerCommandBlock = modbus.MetricBlock{
-	Name:         "RealPowerCommand",
-	StartAddr:    1000,
-	NumRegisters: 3,
-	Metrics: map[string]modbus.Metric{
-		"Mode": {
-			StartAddr:   1000,
-			DataType:    modbus.Uint16Type,
-			ScalingFunc: nil,
-		},
-		"AlwaysActive": {
-			StartAddr:   1001,
-			DataType:    modbus.Uint16Type,
-			ScalingFunc: nil,
-		},
-		"PeakPowerMode": {
-			StartAddr:   1002,
-			DataType:    modbus.Uint16Type,
-			ScalingFunc: nil,
-		},
-	},
-}
-
 var statusBlock = modbus.MetricBlock{
 	Name:         "Status",
 	StartAddr:    200,
@@ -103,6 +80,29 @@ var statusBlock = modbus.MetricBlock{
 	},
 }
 
+var realPowerCommandBlock = modbus.MetricBlock{
+	Name:         "RealPowerCommand",
+	StartAddr:    1000,
+	NumRegisters: 3,
+	Metrics: map[string]modbus.Metric{
+		"Mode": {
+			StartAddr:   1000,
+			DataType:    modbus.Uint16Type,
+			ScalingFunc: nil,
+		},
+		"AlwaysActive": {
+			StartAddr:   1001,
+			DataType:    modbus.Uint16Type,
+			ScalingFunc: nil,
+		},
+		"PeakPowerMode": {
+			StartAddr:   1002,
+			DataType:    modbus.Uint16Type,
+			ScalingFunc: nil,
+		},
+	},
+}
+
 var directRealPowerCommandBlock = modbus.MetricBlock{
 	Name:         "DirectRealPowerCommand",
 	StartAddr:    1020,
@@ -121,6 +121,24 @@ var directRealPowerCommandBlock = modbus.MetricBlock{
 		"Timeout": {
 			StartAddr:   1023,
 			DataType:    modbus.Uint16Type,
+			ScalingFunc: nil,
+		},
+	},
+}
+
+var realPowerRampParametersBlock = modbus.MetricBlock{
+	Name:         "RealPowerRampParameters",
+	StartAddr:    1024,
+	NumRegisters: 4,
+	Metrics: map[string]modbus.Metric{
+		"RampUp": {
+			StartAddr:   1024,
+			DataType:    modbus.Int32Type,
+			ScalingFunc: nil,
+		},
+		"RampDown": {
+			StartAddr:   1026,
+			DataType:    modbus.Int32Type,
 			ScalingFunc: nil,
 		},
 	},
