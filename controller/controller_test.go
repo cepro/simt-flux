@@ -81,6 +81,7 @@ func TestController(test *testing.T) {
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		ExportAvoidancePeriods: exportAvoidancePeriods,
 		ChargeToMinPeriods:     chargeToMinPeriods,
+		MaxReadingAge:          5 * time.Second,
 		BessCommands:           bessCommands,
 	})
 	go ctrl.Run(ctx, ctrlTickerChan)

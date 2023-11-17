@@ -17,6 +17,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	CONTROL_LOOP_PERIOD = time.Second * 5
+)
+
 type Bess interface {
 	Run(ctx context.Context, period time.Duration) error
 	NameplateEnergy() float64
@@ -141,9 +145,10 @@ func main() {
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
 		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,
+		MaxReadingAge:          CONTROL_LOOP_PERIOD,
 		BessCommands:           bess.Commands(),
 	})
-	go ctrl.Run(ctx, time.NewTicker(time.Second*5).C)
+	go ctrl.Run(ctx, time.NewTicker(CONTROL_LOOP_PERIOD).C)
 
 	// the meter and bess readings are sent to both the controller and the data platform
 	go func() {

@@ -30,8 +30,8 @@ type Controller struct {
 
 	config Config
 
-	sitePower float64
-	bessSoe   float64
+	sitePower timedMetric
+	bessSoe   timedMetric
 
 	lastTargetPower float64
 }
@@ -50,6 +50,8 @@ type Config struct {
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
+
+	MaxReadingAge time.Duration // the maximum age of telemetry data before it's considered too stale to operate on, and the controller is stopped until new readings are available
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
 }
@@ -81,15 +83,24 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		case <-ctx.Done():
 			return
 		case t := <-tickerChan:
+			if c.sitePower.isOlderThan(c.config.MaxReadingAge) {
+				slog.Error("Site power reading is too old to use, skipping this control loop.", "data_updated_at", c.sitePower.updatedAt, "data_max_age", c.config.MaxReadingAge)
+				continue
+			}
+			if c.bessSoe.isOlderThan(c.config.MaxReadingAge) {
+				slog.Error("BESS SoE reading is too old to use, skipping this control loop.", "data_updated_at", c.sitePower.updatedAt, "data_max_age", c.config.MaxReadingAge)
+				continue
+			}
+
 			c.runControlLoop(t)
 		case reading := <-c.SiteMeterReadings:
 			if reading.PowerTotalActive == nil {
 				slog.Error("No active power available in site meter reading")
 				continue
 			}
-			c.sitePower = *reading.PowerTotalActive
+			c.sitePower.set(*reading.PowerTotalActive)
 		case reading := <-c.BessReadings:
-			c.bessSoe = reading.Soe
+			c.bessSoe.set(reading.Soe)
 		}
 	}
 }
@@ -99,14 +110,14 @@ func (c *Controller) EmulatedSitePower() float64 {
 	// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
 	// controller will increase BESS output to the maximum and empty the battery.
 	// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
-	return c.sitePower - c.lastTargetPower
+	return c.sitePower.value - c.lastTargetPower
 }
 
 // runControlLoop inspects the latest telemetry and attempts to bring the microgrid site power level to <=0 during
 // 'import avoidance periods' by setting the battery power level appropriately.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	sitePower := c.sitePower
+	sitePower := c.sitePower.value
 	if c.config.BessIsEmulated {
 		sitePower = c.EmulatedSitePower()
 	}
@@ -114,7 +125,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 	// Calculate the different control signals from the different modes of operation
 	importAvoidancePower, importAvoidanceActive := importAvoidance(t, c.config.ImportAvoidancePeriods, sitePower, c.lastTargetPower)
 	exportAvoidancePower, exportAvoidanceActive := exportAvoidance(t, c.config.ExportAvoidancePeriods, sitePower, c.lastTargetPower)
-	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe)
+	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe.value)
 
 	// Calculate the target power for the BESS by applying a priority order to the different control signals
 	targetPower := 0.0
@@ -137,19 +148,19 @@ func (c *Controller) runControlLoop(t time.Time) {
 	// Dont exceed the min/max SoE limits
 	soeMinActive := false
 	soeMaxActive := false
-	if targetPower > 0 && c.bessSoe <= c.config.BessSoeMin {
+	if targetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
 		soeMinActive = true
 		targetPower = 0
 	}
-	if targetPower < 0 && c.bessSoe >= c.config.BessSoeMax {
+	if targetPower < 0 && c.bessSoe.value >= c.config.BessSoeMax {
 		soeMaxActive = true
 		targetPower = 0
 	}
 
 	slog.Info(
 		"Controlling BESS",
-		"site_power", c.sitePower,
-		"bess_soe", c.bessSoe,
+		"site_power", c.sitePower.value,
+		"bess_soe", c.bessSoe.value,
 		"bess_soe_min_active", soeMinActive,
 		"bess_soe_max_active", soeMaxActive,
 		"import_avoidance_active", importAvoidanceActive,
