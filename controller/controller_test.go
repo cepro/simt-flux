@@ -12,6 +12,10 @@ import (
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
+const (
+	chargeEfficiency = 0.9
+)
+
 // TestController is a high level test of the controllers ability to issue BessCommands to service the "import avoidance", "export avoidance" and "charge to min" modes.
 // It feeds the controller with a pre-defined/static timeseries of consumer demand to ensure that it reacts correctly to changes in demand.
 func TestController(test *testing.T) {
@@ -80,6 +84,7 @@ func TestController(test *testing.T) {
 		BessSoeMax:             180,
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		ExportAvoidancePeriods: exportAvoidancePeriods,
+		BessChargeEfficiency:   chargeEfficiency,
 		ChargeToMinPeriods:     chargeToMinPeriods,
 		MaxReadingAge:          5 * time.Second,
 		BessCommands:           bessCommands,

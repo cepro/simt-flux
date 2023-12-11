@@ -11,10 +11,6 @@ import (
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
-const (
-	chargeEfficiency = 0.95 // how efficiently the battery charges
-)
-
 // Controller manages the power/energy levels of a BESS.
 //
 // It supports the following modes:
@@ -42,11 +38,13 @@ type PeriodWithSoe struct {
 }
 
 type Config struct {
-	BessNameplatePower     float64                         // power capability of the bess in kW
-	BessNameplateEnergy    float64                         // energy storage capability of the bess in kW
-	BessIsEmulated         bool                            // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
-	BessSoeMin             float64                         // The minimum SoE that the BESS will be allowed to fall to
-	BessSoeMax             float64                         // The maximum SoE that the BESS will be allowed to charge to
+	BessNameplatePower   float64 // power capability of the bess in kW
+	BessNameplateEnergy  float64 // energy storage capability of the bess in kW
+	BessIsEmulated       bool    // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
+	BessSoeMin           float64 // The minimum SoE that the BESS will be allowed to fall to
+	BessSoeMax           float64 // The maximum SoE that the BESS will be allowed to charge to
+	BessChargeEfficiency float64 // Value from 0.0 to 1.0 giving the efficiency of charging
+
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
@@ -72,6 +70,9 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"Starting controller",
 		"bess_nameplate_power", c.config.BessNameplatePower,
 		"bess_nameplate_energy", c.config.BessNameplateEnergy,
+		"bess_soe_min", c.config.BessSoeMin,
+		"bess_soe_max", c.config.BessSoeMax,
+		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_min_periods", fmt.Sprintf("%+v", c.config.ChargeToMinPeriods),
@@ -125,7 +126,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 	// Calculate the different control signals from the different modes of operation
 	importAvoidancePower, importAvoidanceActive := importAvoidance(t, c.config.ImportAvoidancePeriods, sitePower, c.lastTargetPower)
 	exportAvoidancePower, exportAvoidanceActive := exportAvoidance(t, c.config.ExportAvoidancePeriods, sitePower, c.lastTargetPower)
-	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe.value)
+	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe.value, c.config.BessChargeEfficiency)
 
 	// Calculate the target power for the BESS by applying a priority order to the different control signals
 	targetPower := 0.0
@@ -210,7 +211,7 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePe
 }
 
 // chargeToMin returns the power level that should be applied to the battery for "charge to min" functionality, and a boolean indicating if "charge to min" is active.
-func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe float64) (float64, bool) {
+func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) (float64, bool) {
 
 	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
 	if periodWithSoe == nil {

@@ -75,6 +75,7 @@
         },
         "bessSoeMin": 150,
         "bessSoeMax": 1000,
+        "bessChargeEfficiency": 0.85,
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",

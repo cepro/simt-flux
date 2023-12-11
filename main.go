@@ -142,6 +142,7 @@ func main() {
 		BessIsEmulated:         config.Controller.Emulation.BessIsEmulated,
 		BessSoeMin:             config.Controller.BessSoeMin,
 		BessSoeMax:             config.Controller.BessSoeMax,
+		BessChargeEfficiency:   config.Controller.BessChargeEfficiency,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
 		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,

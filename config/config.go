@@ -78,6 +78,7 @@ type ControllerConfig struct {
 	Emulation              EmulationConfig             `json:"emulation"`
 	BessSoeMin             float64                     `json:"bessSoeMin"`
 	BessSoeMax             float64                     `json:"bessSoeMax"`
+	BessChargeEfficiency   float64                     `json:"bessChargeEfficiency"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
