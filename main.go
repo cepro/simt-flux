@@ -4,14 +4,17 @@ import (
 	"context"
 	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
+	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
+	"github.com/cepro/besscontroller/modo"
 	"github.com/cepro/besscontroller/powerpack"
 	"github.com/cepro/besscontroller/telemetry"
 	"github.com/google/uuid"
@@ -136,6 +139,11 @@ func main() {
 	}
 	go dataPlatform.Run(ctx, time.Second*time.Duration(config.DataPlatform.UploadIntervalSecs))
 
+	// Create modo client
+	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages"
+	modoClient := modo.New(http.Client{Timeout: time.Second * 10})
+	go modoClient.Run(ctx, time.Second*30)
+
 	ctrl := controller.New(controller.Config{
 		BessNameplatePower:     bess.NameplatePower(),
 		BessNameplateEnergy:    bess.NameplateEnergy(),
@@ -146,6 +154,12 @@ func main() {
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
 		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,
+		NivChasePeriods:        config.Controller.NivChasePeriods,
+		NivChargeCurve:         cartesian.Curve{Points: config.Controller.NivChargeCurve},
+		NivDischargeCurve:      cartesian.Curve{Points: config.Controller.NivDischargeCurve},
+		DuosChargesImport:      typeConvertDuosCharges(config.Controller.DuosChargesImport),
+		DuosChargesExport:      typeConvertDuosCharges(config.Controller.DuosChargesExport),
+		ModoClient:             modoClient,
 		MaxReadingAge:          CONTROL_LOOP_PERIOD,
 		BessCommands:           bess.Commands(),
 	})
@@ -206,4 +220,13 @@ func sendIfNonBlocking[V any](ch chan V, val V, messageTargetLogStr string) {
 	default:
 		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
 	}
+}
+
+// typeConvertDuosCharges converts the config.DuosCharge types to controller.DuosCharge types
+func typeConvertDuosCharges(configCharges []config.DuosCharge) []controller.DuosCharge {
+	ctrlCharges := make([]controller.DuosCharge, 0, len(configCharges))
+	for _, configCharge := range configCharges {
+		ctrlCharges = append(ctrlCharges, controller.DuosCharge(configCharge))
+	}
+	return ctrlCharges
 }

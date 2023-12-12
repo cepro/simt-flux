@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
@@ -37,6 +38,11 @@ type PeriodWithSoe struct {
 	Soe    float64
 }
 
+// imbalancePricer is an interface onto any object that provides imbalance pricing
+type imbalancePricer interface {
+	ImbalancePrice() (float64, time.Time)
+}
+
 type Config struct {
 	BessNameplatePower   float64 // power capability of the bess in kW
 	BessNameplateEnergy  float64 // energy storage capability of the bess in kW
@@ -48,6 +54,14 @@ type Config struct {
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
+	NivChasePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'niv chasing'
+
+	NivChargeCurve    cartesian.Curve // Price/SoE curve to charge to when NIV chasing
+	NivDischargeCurve cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
+	DuosChargesImport []DuosCharge
+	DuosChargesExport []DuosCharge
+
+	ModoClient imbalancePricer
 
 	MaxReadingAge time.Duration // the maximum age of telemetry data before it's considered too stale to operate on, and the controller is stopped until new readings are available
 
@@ -123,20 +137,41 @@ func (c *Controller) runControlLoop(t time.Time) {
 		sitePower = c.EmulatedSitePower()
 	}
 
+	duosChargeImport := getDuosCharges(t, c.config.DuosChargesImport)
+	duosChargeExport := getDuosCharges(t, c.config.DuosChargesExport)
+
 	// Calculate the different control signals from the different modes of operation
 	importAvoidancePower, importAvoidanceActive := importAvoidance(t, c.config.ImportAvoidancePeriods, sitePower, c.lastTargetPower)
 	exportAvoidancePower, exportAvoidanceActive := exportAvoidance(t, c.config.ExportAvoidancePeriods, sitePower, c.lastTargetPower)
 	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe.value, c.config.BessChargeEfficiency)
+	nivChasePower, nivChaseActive := nivChase(
+		t,
+		c.config.NivChasePeriods,
+		c.config.NivChargeCurve,
+		c.config.NivDischargeCurve,
+		c.bessSoe.value,
+		c.config.BessChargeEfficiency,
+		duosChargeImport,
+		duosChargeExport,
+		c.config.ModoClient,
+	)
 
 	// Calculate the target power for the BESS by applying a priority order to the different control signals
 	targetPower := 0.0
 	if chargeToMinActive {
 		targetPower = chargeToMinPower
+	} else if nivChaseActive {
+		targetPower = nivChasePower
 	} else if exportAvoidanceActive {
 		targetPower = exportAvoidancePower
 	} else if importAvoidanceActive {
 		targetPower = importAvoidancePower
 	}
+
+	// TODO: allow 'import avoidance' and NIV chasing to be stacked together
+	// TODO: This is not working as you might expect. At the moment in practice it's just doing the larger of either NIV chasing or import avoidance because a NIV chase
+	// export will likely send site imports to zero. So the `importAvoidancePower` will go to zero too, rather than actually summing with the NIV chasing power.
+	// "Import avoidance plus NIV chasing" should be implemented as setting the target `nivChasePower` to be controlled at the site meter.
 
 	// Dont try to exceed the nameplate power of the BESS
 	if targetPower > c.config.BessNameplatePower {
@@ -167,6 +202,9 @@ func (c *Controller) runControlLoop(t time.Time) {
 		"import_avoidance_active", importAvoidanceActive,
 		"export_avoidance_active", exportAvoidanceActive,
 		"charge_to_min_active", chargeToMinActive,
+		"niv_chase_active", nivChaseActive,
+		"duos_charge_import", duosChargeImport,
+		"duos_charge_export", duosChargeExport,
 		"bess_last_target_power", c.lastTargetPower,
 		"bess_target_power", targetPower,
 	)

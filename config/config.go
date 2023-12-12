@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cepro/besscontroller/cartesian"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 	"github.com/google/uuid"
 )
@@ -82,6 +83,17 @@ type ControllerConfig struct {
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
+	NivChasePeriods        []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
+	NivChargeCurve         []cartesian.Point           `json:"nivChargeCurve"`
+	NivDischargeCurve      []cartesian.Point           `json:"nivDischargeCurve"`
+	DuosChargesImport      []DuosCharge                `json:"duosChargesImport"`
+	DuosChargesExport      []DuosCharge                `json:"duosChargesExport"`
+}
+
+type DuosCharge struct {
+	Rate           float64                     `json:"rate"`
+	PeriodsWeekday []timeutils.ClockTimePeriod `json:"weekdayPeriods"`
+	PeriodsWeekend []timeutils.ClockTimePeriod `json:"weekendPeriods"`
 }
 
 type Config struct {

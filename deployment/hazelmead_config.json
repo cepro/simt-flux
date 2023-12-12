@@ -53,7 +53,7 @@
             "host": "192.168.8.51:502",
             "id": "539cab31-6c7f-44ae-bd6a-744af19d8d0c",
             "pollIntervalSecs": 2,
-            "nameplatePower": 83,
+            "nameplatePower": 200,
             "nameplateEnergy": 1609,
             "inverterRampRateUp": 30,
             "inverterRampRateDown": 30
@@ -73,17 +73,13 @@
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
         },
-        "bessSoeMin": 100,
-        "bessSoeMax": 1000,
+        "bessSoeMin": 50,
+        "bessSoeMax": 1400,
         "bessChargeEfficiency": 0.85,
         "importAvoidancePeriods": [
             {
-                "start": "06:00:00:Europe/London",
-                "end": "10:00:00:Europe/London"
-            },
-            {
-                "start": "16:00:00:Europe/London",
-                "end": "20:00:00:Europe/London"
+                "start": "16:30:00:Europe/London",
+                "end": "19:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
@@ -93,19 +89,132 @@
             }
         ],
         "chargeToMinPeriods": [
+        ],
+        "nivChasePeriods": [
             {
-                "Soe": 600,
-                "period": {
-                    "start": "00:00:01:Europe/London",
-                    "end": "05:00:00:Europe/London"
-                }
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
+            }
+        ],
+        "nivChargeCurve": [
+            {"x": -999999999, "y": 1430},
+            {"x": 0, "y": 1430},
+            {"x": 12, "y": 350},
+            {"x": 12, "y": 200},
+            {"x": 15, "y": 200}
+        ],
+        "nivDischargeCurve": [
+            {"x": 15, "y": 1430},
+            {"x": 15, "y": 1000},
+            {"x": 25, "y": 100},
+            {"x": 999999999, "y": 100}
+        ],
+        "duosChargesImport": [
+            {
+                "rate": 11.385,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": []
             },
             {
-                "Soe": 300,
-                "period": {
-                    "start": "14:00:00:Europe/London",
-                    "end": "16:00:00:Europe/London"
-                }
+                "rate": 0.444,
+                "weekdayPeriods": [
+                    {
+                        "start": "07:30:00:Europe/London",
+                        "end": "17:00:00:Europe/London"
+                    },
+                    {
+                        "start": "19:00:00:Europe/London",
+                        "end": "21:30:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "16:30:00:Europe/London",
+                        "end": "19:30:00:Europe/London"
+                    }
+                ]
+            },
+            {
+                "rate": 0.026,
+                "weekdayPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "07:30:00:Europe/London"
+                    },
+                    {
+                        "start": "21:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "16:30:00:Europe/London"
+                    },
+                    {
+                        "start": "19:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ]
+            }
+        ],
+        "duosChargesExport": [
+            {
+                "rate": -10.0540,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": []
+            },
+            {
+                "rate": -0.4350,
+                "weekdayPeriods": [
+                    {
+                        "start": "07:30:00:Europe/London",
+                        "end": "17:00:00:Europe/London"
+                    },
+                    {
+                        "start": "19:00:00:Europe/London",
+                        "end": "21:30:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "16:30:00:Europe/London",
+                        "end": "19:30:00:Europe/London"
+                    }
+                ]
+            },
+            {
+                "rate": -0.027,
+                "weekdayPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "07:30:00:Europe/London"
+                    },
+                    {
+                        "start": "21:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "16:30:00:Europe/London"
+                    },
+                    {
+                        "start": "19:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ]
             }
         ]
     }

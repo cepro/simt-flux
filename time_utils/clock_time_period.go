@@ -36,3 +36,9 @@ func (p *ClockTimePeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 
 	return Period{Start: startDateTime, End: endDateTime}, true
 }
+
+// Contains returns true if the given t is contained in the ClockTimePeriod
+func (p *ClockTimePeriod) Contains(t time.Time) bool {
+	_, contains := p.AbsolutePeriod(t)
+	return contains
+}

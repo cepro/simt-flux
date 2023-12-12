@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
@@ -38,6 +39,10 @@ func TestController(test *testing.T) {
 		{
 			Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+		},
+		{
+			Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
 		},
 	}
 	exportAvoidancePeriods := []timeutils.ClockTimePeriod{
@@ -74,6 +79,40 @@ func TestController(test *testing.T) {
 			},
 		},
 	}
+	nivChasePeriods := []timeutils.ClockTimePeriod{
+		{
+			Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+			End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+		},
+	}
+	nivChargeCurve := cartesian.Curve{
+		Points: []cartesian.Point{
+			{X: -9999, Y: 180},
+			{X: 0, Y: 180},
+			{X: 20, Y: 0},
+		},
+	}
+	nivDischargeCurve := cartesian.Curve{
+		Points: []cartesian.Point{
+			{X: 30, Y: 180},
+			{X: 40, Y: 0},
+			{X: 9999, Y: 0},
+		},
+	}
+	duosChargesImport := []DuosCharge{
+		{
+			Rate:           10,
+			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
+			PeriodsWeekend: nivChasePeriods,
+		},
+	}
+	duosChargesExport := []DuosCharge{
+		{
+			Rate:           -10,
+			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
+			PeriodsWeekend: nivChasePeriods,
+		},
+	}
 
 	bessCommands := make(chan telemetry.BessCommand, 1)
 	ctrlTickerChan := make(chan time.Time, 1)
@@ -86,6 +125,12 @@ func TestController(test *testing.T) {
 		ExportAvoidancePeriods: exportAvoidancePeriods,
 		BessChargeEfficiency:   chargeEfficiency,
 		ChargeToMinPeriods:     chargeToMinPeriods,
+		NivChasePeriods:        nivChasePeriods,
+		NivChargeCurve:         nivChargeCurve,
+		NivDischargeCurve:      nivDischargeCurve,
+		DuosChargesImport:      duosChargesImport,
+		DuosChargesExport:      duosChargesExport,
+		ModoClient:             &MockImbalancePricer{}, // this is replaced at each test iteration
 		MaxReadingAge:          5 * time.Second,
 		BessCommands:           bessCommands,
 	})
@@ -96,8 +141,10 @@ func TestController(test *testing.T) {
 		time                    time.Time // the point in time being tested
 		bessSoe                 float64   // the state of energy of the battery at this point in time
 		consumerDemand          float64   // the consumer demand at this point in time
+		imbalancePrice          float64   // the predicted system settelment price for this period
 		expectedBessTargetPower float64   // the power command that we expect the controller to issue at this point in time
 	}
+	// TODO: this array of test points covers many test scenarios, it would be better if this was refactored so that each scenario was kept more separate somehow
 	testpoints := []testpoint{
 		// Start off with zero consumer demand, expecting zero power from the battery
 		{time: mustParseTime("2023-09-12T09:00:00+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
@@ -171,6 +218,32 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
+
+		// Test NIV chasing...
+		// Here we're too soon into the SP to niv chase - we don't yet trust the price prediction
+		{time: mustParseTime("2023-09-12T23:00:00+01:00"), bessSoe: 19, consumerDemand: 10, imbalancePrice: -99, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T23:09:59+01:00"), bessSoe: 19, consumerDemand: 10, imbalancePrice: +99, expectedBessTargetPower: 0},
+
+		// Imbalance price is between the charge and discharge curves - DuoS plus imbalance is 25p.kWh - no action
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 15.0, expectedBessTargetPower: 0},
+
+		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - charge at full rate
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
+
+		// // Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but SoE is already high - so charge is set by curve following
+		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 160, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -66.66667},
+
+		// // Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate
+		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 100},
+
+		// // Imbalance price is attractive for discharge - DUoS plus imbalance is 35p/kWh - but SoE is already low - so charge is set by curve following
+		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 30},
+		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 90, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 0},
+
+		// // Test NIV chasing works at the same time as import avoidance
+		// {time: mustParseTime("2023-09-12T23:30:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 15.0, expectedBessTargetPower: 10}, // price not interesting for NIV chasing
+		// {time: mustParseTime("2023-09-12T23:30:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25.0, expectedBessTargetPower: 10}, // too soon into SP to NIV chase
+		// {time: mustParseTime("2023-09-12T23:40:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25.0, expectedBessTargetPower: 40}, // import avoidance plus NIV chasing export
 	}
 
 	mock := microgridMock{
@@ -180,6 +253,12 @@ func TestController(test *testing.T) {
 	}
 	for _, point := range testpoints {
 		test.Logf("Simulating time %v", point.time)
+
+		// Update the mock modo client to return the test point's imbalance price
+		ctrl.config.ModoClient = &MockImbalancePricer{
+			price: point.imbalancePrice,
+			time:  timeutils.FloorHH(point.time),
+		}
 
 		// generate the meter and bess readings, using the mocked consumer demand
 		mock.SimulateReadings(point.consumerDemand, point.bessSoe)
@@ -204,6 +283,15 @@ func TestController(test *testing.T) {
 
 	}
 
+}
+
+type MockImbalancePricer struct {
+	price float64
+	time  time.Time
+}
+
+func (m *MockImbalancePricer) ImbalancePrice() (float64, time.Time) {
+	return m.price, m.time
 }
 
 // microgridMock acts as a mock meter, BESS and consumer demand to enable testing of the controller.
