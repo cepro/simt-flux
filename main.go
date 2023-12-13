@@ -159,8 +159,9 @@ func main() {
 		NivChasePeriods:         config.Controller.NivChasePeriods,
 		NivChargeCurve:          cartesian.Curve{Points: config.Controller.NivChargeCurve},
 		NivDischargeCurve:       cartesian.Curve{Points: config.Controller.NivDischargeCurve},
-		DuosChargesImport:       typeConvertDuosCharges(config.Controller.DuosChargesImport),
-		DuosChargesExport:       typeConvertDuosCharges(config.Controller.DuosChargesExport),
+		NivDefaultPricing:       typeConvertTimedCharges(config.Controller.NivDefaultPricing),
+		DuosChargesImport:       typeConvertTimedCharges(config.Controller.DuosChargesImport),
+		DuosChargesExport:       typeConvertTimedCharges(config.Controller.DuosChargesExport),
 		ModoClient:              modoClient,
 		MaxReadingAge:           CONTROL_LOOP_PERIOD,
 		BessCommands:            bess.Commands(),
@@ -224,11 +225,11 @@ func sendIfNonBlocking[V any](ch chan V, val V, messageTargetLogStr string) {
 	}
 }
 
-// typeConvertDuosCharges converts the config.DuosCharge types to controller.DuosCharge types
-func typeConvertDuosCharges(configCharges []config.DuosCharge) []controller.DuosCharge {
-	ctrlCharges := make([]controller.DuosCharge, 0, len(configCharges))
+// typeConvertTimedCharges converts the config.TimedCharge types to controller.TimedCharge types
+func typeConvertTimedCharges(configCharges []config.TimedCharge) []controller.TimedCharge {
+	ctrlCharges := make([]controller.TimedCharge, 0, len(configCharges))
 	for _, configCharge := range configCharges {
-		ctrlCharges = append(ctrlCharges, controller.DuosCharge(configCharge))
+		ctrlCharges = append(ctrlCharges, controller.TimedCharge(configCharge))
 	}
 	return ctrlCharges
 }

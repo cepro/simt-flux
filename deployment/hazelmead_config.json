@@ -110,9 +110,18 @@
         "nivDischargeCurve": [
             {"x": 13, "y": 1430},
             {"x": 13, "y": 1000},
-            {"x": 25, "y": 100},
+            {"x": 20, "y": 100},
             {"x": 999999999, "y": 100}
         ],
+        "nivDefaultPricing": {
+            "rate": 5,
+            "weekdayPeriods": [
+                {
+                    "start": "17:00:00:Europe/London",
+                    "end": "19:00:00:Europe/London"
+                }
+            ]
+        },
         "duosChargesImport": [
             {
                 "rate": 11.385,

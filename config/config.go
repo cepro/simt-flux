@@ -90,11 +90,12 @@ type ControllerConfig struct {
 	NivChasePeriods         []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
 	NivChargeCurve          []cartesian.Point           `json:"nivChargeCurve"`
 	NivDischargeCurve       []cartesian.Point           `json:"nivDischargeCurve"`
-	DuosChargesImport       []DuosCharge                `json:"duosChargesImport"`
-	DuosChargesExport       []DuosCharge                `json:"duosChargesExport"`
+	NivDefaultPricing       []TimedCharge               `json:"nivDefaultPricing"`
+	DuosChargesImport       []TimedCharge               `json:"duosChargesImport"`
+	DuosChargesExport       []TimedCharge               `json:"duosChargesExport"`
 }
 
-type DuosCharge struct {
+type TimedCharge struct {
 	Rate           float64                     `json:"rate"`
 	PeriodsWeekday []timeutils.ClockTimePeriod `json:"weekdayPeriods"`
 	PeriodsWeekend []timeutils.ClockTimePeriod `json:"weekendPeriods"`

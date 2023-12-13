@@ -99,14 +99,14 @@ func TestController(test *testing.T) {
 			{X: 9999, Y: 0},
 		},
 	}
-	duosChargesImport := []DuosCharge{
+	duosChargesImport := []TimedCharge{
 		{
 			Rate:           10,
 			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
 			PeriodsWeekend: nivChasePeriods,
 		},
 	}
-	duosChargesExport := []DuosCharge{
+	duosChargesExport := []TimedCharge{
 		{
 			Rate:           -10,
 			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness

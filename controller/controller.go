@@ -50,8 +50,9 @@ type Config struct {
 
 	NivChargeCurve    cartesian.Curve // Price/SoE curve to charge to when NIV chasing
 	NivDischargeCurve cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
-	DuosChargesImport []DuosCharge
-	DuosChargesExport []DuosCharge
+	NivDefaultPricing []TimedCharge   // Imbalance pricing that is assumed before Modo calculations are ready
+	DuosChargesImport []TimedCharge
+	DuosChargesExport []TimedCharge
 
 	ModoClient imbalancePricer
 
@@ -90,6 +91,7 @@ func New(config Config) *Controller {
 // loop every time a tick is recieved on `tickerChan`.
 func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 
+	// TODO: print all configuration here
 	slog.Info(
 		"Starting controller",
 		"bess_soe_min", c.config.BessSoeMin,
@@ -103,6 +105,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_min_periods", fmt.Sprintf("%+v", c.config.ChargeToMinPeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
+		"niv_default_pricing", fmt.Sprintf("%+v", c.config.NivDefaultPricing),
 	)
 
 	slog.Info("Controller running")
@@ -152,14 +155,15 @@ func (c *Controller) SitePower() float64 {
 func (c *Controller) runControlLoop(t time.Time) {
 
 	// DUoS charges change depending on the time of day - get the current charges
-	duosChargeImport := getDuosCharges(t, c.config.DuosChargesImport)
-	duosChargeExport := getDuosCharges(t, c.config.DuosChargesExport)
+	duosChargeImport, _ := firstTimedCharges(t, c.config.DuosChargesImport)
+	duosChargeExport, _ := firstTimedCharges(t, c.config.DuosChargesExport)
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
 		nivChase(
 			t,
 			c.config.NivChasePeriods,
+			c.config.NivDefaultPricing,
 			c.config.NivChargeCurve,
 			c.config.NivDischargeCurve,
 			c.bessSoe.value,
@@ -281,6 +285,9 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 	// Re-apply the BESS power limits here as it's possible that the conversion from site power control level to bess power control level may have produced
 	// a target power outside of the BESS' capabilities
 	bessTargetPower, bessPowerLimitsActive2 = limitValue(bessTargetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
+
+	// TODO: there are some edge-case scenarios where the sign of the targetPower could change - e.g. if solar exports exceed the site limits.
+	// In that scenario we might just want to turn the battery off?
 
 	// Apply BESS SoE limits
 	if bessTargetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
