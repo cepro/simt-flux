@@ -80,6 +80,8 @@ type ControllerConfig struct {
 	BessSoeMin             float64                     `json:"bessSoeMin"`
 	BessSoeMax             float64                     `json:"bessSoeMax"`
 	BessChargeEfficiency   float64                     `json:"bessChargeEfficiency"`
+	SiteImportPowerLimit   float64                     `json:"siteImportPowerLimit"`
+	SiteExportPowerLimit   float64                     `json:"siteExportPowerLimit"`
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`

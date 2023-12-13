@@ -13,7 +13,7 @@ const (
 	thirtyMins = time.Minute * 30
 )
 
-// nivChase returns the power level that should be applied to the battery for NIV chasing, and a boolean indicating if NIV chasing is active.
+// nivChase returns the control component for NIV chasing, using the Modo imbalance price calculation.
 func nivChase(
 	t time.Time,
 	nivChasePeriods []timeutils.ClockTimePeriod,
@@ -23,13 +23,13 @@ func nivChase(
 	duosChargeImport,
 	duosChargeExport float64,
 	modoClient imbalancePricer,
-) (float64, bool) {
+) controlComponent {
 
 	logger := slog.Default()
 
 	nivChasePeriod := periodContainingTime(t, nivChasePeriods)
 	if nivChasePeriod == nil {
-		return 0, false
+		return controlComponent{isActive: false}
 	}
 
 	currentSP := timeutils.FloorHH(t)
@@ -44,7 +44,7 @@ func nivChase(
 	// We only trust the imbalance price calcualation 10 minutes into the SP
 	if timeIntoSP < time.Minute*10 {
 		logger.Info("Too soon into settlement period to NIV chase")
-		return 0, false
+		return controlComponent{isActive: false}
 	}
 
 	imbalancePrice, imbalancePriceSP := modoClient.ImbalancePrice()
@@ -53,7 +53,7 @@ func nivChase(
 	// publish the price for the previous SP.
 	if !currentSP.Equal(imbalancePriceSP) {
 		logger.Info("Cannot NIV chase: imbalance price is for the wrong settlement period", "current_settlement_period", currentSP, "price_settlement_period", imbalancePriceSP)
-		return 0, false
+		return controlComponent{isActive: false}
 	}
 
 	chargeDistance := chargeCurve.VerticalDistance(cartesian.Point{X: imbalancePrice + duosChargeImport, Y: soe})
@@ -80,7 +80,10 @@ func nivChase(
 	)
 
 	// Battery power constraints are applied upstream...
-
-	isActive := (targetPower > 0) || (targetPower < 0)
-	return targetPower, isActive
+	return controlComponent{
+		name:         "niv_chase",
+		isActive:     (targetPower > 0) || (targetPower < 0),
+		targetPower:  targetPower,
+		controlPoint: controlPointBess,
+	}
 }

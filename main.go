@@ -151,6 +151,8 @@ func main() {
 		BessSoeMin:             config.Controller.BessSoeMin,
 		BessSoeMax:             config.Controller.BessSoeMax,
 		BessChargeEfficiency:   config.Controller.BessChargeEfficiency,
+		SiteImportPowerLimit:   config.Controller.SiteImportPowerLimit,
+		SiteExportPowerLimit:   config.Controller.SiteExportPowerLimit,
 		ImportAvoidancePeriods: config.Controller.ImportAvoidancePeriods,
 		ExportAvoidancePeriods: config.Controller.ExportAvoidancePeriods,
 		ChargeToMinPeriods:     config.Controller.ChargeToMinPeriods,

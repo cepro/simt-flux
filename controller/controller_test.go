@@ -114,6 +114,10 @@ func TestController(test *testing.T) {
 		},
 	}
 
+	// These are defined as vars because Go cannot get the address of a constant - e.g. you can't do `&50.0`
+	var fifty float64 = 50.0
+	var seventy float64 = 70.0
+
 	bessCommands := make(chan telemetry.BessCommand, 1)
 	ctrlTickerChan := make(chan time.Time, 1)
 	ctrl := New(Config{
@@ -121,9 +125,11 @@ func TestController(test *testing.T) {
 		BessNameplateEnergy:    200,
 		BessSoeMin:             20,
 		BessSoeMax:             180,
+		BessChargeEfficiency:   chargeEfficiency,
+		SiteImportPowerLimit:   9999, // this is replaced at each test iteration
+		SiteExportPowerLimit:   9999, // this is replaced at each test iteration
 		ImportAvoidancePeriods: importAvoidancePeriods,
 		ExportAvoidancePeriods: exportAvoidancePeriods,
-		BessChargeEfficiency:   chargeEfficiency,
 		ChargeToMinPeriods:     chargeToMinPeriods,
 		NivChasePeriods:        nivChasePeriods,
 		NivChargeCurve:         nivChargeCurve,
@@ -142,6 +148,8 @@ func TestController(test *testing.T) {
 		bessSoe                 float64   // the state of energy of the battery at this point in time
 		consumerDemand          float64   // the consumer demand at this point in time
 		imbalancePrice          float64   // the predicted system settelment price for this period
+		siteImportPowerLimit    *float64  // site import limits applied for the test point, defaults to 9999 if nil
+		siteExportPowerLimit    *float64  // site export limits applied for the test point, defaults to 9999 if nil
 		expectedBessTargetPower float64   // the power command that we expect the controller to issue at this point in time
 	}
 	// TODO: this array of test points covers many test scenarios, it would be better if this was refactored so that each scenario was kept more separate somehow
@@ -230,20 +238,30 @@ func TestController(test *testing.T) {
 		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - charge at full rate
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
 
-		// // Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but SoE is already high - so charge is set by curve following
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 160, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -66.66667},
+		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but SoE is already high - so charge is set by curve following
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 160, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -66.66667},
 
-		// // Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 100},
+		// Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 100},
 
-		// // Imbalance price is attractive for discharge - DUoS plus imbalance is 35p/kWh - but SoE is already low - so charge is set by curve following
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 30},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 90, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 0},
+		// Imbalance price is attractive for discharge - DUoS plus imbalance is 35p/kWh - but SoE is already low - so charge is set by curve following
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 30},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 90, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 0},
 
-		// // Test NIV chasing works at the same time as import avoidance
-		// {time: mustParseTime("2023-09-12T23:30:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 15.0, expectedBessTargetPower: 10}, // price not interesting for NIV chasing
-		// {time: mustParseTime("2023-09-12T23:30:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25.0, expectedBessTargetPower: 10}, // too soon into SP to NIV chase
-		// {time: mustParseTime("2023-09-12T23:40:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25.0, expectedBessTargetPower: 40}, // import avoidance plus NIV chasing export
+		// Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 100}, // here we are limited by the power capability of the BESS
+
+		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -60},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -30, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -80},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -60, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100}, // here we are limited by the power capability of the BESS
 	}
 
 	mock := microgridMock{
@@ -258,6 +276,17 @@ func TestController(test *testing.T) {
 		ctrl.config.ModoClient = &MockImbalancePricer{
 			price: point.imbalancePrice,
 			time:  timeutils.FloorHH(point.time),
+		}
+
+		if point.siteImportPowerLimit == nil {
+			ctrl.config.SiteImportPowerLimit = 9999
+		} else {
+			ctrl.config.SiteImportPowerLimit = *point.siteImportPowerLimit
+		}
+		if point.siteExportPowerLimit == nil {
+			ctrl.config.SiteExportPowerLimit = 9999
+		} else {
+			ctrl.config.SiteExportPowerLimit = *point.siteExportPowerLimit
 		}
 
 		// generate the meter and bess readings, using the mocked consumer demand

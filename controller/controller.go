@@ -30,17 +30,7 @@ type Controller struct {
 	sitePower timedMetric
 	bessSoe   timedMetric
 
-	lastTargetPower float64
-}
-
-type PeriodWithSoe struct {
-	Period timeutils.Period
-	Soe    float64
-}
-
-// imbalancePricer is an interface onto any object that provides imbalance pricing
-type imbalancePricer interface {
-	ImbalancePrice() (float64, time.Time)
+	lastBessTargetPower float64
 }
 
 type Config struct {
@@ -50,6 +40,9 @@ type Config struct {
 	BessSoeMin           float64 // The minimum SoE that the BESS will be allowed to fall to
 	BessSoeMax           float64 // The maximum SoE that the BESS will be allowed to charge to
 	BessChargeEfficiency float64 // Value from 0.0 to 1.0 giving the efficiency of charging
+
+	SiteImportPowerLimit float64 // Max power that can be imported from the microgrid boundary
+	SiteExportPowerLimit float64 // Max power that can be exported from the microgrid boundary
 
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
@@ -66,6 +59,24 @@ type Config struct {
 	MaxReadingAge time.Duration // the maximum age of telemetry data before it's considered too stale to operate on, and the controller is stopped until new readings are available
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
+}
+
+type PeriodWithSoe struct {
+	Period timeutils.Period
+	Soe    float64
+}
+
+// imbalancePricer is an interface onto any object that provides imbalance pricing
+type imbalancePricer interface {
+	ImbalancePrice() (float64, time.Time)
+}
+
+// controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc
+type controlComponent struct {
+	name         string       // Friendly name of this component for debug logging
+	isActive     bool         // Set True if this control component is activated, or false if it is not doing anything
+	targetPower  float64      // The power associated with this control component
+	controlPoint controlPoint // Where the power should be applied
 }
 
 func New(config Config) *Controller {
@@ -90,6 +101,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_min_periods", fmt.Sprintf("%+v", c.config.ChargeToMinPeriods),
+		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 	)
 
 	slog.Info("Controller running")
@@ -125,150 +137,245 @@ func (c *Controller) EmulatedSitePower() float64 {
 	// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
 	// controller will increase BESS output to the maximum and empty the battery.
 	// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
-	return c.sitePower.value - c.lastTargetPower
+	return c.sitePower.value - c.lastBessTargetPower
 }
 
-// runControlLoop inspects the latest telemetry and attempts to bring the microgrid site power level to <=0 during
-// 'import avoidance periods' by setting the battery power level appropriately.
+func (c *Controller) SitePower() float64 {
+	if c.config.BessIsEmulated {
+		return c.EmulatedSitePower()
+	}
+	return c.sitePower.value
+}
+
+// runControlLoop inspects the latest telemetry and controls the battery according to the highest priority control component.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	sitePower := c.sitePower.value
-	if c.config.BessIsEmulated {
-		sitePower = c.EmulatedSitePower()
-	}
-
+	// DUoS charges change depending on the time of day - get the current charges
 	duosChargeImport := getDuosCharges(t, c.config.DuosChargesImport)
 	duosChargeExport := getDuosCharges(t, c.config.DuosChargesExport)
 
-	// Calculate the different control signals from the different modes of operation
-	importAvoidancePower, importAvoidanceActive := importAvoidance(t, c.config.ImportAvoidancePeriods, sitePower, c.lastTargetPower)
-	exportAvoidancePower, exportAvoidanceActive := exportAvoidance(t, c.config.ExportAvoidancePeriods, sitePower, c.lastTargetPower)
-	chargeToMinPower, chargeToMinActive := chargeToMin(t, c.config.ChargeToMinPeriods, c.bessSoe.value, c.config.BessChargeEfficiency)
-	nivChasePower, nivChaseActive := nivChase(
-		t,
-		c.config.NivChasePeriods,
-		c.config.NivChargeCurve,
-		c.config.NivDischargeCurve,
-		c.bessSoe.value,
-		c.config.BessChargeEfficiency,
-		duosChargeImport,
-		duosChargeExport,
-		c.config.ModoClient,
-	)
-
-	// Calculate the target power for the BESS by applying a priority order to the different control signals
-	targetPower := 0.0
-	if chargeToMinActive {
-		targetPower = chargeToMinPower
-	} else if nivChaseActive {
-		targetPower = nivChasePower
-	} else if exportAvoidanceActive {
-		targetPower = exportAvoidancePower
-	} else if importAvoidanceActive {
-		targetPower = importAvoidancePower
+	// Calculate the different control components from the different modes of operation, listed in priority order
+	components := []controlComponent{
+		nivChase(
+			t,
+			c.config.NivChasePeriods,
+			c.config.NivChargeCurve,
+			c.config.NivDischargeCurve,
+			c.bessSoe.value,
+			c.config.BessChargeEfficiency,
+			duosChargeImport,
+			duosChargeExport,
+			c.config.ModoClient,
+		),
+		chargeToMin(
+			t,
+			c.config.ChargeToMinPeriods,
+			c.bessSoe.value,
+			c.config.BessChargeEfficiency,
+		),
+		importAvoidance(
+			t,
+			c.config.ImportAvoidancePeriods,
+			c.SitePower(),
+			c.lastBessTargetPower,
+		),
+		exportAvoidance(
+			t,
+			c.config.ExportAvoidancePeriods,
+			c.SitePower(),
+			c.lastBessTargetPower,
+		),
 	}
 
-	// TODO: allow 'import avoidance' and NIV chasing to be stacked together
-	// TODO: This is not working as you might expect. At the moment in practice it's just doing the larger of either NIV chasing or import avoidance because a NIV chase
-	// export will likely send site imports to zero. So the `importAvoidancePower` will go to zero too, rather than actually summing with the NIV chasing power.
-	// "Import avoidance plus NIV chasing" should be implemented as setting the target `nivChasePower` to be controlled at the site meter.
+	// Select the highest priority component that is active, or default to a zero-power "idle" component
+	component := controlComponent{
+		name:         "idle",
+		isActive:     true,
+		targetPower:  0,
+		controlPoint: controlPointBess,
+	}
+	for i := range components {
+		if components[i].isActive {
+			component = components[i]
+			break
+		}
+	}
 
-	// Dont try to exceed the nameplate power of the BESS
-	if targetPower > c.config.BessNameplatePower {
-		targetPower = c.config.BessNameplatePower
-	}
-	if targetPower < -c.config.BessNameplatePower {
-		targetPower = -c.config.BessNameplatePower
-	}
-
-	// Dont exceed the min/max SoE limits
-	soeMinActive := false
-	soeMaxActive := false
-	if targetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
-		soeMinActive = true
-		targetPower = 0
-	}
-	if targetPower < 0 && c.bessSoe.value >= c.config.BessSoeMax {
-		soeMaxActive = true
-		targetPower = 0
-	}
+	bessTargetPower, limits := c.calculateBessPower(component)
 
 	slog.Info(
 		"Controlling BESS",
 		"site_power", c.sitePower.value,
 		"bess_soe", c.bessSoe.value,
-		"bess_soe_min_active", soeMinActive,
-		"bess_soe_max_active", soeMaxActive,
-		"import_avoidance_active", importAvoidanceActive,
-		"export_avoidance_active", exportAvoidanceActive,
-		"charge_to_min_active", chargeToMinActive,
-		"niv_chase_active", nivChaseActive,
+		"control_component", component.name,
+		"control_component_power", component.targetPower,
+		"control_component_point", component.controlPoint,
+		"site_power_limits_active", limits.sitePower,
+		"bess_power_limits_active", limits.bessPower,
+		"bess_soe_limits_active", limits.bessSoe,
 		"duos_charge_import", duosChargeImport,
 		"duos_charge_export", duosChargeExport,
-		"bess_last_target_power", c.lastTargetPower,
-		"bess_target_power", targetPower,
+		"bess_last_target_power", c.lastBessTargetPower,
+		"bess_target_power", bessTargetPower,
 	)
 
 	command := telemetry.BessCommand{
-		TargetPower: targetPower,
+		TargetPower: bessTargetPower,
 	}
 	sendIfNonBlocking(c.config.BessCommands, command, "PowerPack commands")
-	c.lastTargetPower = targetPower
+	c.lastBessTargetPower = bessTargetPower
 }
 
-// importAvoidance returns the power level that should be applied to the battery for import avoidance, and a boolean indicating if import avoidance is active.
-func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) (float64, bool) {
+// activeLimits provides debug information on which limits were used in the calculation of the BESS power level.
+type activeLimits struct {
+	bessPower bool
+	sitePower bool
+	bessSoe   bool
+}
+
+// calculateBessPower returns the power level that should be sent to the BESS, given the control component. Limits are applied to keep the SoE, BESS power, and
+// site power within bounds. Details of which limits were activated in the calculation are returned.
+func (c *Controller) calculateBessPower(component controlComponent) (float64, activeLimits) {
+
+	var bessPowerLimitsActive1 bool
+	var bessPowerLimitsActive2 bool
+	var sitePowerLimitsActive bool
+	var bessSoeLimitActive bool
+
+	if component.controlPoint == controlPointBess {
+
+		// Apply the physical power limits of the BESS
+		component.targetPower, bessPowerLimitsActive1 = limitValue(component.targetPower, c.config.BessNameplatePower, c.config.BessNameplatePower)
+
+		// If we want to control the power at the BESS inverter meter, then we must ensure that it will not exceed the site connection limits.
+		// If it will exceed the site limits, then we move the control point to the site level, and apply the site connection limits.
+		bessPowerDiff := component.targetPower - c.lastBessTargetPower
+		expectedSitePower := c.SitePower() - bessPowerDiff // Site power: positive is import, negative is export. Battery power: positive is discharge, negative is charge.
+		limitedSitePower, sitePowerLimitsActive := limitValue(expectedSitePower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
+		if sitePowerLimitsActive {
+			component.controlPoint = controlPointSite
+			component.targetPower = limitedSitePower
+		}
+	} else if component.controlPoint == controlPointSite {
+
+		// If we want to control the power at the site meter, then apply the site connection limits:
+		component.targetPower, sitePowerLimitsActive = limitValue(component.targetPower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
+
+	} else {
+		panic(fmt.Sprintf("Unknown control point: %v", component.controlPoint))
+	}
+
+	bessTargetPower := 0.0
+	if component.controlPoint == controlPointSite {
+		// Convert the requested site power control level into a bess power control level
+		err := component.targetPower - c.SitePower()
+		bessTargetPower = c.lastBessTargetPower - err
+	} else if component.controlPoint == controlPointBess {
+		bessTargetPower = component.targetPower
+	} else {
+		panic(fmt.Sprintf("Unknown control point: %v", component.controlPoint))
+	}
+
+	// Re-apply the BESS power limits here as it's possible that the conversion from site power control level to bess power control level may have produced
+	// a target power outside of the BESS' capabilities
+	bessTargetPower, bessPowerLimitsActive2 = limitValue(bessTargetPower, c.config.BessNameplatePower, c.config.BessNameplatePower)
+
+	// Apply BESS SoE limits
+	if bessTargetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
+		bessTargetPower = 0
+		bessSoeLimitActive = true
+	}
+	if bessTargetPower < 0 && c.bessSoe.value >= c.config.BessSoeMax {
+		bessTargetPower = 0
+		bessSoeLimitActive = true
+	}
+
+	return bessTargetPower, activeLimits{
+		bessPower: bessPowerLimitsActive1 || bessPowerLimitsActive2,
+		sitePower: sitePowerLimitsActive,
+		bessSoe:   bessSoeLimitActive,
+	}
+}
+
+// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
+func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
+	if value > maxPositive {
+		return maxPositive, true
+	} else if value < -maxNegative {
+		return -maxNegative, true
+	} else {
+		return value, false
+	}
+}
+
+// importAvoidance returns control component for avoiding site imports.
+func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
 	if importAvoidancePeriod == nil {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
 	importAvoidancePower := sitePower + lastTargetPower
 	if importAvoidancePower < 0 {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
-	return importAvoidancePower, true
+	return controlComponent{
+		name:         "import_avoidance",
+		isActive:     true,
+		targetPower:  0, // Target zero power at the site boundary
+		controlPoint: controlPointSite,
+	}
 }
 
-// exportAvoidance returns the power level that should be applied to the battery for import avoidance, and a boolean indicating if import avoidance is active.
-func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) (float64, bool) {
+// exportAvoidance returns the control component for avoiding site exports.
+func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	exportAvoidancePeriod := periodContainingTime(t, exportAvoidancePeriods)
 	if exportAvoidancePeriod == nil {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
 	exportAvoidancePower := sitePower + lastTargetPower
 	if exportAvoidancePower > 0 {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
-	return exportAvoidancePower, true
+	return controlComponent{
+		name:         "export_avoidance",
+		isActive:     true,
+		targetPower:  0, // Target zero power at the site boundary
+		controlPoint: controlPointSite,
+	}
 }
 
-// chargeToMin returns the power level that should be applied to the battery for "charge to min" functionality, and a boolean indicating if "charge to min" is active.
-func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) (float64, bool) {
+// chargeToMin returns the control component for charging the battery to a minimum SoE.
+func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
 	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
 	if periodWithSoe == nil {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
 	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
 	energyToRecharge := (periodWithSoe.Soe - bessSoe) / chargeEfficiency
 	if energyToRecharge <= 0 {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
 	durationToRecharge := periodWithSoe.Period.End.Sub(t)
 	chargeToMinPower := -energyToRecharge / durationToRecharge.Hours()
 	if chargeToMinPower > 0 {
-		return 0.0, false
+		return controlComponent{isActive: false}
 	}
 
-	return chargeToMinPower, true
+	return controlComponent{
+		name:         "charge_to_min",
+		isActive:     true,
+		targetPower:  chargeToMinPower,
+		controlPoint: controlPointBess,
+	}
 }
 
 // periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.

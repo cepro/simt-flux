@@ -73,9 +73,11 @@
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
         },
-        "bessSoeMin": 50,
+        "bessSoeMin": 0,
         "bessSoeMax": 1400,
         "bessChargeEfficiency": 0.85,
+        "siteImportPowerLimit": 200,
+        "siteExportPowerLimit": 475,
         "importAvoidancePeriods": [
             {
                 "start": "16:30:00:Europe/London",
@@ -104,8 +106,8 @@
             {"x": 15, "y": 200}
         ],
         "nivDischargeCurve": [
-            {"x": 15, "y": 1430},
-            {"x": 15, "y": 1000},
+            {"x": 14, "y": 1430},
+            {"x": 14, "y": 1000},
             {"x": 25, "y": 100},
             {"x": 999999999, "y": 100}
         ],

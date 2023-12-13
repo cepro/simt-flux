@@ -76,6 +76,8 @@
         "bessSoeMin": 25,
         "bessSoeMax": 420,
         "bessChargeEfficiency": 0.95,
+        "siteImportPowerLimit": 100,
+        "siteExportPowerLimit": 100,
         "importAvoidancePeriods": [
             {
                 "start": "06:00:00:Europe/London",
