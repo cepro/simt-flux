@@ -17,6 +17,16 @@
                 "SUPABASE_ANON_KEY": "${env:SUPABASE_ANON_KEY}",
                 "SUPABASE_USER_KEY": "${env:SUPABASE_USER_KEY}"
             }
-        }
+        },
+        {
+            "name": "Test Current File",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${relativeFileDirname}",
+            "env": {},
+            "args": [],
+            "showLog": true
+        }    
     ]
 }
