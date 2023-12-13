@@ -53,7 +53,7 @@
             "host": "192.168.8.51:502",
             "id": "539cab31-6c7f-44ae-bd6a-744af19d8d0c",
             "pollIntervalSecs": 2,
-            "nameplatePower": 200,
+            "nameplatePower": 565,
             "nameplateEnergy": 1609,
             "inverterRampRateUp": 75,
             "inverterRampRateDown": 75
@@ -73,11 +73,13 @@
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
         },
+        "bessChargeEfficiency": 0.85,
         "bessSoeMin": 0,
         "bessSoeMax": 1400,
-        "bessChargeEfficiency": 0.85,
+        "bessChargePowerLimit": 300,
+        "bessDischargePowerLimit": 565,
         "siteImportPowerLimit": 200,
-        "siteExportPowerLimit": 475,
+        "siteExportPowerLimit": 300,
         "importAvoidancePeriods": [
             {
                 "start": "16:30:00:Europe/London",

@@ -74,22 +74,24 @@ type EmulationConfig struct {
 }
 
 type ControllerConfig struct {
-	SiteMeterID            uuid.UUID                   `json:"siteMeter"`
-	BessMeterID            uuid.UUID                   `json:"bessMeter"`
-	Emulation              EmulationConfig             `json:"emulation"`
-	BessSoeMin             float64                     `json:"bessSoeMin"`
-	BessSoeMax             float64                     `json:"bessSoeMax"`
-	BessChargeEfficiency   float64                     `json:"bessChargeEfficiency"`
-	SiteImportPowerLimit   float64                     `json:"siteImportPowerLimit"`
-	SiteExportPowerLimit   float64                     `json:"siteExportPowerLimit"`
-	ImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
-	ExportAvoidancePeriods []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
-	ChargeToMinPeriods     []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
-	NivChasePeriods        []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
-	NivChargeCurve         []cartesian.Point           `json:"nivChargeCurve"`
-	NivDischargeCurve      []cartesian.Point           `json:"nivDischargeCurve"`
-	DuosChargesImport      []DuosCharge                `json:"duosChargesImport"`
-	DuosChargesExport      []DuosCharge                `json:"duosChargesExport"`
+	SiteMeterID             uuid.UUID                   `json:"siteMeter"`
+	BessMeterID             uuid.UUID                   `json:"bessMeter"`
+	Emulation               EmulationConfig             `json:"emulation"`
+	BessChargeEfficiency    float64                     `json:"bessChargeEfficiency"`
+	BessSoeMin              float64                     `json:"bessSoeMin"`
+	BessSoeMax              float64                     `json:"bessSoeMax"`
+	BessChargePowerLimit    float64                     `json:"bessChargePowerLimit"`
+	BessDischargePowerLimit float64                     `json:"bessDischargePowerLimit"`
+	SiteImportPowerLimit    float64                     `json:"siteImportPowerLimit"`
+	SiteExportPowerLimit    float64                     `json:"siteExportPowerLimit"`
+	ImportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
+	ExportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
+	ChargeToMinPeriods      []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
+	NivChasePeriods         []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
+	NivChargeCurve          []cartesian.Point           `json:"nivChargeCurve"`
+	NivDischargeCurve       []cartesian.Point           `json:"nivDischargeCurve"`
+	DuosChargesImport       []DuosCharge                `json:"duosChargesImport"`
+	DuosChargesExport       []DuosCharge                `json:"duosChargesExport"`
 }
 
 type DuosCharge struct {

@@ -34,15 +34,14 @@ type Controller struct {
 }
 
 type Config struct {
-	BessNameplatePower   float64 // power capability of the bess in kW
-	BessNameplateEnergy  float64 // energy storage capability of the bess in kW
-	BessIsEmulated       bool    // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
-	BessSoeMin           float64 // The minimum SoE that the BESS will be allowed to fall to
-	BessSoeMax           float64 // The maximum SoE that the BESS will be allowed to charge to
-	BessChargeEfficiency float64 // Value from 0.0 to 1.0 giving the efficiency of charging
-
-	SiteImportPowerLimit float64 // Max power that can be imported from the microgrid boundary
-	SiteExportPowerLimit float64 // Max power that can be exported from the microgrid boundary
+	BessIsEmulated          bool    // If true, the site meter readings are artificially adjusted to account for the lack of real BESS import/export.
+	BessChargeEfficiency    float64 // Value from 0.0 to 1.0 giving the efficiency of charging
+	BessSoeMin              float64 // The minimum SoE that the BESS will be allowed to fall to
+	BessSoeMax              float64 // The maximum SoE that the BESS will be allowed to charge to
+	BessChargePowerLimit    float64 // The maximum power that we can call on the BESS to charge at
+	BessDischargePowerLimit float64 // The maximum power that we can call on the BESS to discharge at
+	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
+	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
@@ -93,10 +92,10 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 
 	slog.Info(
 		"Starting controller",
-		"bess_nameplate_power", c.config.BessNameplatePower,
-		"bess_nameplate_energy", c.config.BessNameplateEnergy,
 		"bess_soe_min", c.config.BessSoeMin,
 		"bess_soe_max", c.config.BessSoeMax,
+		"bess_charge_power_limit", c.config.BessChargePowerLimit,
+		"bess_discharge_power_limit", c.config.BessDischargePowerLimit,
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
@@ -245,7 +244,7 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 	if component.controlPoint == controlPointBess {
 
 		// Apply the physical power limits of the BESS
-		component.targetPower, bessPowerLimitsActive1 = limitValue(component.targetPower, c.config.BessNameplatePower, c.config.BessNameplatePower)
+		component.targetPower, bessPowerLimitsActive1 = limitValue(component.targetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
 
 		// If we want to control the power at the BESS inverter meter, then we must ensure that it will not exceed the site connection limits.
 		// If it will exceed the site limits, then we move the control point to the site level, and apply the site connection limits.
@@ -279,7 +278,7 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 
 	// Re-apply the BESS power limits here as it's possible that the conversion from site power control level to bess power control level may have produced
 	// a target power outside of the BESS' capabilities
-	bessTargetPower, bessPowerLimitsActive2 = limitValue(bessTargetPower, c.config.BessNameplatePower, c.config.BessNameplatePower)
+	bessTargetPower, bessPowerLimitsActive2 = limitValue(bessTargetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
 
 	// Apply BESS SoE limits
 	if bessTargetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
