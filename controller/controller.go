@@ -251,7 +251,8 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 		// If it will exceed the site limits, then we move the control point to the site level, and apply the site connection limits.
 		bessPowerDiff := component.targetPower - c.lastBessTargetPower
 		expectedSitePower := c.SitePower() - bessPowerDiff // Site power: positive is import, negative is export. Battery power: positive is discharge, negative is charge.
-		limitedSitePower, sitePowerLimitsActive := limitValue(expectedSitePower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
+		var limitedSitePower = 0.0
+		limitedSitePower, sitePowerLimitsActive = limitValue(expectedSitePower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
 		if sitePowerLimitsActive {
 			component.controlPoint = controlPointSite
 			component.targetPower = limitedSitePower
