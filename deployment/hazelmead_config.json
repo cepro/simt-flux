@@ -55,8 +55,8 @@
             "pollIntervalSecs": 2,
             "nameplatePower": 200,
             "nameplateEnergy": 1609,
-            "inverterRampRateUp": 30,
-            "inverterRampRateDown": 30
+            "inverterRampRateUp": 75,
+            "inverterRampRateDown": 75
         }
     },
     "dataPlatform": {
@@ -106,8 +106,8 @@
             {"x": 15, "y": 200}
         ],
         "nivDischargeCurve": [
-            {"x": 14, "y": 1430},
-            {"x": 14, "y": 1000},
+            {"x": 13, "y": 1430},
+            {"x": 13, "y": 1000},
             {"x": 25, "y": 100},
             {"x": 999999999, "y": 100}
         ],
