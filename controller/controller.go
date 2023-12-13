@@ -96,6 +96,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_soe_max", c.config.BessSoeMax,
 		"bess_charge_power_limit", c.config.BessChargePowerLimit,
 		"bess_discharge_power_limit", c.config.BessDischargePowerLimit,
+		"site_import_power_limit", c.config.SiteImportPowerLimit,
+		"site_export_power_limit", c.config.SiteExportPowerLimit,
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
