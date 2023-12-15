@@ -50,7 +50,7 @@
     },
     "bess": {
         "powerPack": {
-            "host": "192.168.10.64:502",
+            "host": "192.168.8.130:502",
             "id": "6340b165-1da2-48af-9b33-891e443b1695",
             "pollIntervalSecs": 2,
             "nameplatePower": 222,
@@ -68,24 +68,22 @@
     },
     "controller": {
         "siteMeter": "7e2b6ad8-662f-4d31-96b6-fe72d102468a",
-        "bessMeter": "03bdd37e-8cf8-472d-9825-6f54206f4126",
+        "bessMeter": "4ec0bbfd-c07e-4871-b5b6-ead7dfc1adf5",
         "emulation": {
-            "bessIsEmulated": true,
-            "emulatedSiteMeter": "024306e6-f276-4233-9550-7b1ea69c1f37"
+            "bessIsEmulated": false,
+            "emulatedSiteMeter": null
         },
-        "bessSoeMin": 25,
-        "bessSoeMax": 420,
-        "bessChargeEfficiency": 0.95,
+        "bessChargeEfficiency": 0.85,
+        "bessSoeMin": 0,
+        "bessSoeMax": 444,
+        "bessChargePowerLimit": 222,
+        "bessDischargePowerLimit": 222,
         "siteImportPowerLimit": 100,
-        "siteExportPowerLimit": 100,
+        "siteExportPowerLimit": 230,
         "importAvoidancePeriods": [
             {
-                "start": "06:00:00:Europe/London",
-                "end": "10:00:00:Europe/London"
-            },
-            {
-                "start": "16:00:00:Europe/London",
-                "end": "20:00:00:Europe/London"
+                "start": "16:30:00:Europe/London",
+                "end": "19:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
@@ -95,19 +93,142 @@
             }
         ],
         "chargeToMinPeriods": [
+        ],
+        "nivChasePeriods": [
             {
-                "Soe": 200,
-                "period": {
-                    "start": "01:00:00:Europe/London",
-                    "end": "03:00:00:Europe/London"
-                }
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
+            }
+        ],
+        "nivChargeCurve": [
+            {"x": -999999999, "y": 1430},
+            {"x": 0, "y": 1430},
+            {"x": 7, "y": 350},
+            {"x": 10, "y": 200}
+        ],
+        "nivDischargeCurve": [
+            {"x": 13, "y": 1430},
+            {"x": 13, "y": 1000},
+            {"x": 16, "y": 100},
+            {"x": 999999999, "y": 100}
+        ],
+        "nivDefaultPricing": [
+            {
+                "rate": 5,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ]
+            }
+        ],
+        "duosChargesImport": [
+            {
+                "rate": 11.385,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": []
             },
             {
-                "Soe": 200,
-                "period": {
-                    "start": "15:00:00:Europe/London",
-                    "end": "16:00:00:Europe/London"
-                }
+                "rate": 0.444,
+                "weekdayPeriods": [
+                    {
+                        "start": "07:30:00:Europe/London",
+                        "end": "17:00:00:Europe/London"
+                    },
+                    {
+                        "start": "19:00:00:Europe/London",
+                        "end": "21:30:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "16:30:00:Europe/London",
+                        "end": "19:30:00:Europe/London"
+                    }
+                ]
+            },
+            {
+                "rate": 0.026,
+                "weekdayPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "07:30:00:Europe/London"
+                    },
+                    {
+                        "start": "21:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "16:30:00:Europe/London"
+                    },
+                    {
+                        "start": "19:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ]
+            }
+        ],
+        "duosChargesExport": [
+            {
+                "rate": -10.0540,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": []
+            },
+            {
+                "rate": -0.4350,
+                "weekdayPeriods": [
+                    {
+                        "start": "07:30:00:Europe/London",
+                        "end": "17:00:00:Europe/London"
+                    },
+                    {
+                        "start": "19:00:00:Europe/London",
+                        "end": "21:30:00:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "16:30:00:Europe/London",
+                        "end": "19:30:00:Europe/London"
+                    }
+                ]
+            },
+            {
+                "rate": -0.027,
+                "weekdayPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "07:30:00:Europe/London"
+                    },
+                    {
+                        "start": "21:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "16:30:00:Europe/London"
+                    },
+                    {
+                        "start": "19:30:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ]
             }
         ]
     }
