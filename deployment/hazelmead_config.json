@@ -76,8 +76,8 @@
         "bessChargeEfficiency": 0.85,
         "bessSoeMin": 0,
         "bessSoeMax": 1400,
-        "bessChargePowerLimit": 210,
-        "bessDischargePowerLimit": 565,
+        "bessChargePowerLimit": 200,
+        "bessDischargePowerLimit": 200,
         "siteImportPowerLimit": 220,
         "siteExportPowerLimit": 475,
         "importAvoidancePeriods": [
@@ -103,25 +103,26 @@
         "nivChargeCurve": [
             {"x": -999999999, "y": 1430},
             {"x": 0, "y": 1430},
-            {"x": 12, "y": 350},
-            {"x": 12, "y": 200},
-            {"x": 15, "y": 200}
+            {"x": 7, "y": 350},
+            {"x": 10, "y": 200}
         ],
         "nivDischargeCurve": [
             {"x": 13, "y": 1430},
             {"x": 13, "y": 1000},
-            {"x": 20, "y": 100},
+            {"x": 16, "y": 100},
             {"x": 999999999, "y": 100}
         ],
-        "nivDefaultPricing": {
-            "rate": 5,
-            "weekdayPeriods": [
-                {
-                    "start": "17:00:00:Europe/London",
-                    "end": "19:00:00:Europe/London"
-                }
-            ]
-        },
+        "nivDefaultPricing": [
+            {
+                "rate": 5,
+                "weekdayPeriods": [
+                    {
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                ]
+            }
+        ],
         "duosChargesImport": [
             {
                 "rate": 11.385,
