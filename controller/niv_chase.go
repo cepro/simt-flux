@@ -90,7 +90,7 @@ func nivChase(
 		"target_power", targetPower,
 		"time_left", timeLeftOfSP.Hours(),
 		"charge_price", chargePrice,
-		"discharge_price", dischargeDistance,
+		"discharge_price", dischargePrice,
 		"charge_distance", chargeDistance,
 		"discharge_distance", dischargeDistance,
 	)
