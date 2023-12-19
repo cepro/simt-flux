@@ -116,6 +116,11 @@ func (p *PowerPack) initializeBessIfRequired() error {
 		return fmt.Errorf("set ramp down rate: %w", err)
 	}
 
+	err = p.client.WriteMetric(realPowerCommandBlock.Metrics["AlwaysActive"], uint16(1))
+	if err != nil {
+		return fmt.Errorf("set always active mode: %w", err)
+	}
+
 	p.logger.Info(fmt.Sprintf("Applied powerpack ramp settings"))
 
 	p.haveInitializedBess = true
@@ -163,7 +168,8 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 	}
 
 	// If this is the first power command we have issued, then set the "real power command mode" to "direct" (which means we will tell the PowerPack
-	// direclty how much power to import/export)
+	// direclty how much power to import/export). The Tesla manual reccomends setting this *after* the first power command, hence this is not sent
+	// in the `initializeBessIfRequired` function.
 	if !p.haveIssuedFirstCommand {
 		// configure the heartbeat timeout for "direct real power commands" on the modbus connection
 		err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
