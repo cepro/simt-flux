@@ -76,8 +76,8 @@
         "bessChargeEfficiency": 0.85,
         "bessSoeMin": 0,
         "bessSoeMax": 1400,
-        "bessChargePowerLimit": 200,
-        "bessDischargePowerLimit": 200,
+        "bessChargePowerLimit": 565,
+        "bessDischargePowerLimit": 565,
         "siteImportPowerLimit": 220,
         "siteExportPowerLimit": 475,
         "importAvoidancePeriods": [
