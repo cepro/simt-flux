@@ -145,6 +145,13 @@ func (p *PowerPack) logConfigParameters() {
 		return
 	}
 	p.logger.Info(fmt.Sprintf("Retrieved PowerPack ramp configuration: %+v", metrics))
+
+	metrics, err = p.client.PollBlock(nil, realPowerCommandBlock)
+	if err != nil {
+		p.logger.Error("Failed to retrieve PowerPack real power command configuration", "error", err)
+		return
+	}
+	p.logger.Info(fmt.Sprintf("Retrieved PowerPack real power command configuration: %+v", metrics))
 }
 
 // issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
