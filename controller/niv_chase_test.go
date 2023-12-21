@@ -45,8 +45,8 @@ func TestNivChase(test *testing.T) {
 		curveShiftShort          float64
 		imbalancePrice           float64
 		imbalanceVolume          float64
-		duosChargeImport         float64
-		duosChargeExport         float64
+		chargesImport            float64
+		chargesExport            float64
 		expectedControlComponent controlComponent
 	}
 
@@ -152,15 +152,15 @@ func TestNivChase(test *testing.T) {
 			expectedControlComponent: activeControlComponent(300.0),
 		},
 		{
-			name:                     "Imbalance price is between the charge and discharge curves - but DUoS fees trigger export",
+			name:                     "Imbalance price is between the charge and discharge curves - but DUoS charges fees trigger export",
 			t:                        mustParseTime("2023-09-12T23:10:00+01:00"),
 			soe:                      200.0,
 			curveShiftLong:           0.0,
 			curveShiftShort:          0.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          0.0,
-			duosChargeImport:         5,
-			duosChargeExport:         5,
+			chargesImport:            5,
+			chargesExport:            5,
 			expectedControlComponent: activeControlComponent(60),
 		},
 	}
@@ -177,8 +177,8 @@ func TestNivChase(test *testing.T) {
 				subTest.curveShiftShort,
 				subTest.soe,
 				0.85,
-				subTest.duosChargeImport,
-				subTest.duosChargeExport,
+				subTest.chargesImport,
+				subTest.chargesExport,
 				&MockImbalancePricer{
 					price:  subTest.imbalancePrice,
 					volume: subTest.imbalanceVolume,

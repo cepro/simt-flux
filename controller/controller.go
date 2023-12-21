@@ -54,8 +54,8 @@ type Config struct {
 	NivCurveShiftLong  float64         // How much to shift the NIV price curves when the system is long
 	NivCurveShiftShort float64         // How much to shift the NIV price curves when the system is short
 	NivDefaultPricing  []TimedCharge   // Imbalance pricing that is assumed before Modo calculations are ready
-	DuosChargesImport  []TimedCharge
-	DuosChargesExport  []TimedCharge
+	ChargesImport      []TimedCharge   // Any charges that apply to importing power from the grid
+	ChargesExport      []TimedCharge   // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
@@ -110,6 +110,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
+		"niv_curve_shift_long", c.config.NivCurveShiftLong,
+		"niv_curve_shift_short", c.config.NivCurveShiftShort,
 		"niv_default_pricing", fmt.Sprintf("%+v", c.config.NivDefaultPricing),
 	)
 
@@ -159,9 +161,9 @@ func (c *Controller) SitePower() float64 {
 // runControlLoop inspects the latest telemetry and controls the battery according to the highest priority control component.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	// DUoS charges change depending on the time of day - get the current charges
-	duosChargeImport, _ := firstTimedCharges(t, c.config.DuosChargesImport)
-	duosChargeExport, _ := firstTimedCharges(t, c.config.DuosChargesExport)
+	// Charges change depending on the time of day - get the current charges
+	chargesImport := sumTimedCharges(t, c.config.ChargesImport)
+	chargesExport := sumTimedCharges(t, c.config.ChargesExport)
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
@@ -187,8 +189,8 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.config.NivCurveShiftShort,
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
-			duosChargeImport,
-			duosChargeExport,
+			chargesImport,
+			chargesExport,
 			c.config.ModoClient,
 		),
 		importAvoidance(
@@ -231,8 +233,8 @@ func (c *Controller) runControlLoop(t time.Time) {
 		"site_power_limits_active", limits.sitePower,
 		"bess_power_limits_active", limits.bessPower,
 		"bess_soe_limits_active", limits.bessSoe,
-		"duos_charge_import", duosChargeImport,
-		"duos_charge_export", duosChargeExport,
+		"charges_import", chargesImport,
+		"charges_export", chargesExport,
 		"bess_last_target_power", c.lastBessTargetPower,
 		"bess_target_power", bessTargetPower,
 	)

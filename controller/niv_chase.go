@@ -22,8 +22,8 @@ func nivChase(
 	curveShiftLong, curveShiftShort float64,
 	soe,
 	chargeEfficiency,
-	duosChargeImport,
-	duosChargeExport float64,
+	chargesImport,
+	chargesExport float64,
 	modoClient imbalancePricer,
 ) controlComponent {
 
@@ -73,19 +73,22 @@ func nivChase(
 		imbalancePrice = modoImbalancePrice
 	}
 
-	chargePrice := imbalancePrice + duosChargeImport
-	dischargePrice := imbalancePrice - duosChargeExport
+	chargePrice := imbalancePrice + chargesImport
+	dischargePrice := imbalancePrice - chargesExport
 
 	// Shift the curves depending on if the system is long or short - this is achieved in practice by adjusting the price input into the curve
 	shift := 0.0
 	shiftedChargePrice := chargePrice
 	shiftedDischargePrice := dischargePrice
+	imbalanceDirectionStr := "unknown"
 	if foundModoImbalanceVolume {
-		is_long := modoImbalanceVolume < 0
-		if is_long {
+		isLong := modoImbalanceVolume < 0
+		if isLong {
 			shift = -curveShiftLong
+			imbalanceDirectionStr = "long"
 		} else {
 			shift = curveShiftShort
+			imbalanceDirectionStr = "short"
 		}
 	}
 	shiftedChargePrice += shift
@@ -110,6 +113,7 @@ func nivChase(
 		"time_left", timeLeftOfSP.Hours(),
 		"charge_price", chargePrice,
 		"discharge_price", dischargePrice,
+		"imbalance_direction", imbalanceDirectionStr,
 		"shifted_charge_price", shiftedChargePrice,
 		"shifted_discharge_price", shiftedDischargePrice,
 		"charge_distance", chargeDistance,

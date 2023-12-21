@@ -94,8 +94,8 @@ type ControllerConfig struct {
 	NivCurveShiftLong       float64                     `json:"nivCurveShiftLong"`
 	NivCurveShiftShort      float64                     `json:"nivCurveShiftShort"`
 	NivDefaultPricing       []TimedCharge               `json:"nivDefaultPricing"`
-	DuosChargesImport       []TimedCharge               `json:"duosChargesImport"`
-	DuosChargesExport       []TimedCharge               `json:"duosChargesExport"`
+	ChargesImport           []TimedCharge               `json:"chargesImport"`
+	ChargesExport           []TimedCharge               `json:"chargesExport"`
 }
 
 type TimedCharge struct {

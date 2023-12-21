@@ -37,3 +37,16 @@ func firstTimedCharges(t time.Time, charges []TimedCharge) (float64, bool) {
 	}
 	return 0, false
 }
+
+// sumTimedCharges returns the sum of the given charges that apply for the given `t`.
+func sumTimedCharges(t time.Time, charges []TimedCharge) float64 {
+	total := 0.0
+
+	for _, charge := range charges {
+		rate, found := charge.perKwhRate(t)
+		if found {
+			total += rate
+		}
+	}
+	return total
+}

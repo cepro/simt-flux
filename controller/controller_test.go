@@ -108,14 +108,14 @@ func TestController(test *testing.T) {
 			{X: 9999, Y: 0},
 		},
 	}
-	duosChargesImport := []TimedCharge{
+	chargesImport := []TimedCharge{
 		{
 			Rate:           10,
 			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
 			PeriodsWeekend: nivChasePeriods,
 		},
 	}
-	duosChargesExport := []TimedCharge{
+	chargesExport := []TimedCharge{
 		{
 			Rate:           -10,
 			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
@@ -144,8 +144,8 @@ func TestController(test *testing.T) {
 		NivChasePeriods:         nivChasePeriods,
 		NivChargeCurve:          nivChargeCurve,
 		NivDischargeCurve:       nivDischargeCurve,
-		DuosChargesImport:       duosChargesImport,
-		DuosChargesExport:       duosChargesExport,
+		ChargesImport:           chargesImport,
+		ChargesExport:           chargesExport,
 		ModoClient:              &MockImbalancePricer{}, // this is replaced at each test iteration
 		MaxReadingAge:           5 * time.Second,
 		BessCommands:            bessCommands,
@@ -245,20 +245,20 @@ func TestController(test *testing.T) {
 
 		// Test NIV chasing...
 
-		// Imbalance price is very attractive for charge - DUoS plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
+		// Imbalance price is very attractive for charge - DUoS charges plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
 
-		// Imbalance price is very attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
+		// Imbalance price is very attractive for discharge - DUoS charges plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
 
-		// Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
+		// Imbalance price is attractive for discharge - DUoS charges plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 105}, // here we are limited by the discharge power limits of the BESS
 
-		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
+		// Imbalance price is attractive for charge - DUoS charges plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
