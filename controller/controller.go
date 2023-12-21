@@ -45,14 +45,17 @@ type Config struct {
 
 	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
 	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
-	ChargeToMinPeriods     []config.ClockTimePeriodWithSoe // the periods of time to recharge the battery, and the minimum level that the battery should be recharged to
+	ChargeToSoePeriods     []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
+	DischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
 	NivChasePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'niv chasing'
 
-	NivChargeCurve    cartesian.Curve // Price/SoE curve to charge to when NIV chasing
-	NivDischargeCurve cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
-	NivDefaultPricing []TimedCharge   // Imbalance pricing that is assumed before Modo calculations are ready
-	DuosChargesImport []TimedCharge
-	DuosChargesExport []TimedCharge
+	NivChargeCurve     cartesian.Curve // Price/SoE curve to charge to when NIV chasing
+	NivDischargeCurve  cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
+	NivCurveShiftLong  float64         // How much to shift the NIV price curves when the system is long
+	NivCurveShiftShort float64         // How much to shift the NIV price curves when the system is short
+	NivDefaultPricing  []TimedCharge   // Imbalance pricing that is assumed before Modo calculations are ready
+	DuosChargesImport  []TimedCharge
+	DuosChargesExport  []TimedCharge
 
 	ModoClient imbalancePricer
 
@@ -66,9 +69,10 @@ type PeriodWithSoe struct {
 	Soe    float64
 }
 
-// imbalancePricer is an interface onto any object that provides imbalance pricing
+// imbalancePricer is an interface onto any object that provides imbalance pricing and volumes
 type imbalancePricer interface {
 	ImbalancePrice() (float64, time.Time)
+	ImbalanceVolume() (float64, time.Time)
 }
 
 // controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc
@@ -103,7 +107,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
-		"charge_to_min_periods", fmt.Sprintf("%+v", c.config.ChargeToMinPeriods),
+		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
+		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"niv_default_pricing", fmt.Sprintf("%+v", c.config.NivDefaultPricing),
 	)
@@ -160,23 +165,31 @@ func (c *Controller) runControlLoop(t time.Time) {
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
+		chargeToSoe(
+			t,
+			c.config.ChargeToSoePeriods,
+			c.bessSoe.value,
+			c.config.BessChargeEfficiency,
+		),
+		dischargeToSoe(
+			t,
+			c.config.DischargeToSoePeriods,
+			c.bessSoe.value,
+			1.0, // Discharge efficiency is assumed to be 100%
+		),
 		nivChase(
 			t,
 			c.config.NivChasePeriods,
 			c.config.NivDefaultPricing,
 			c.config.NivChargeCurve,
 			c.config.NivDischargeCurve,
+			c.config.NivCurveShiftLong,
+			c.config.NivCurveShiftShort,
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
 			duosChargeImport,
 			duosChargeExport,
 			c.config.ModoClient,
-		),
-		chargeToMin(
-			t,
-			c.config.ChargeToMinPeriods,
-			c.bessSoe.value,
-			c.config.BessChargeEfficiency,
 		),
 		importAvoidance(
 			t,
@@ -359,30 +372,64 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePe
 	}
 }
 
-// chargeToMin returns the control component for charging the battery to a minimum SoE.
-func chargeToMin(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
+// chargeToSoe returns the control component for charging the battery to a minimum SoE.
+func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
 	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
 	if periodWithSoe == nil {
 		return controlComponent{isActive: false}
 	}
 
+	targetSoe := periodWithSoe.Soe
+	endOfCharge := periodWithSoe.Period.End
+
 	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
-	energyToRecharge := (periodWithSoe.Soe - bessSoe) / chargeEfficiency
-	if energyToRecharge <= 0 {
+	energyToCharge := (targetSoe - bessSoe) / chargeEfficiency
+	if energyToCharge <= 0 {
 		return controlComponent{isActive: false}
 	}
 
-	durationToRecharge := periodWithSoe.Period.End.Sub(t)
-	chargeToMinPower := -energyToRecharge / durationToRecharge.Hours()
-	if chargeToMinPower > 0 {
+	durationToRecharge := endOfCharge.Sub(t)
+	chargePower := -energyToCharge / durationToRecharge.Hours()
+	if chargePower >= 0 {
 		return controlComponent{isActive: false}
 	}
 
 	return controlComponent{
-		name:         "charge_to_min",
+		name:         "charge_to_soe",
 		isActive:     true,
-		targetPower:  chargeToMinPower,
+		targetPower:  chargePower,
+		controlPoint: controlPointBess,
+	}
+}
+
+// dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
+func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.ClockTimePeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+
+	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
+	if periodWithSoe == nil {
+		return controlComponent{isActive: false}
+	}
+
+	targetSoe := periodWithSoe.Soe
+	endOfDischarge := periodWithSoe.Period.End
+
+	// discharge the battery to reach the target SoE at the end of the period. If the battery is already discharged to the target level, or below then do nothing.
+	energyToDischarge := (bessSoe - targetSoe) * dischargeEfficiency
+	if energyToDischarge <= 0 {
+		return controlComponent{isActive: false}
+	}
+
+	durationToDischarge := endOfDischarge.Sub(t)
+	dichargePower := energyToDischarge / durationToDischarge.Hours()
+	if dichargePower <= 0 {
+		return controlComponent{isActive: false}
+	}
+
+	return controlComponent{
+		name:         "discharge_to_soe",
+		isActive:     true,
+		targetPower:  dichargePower,
 		controlPoint: controlPointBess,
 	}
 }

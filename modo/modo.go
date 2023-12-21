@@ -13,30 +13,41 @@ import (
 )
 
 const (
-	systemPriceUrl = "https://data-api.modoenergy.com/v1/widgets/system-price/"
+	imbalancePriceUrl  = "https://data-api.modoenergy.com/v1/widgets/system-price/"
+	imbalanceVolumeUrl = "https://data-api.modoenergy.com/v1/widgets/system-imbalance/"
 )
 
 type Client struct {
-	client                   http.Client
-	lock                     sync.RWMutex // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
-	lastImbalancePrice       float64      // SSP in p/kWh
-	lastImbalancePriceSPTime time.Time
-	logger                   *slog.Logger
+	client                    http.Client
+	lock                      sync.RWMutex // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
+	lastImbalancePrice        float64      // SSP in p/kWh
+	lastImbalancePriceSPTime  time.Time    // Settlement period that the imbalance price relates to
+	lastImbalanceVolume       float64      // Imbalance volume in kWh
+	lastImbalanceVolumeSPTime time.Time    // Settlement period that the imbalance volume relates to
+	logger                    *slog.Logger
 }
 
-type systemPriceResponse struct {
+type imbalancePriceResponse struct {
 	Date              string  `json:"date"`
 	SettlementPeriod  int     `json:"settlement_period"`
 	PricePoundsPerMwh float64 `json:"system_price"` // Modo returns SSP in £/MWh
 }
 
+type imbalanceVolumeResponse struct {
+	Date             string  `json:"date"`
+	SettlementPeriod int     `json:"settlement_period"`
+	VolumeMwh        float64 `json:"niv"` // Modo returns imbalance volume in MWh
+}
+
 func New(client http.Client) *Client {
 	return &Client{
-		client:                   client,
-		lock:                     sync.RWMutex{},
-		lastImbalancePrice:       math.NaN(),
-		lastImbalancePriceSPTime: time.Time{},
-		logger:                   slog.Default(),
+		client:                    client,
+		lock:                      sync.RWMutex{},
+		lastImbalancePrice:        math.NaN(),
+		lastImbalancePriceSPTime:  time.Time{},
+		lastImbalanceVolume:       math.NaN(),
+		lastImbalanceVolumeSPTime: time.Time{},
+		logger:                    slog.Default(),
 	}
 }
 
@@ -53,6 +64,8 @@ func (c *Client) Run(ctx context.Context, period time.Duration) error {
 			// TODO: we should have a read lock activated here
 			previousImbalancePrice := c.lastImbalancePrice
 			previousImbalancePriceSPTime := c.lastImbalancePriceSPTime
+			previousImbalanceVolume := c.lastImbalanceVolume
+			previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
 
 			err := c.updateImbalancePrice()
 			if err != nil {
@@ -60,10 +73,23 @@ func (c *Client) Run(ctx context.Context, period time.Duration) error {
 				continue
 			}
 
-			// TODO: didChange doesn't work
-			didChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
+			err = c.updateImbalanceVolume()
+			if err != nil {
+				c.logger.Error("Failed to update Modo imbalance volume", "error", err)
+				continue
+			}
 
-			c.logger.Info("Updated Modo imbalance price", "settlement_perod", c.lastImbalancePriceSPTime, "imbalance_price", c.lastImbalancePrice, "did_change", didChange)
+			priceDidChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
+			volumeDidChange := (previousImbalanceVolume != c.lastImbalanceVolume) || !(previousImbalanceVolumeSPTime.Equal(c.lastImbalanceVolumeSPTime))
+			c.logger.Info(
+				"Updated Modo imbalance price and volume",
+				"price", c.lastImbalancePrice,
+				"price_settlement_perod", c.lastImbalancePriceSPTime,
+				"volume", c.lastImbalanceVolume/1e3,
+				"volume_settlement_perod", c.lastImbalanceVolumeSPTime,
+				"did_change", priceDidChange || volumeDidChange,
+			)
+
 		}
 	}
 }
@@ -76,9 +102,17 @@ func (c *Client) ImbalancePrice() (float64, time.Time) {
 	return c.lastImbalancePrice, c.lastImbalancePriceSPTime
 }
 
+// ImbalancePrice returns the last cached imbalance volume, and the settlement period time that it corresponds to
+func (c *Client) ImbalanceVolume() (float64, time.Time) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return c.lastImbalanceVolume, c.lastImbalanceVolumeSPTime
+}
+
 // updateImbalancePrice updates the cached imbalance price by querying Modo's servers.
 func (c *Client) updateImbalancePrice() error {
-	parsedResponse, err := c.requestSystemPrice()
+	parsedResponse, err := c.requestImbalancePrice()
 	if err != nil {
 		return err
 	}
@@ -97,22 +131,64 @@ func (c *Client) updateImbalancePrice() error {
 	return nil
 }
 
-// requestSystemPrice returns Modo's imbalance price calculation, or an error.
-func (c *Client) requestSystemPrice() (systemPriceResponse, error) {
-	response, err := c.client.Get(systemPriceUrl)
+// updateImbalanceVolume updates the cached imbalance volume by querying Modo's servers.
+func (c *Client) updateImbalanceVolume() error {
+	parsedResponse, err := c.requestImbalanceVolume()
 	if err != nil {
-		return systemPriceResponse{}, fmt.Errorf("get system price: %w", err)
+		return err
+	}
+
+	t, err := timeOfSettlementPeriod(parsedResponse.Date, parsedResponse.SettlementPeriod)
+	if err != nil {
+		return fmt.Errorf("parse settlement period: %w", err)
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.lastImbalanceVolume = parsedResponse.VolumeMwh * 1e3
+	c.lastImbalanceVolumeSPTime = t
+
+	return nil
+}
+
+// requestImbalancePrice returns Modo's imbalance price calculation, or an error.
+func (c *Client) requestImbalancePrice() (imbalancePriceResponse, error) {
+	response, err := c.client.Get(imbalancePriceUrl)
+	if err != nil {
+		return imbalancePriceResponse{}, fmt.Errorf("get system price: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return systemPriceResponse{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
+		return imbalancePriceResponse{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
 	}
 
-	parsedResponse := systemPriceResponse{}
+	parsedResponse := imbalancePriceResponse{}
 	err = json.NewDecoder(response.Body).Decode(&parsedResponse)
 	if err != nil {
-		return systemPriceResponse{}, fmt.Errorf("parse body: %w", err)
+		return imbalancePriceResponse{}, fmt.Errorf("parse body: %w", err)
+	}
+
+	return parsedResponse, nil
+}
+
+// requestImbalanceVolume returns Modo's imbalance price calculation, or an error.
+func (c *Client) requestImbalanceVolume() (imbalanceVolumeResponse, error) {
+	response, err := c.client.Get(imbalanceVolumeUrl)
+	if err != nil {
+		return imbalanceVolumeResponse{}, fmt.Errorf("get system imbalance: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		return imbalanceVolumeResponse{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
+	}
+
+	parsedResponse := imbalanceVolumeResponse{}
+	err = json.NewDecoder(response.Body).Decode(&parsedResponse)
+	if err != nil {
+		return imbalanceVolumeResponse{}, fmt.Errorf("parse body: %w", err)
 	}
 
 	return parsedResponse, nil

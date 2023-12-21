@@ -86,10 +86,13 @@ type ControllerConfig struct {
 	SiteExportPowerLimit    float64                     `json:"siteExportPowerLimit"`
 	ImportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
 	ExportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
-	ChargeToMinPeriods      []ClockTimePeriodWithSoe    `json:"chargeToMinPeriods"`
+	ChargeToSoePeriods      []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
+	DischargeToSoePeriods   []ClockTimePeriodWithSoe    `json:"dischargeToSoePeriods"`
 	NivChasePeriods         []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
 	NivChargeCurve          []cartesian.Point           `json:"nivChargeCurve"`
 	NivDischargeCurve       []cartesian.Point           `json:"nivDischargeCurve"`
+	NivCurveShiftLong       float64                     `json:"nivCurveShiftLong"`
+	NivCurveShiftShort      float64                     `json:"nivCurveShiftShort"`
 	NivDefaultPricing       []TimedCharge               `json:"nivDefaultPricing"`
 	DuosChargesImport       []TimedCharge               `json:"duosChargesImport"`
 	DuosChargesExport       []TimedCharge               `json:"duosChargesExport"`

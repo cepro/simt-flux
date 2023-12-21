@@ -17,8 +17,8 @@ const (
 	chargeEfficiency = 0.9
 )
 
-// TestController is a high level test of the controllers ability to issue BessCommands to service the "import avoidance", "export avoidance" and "charge to min" modes.
-// It feeds the controller with a pre-defined/static timeseries of consumer demand to ensure that it reacts correctly to changes in demand.
+// TestController is a high level (almost integration) test of the controllers ability to issue BessCommands to service various control modes.
+// It feeds the controller with a pre-defined/static timeseries of consumer demand and prices to ensure that it reacts correctly.
 func TestController(test *testing.T) {
 
 	ctx := context.Background()
@@ -63,12 +63,12 @@ func TestController(test *testing.T) {
 			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
 		},
 	}
-	chargeToMinPeriods := []config.ClockTimePeriodWithSoe{
+	chargeToSoePeriods := []config.ClockTimePeriodWithSoe{
 		{
-			Soe: 160,
+			Soe: 130,
 			Period: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
 			},
 		},
 		{
@@ -76,6 +76,15 @@ func TestController(test *testing.T) {
 			Period: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+			},
+		},
+	}
+	dischargeToSoePeriods := []config.ClockTimePeriodWithSoe{
+		{
+			Soe: 70,
+			Period: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
 			},
 		},
 	}
@@ -130,7 +139,8 @@ func TestController(test *testing.T) {
 		SiteExportPowerLimit:    9999, // this is replaced at each test iteration
 		ImportAvoidancePeriods:  importAvoidancePeriods,
 		ExportAvoidancePeriods:  exportAvoidancePeriods,
-		ChargeToMinPeriods:      chargeToMinPeriods,
+		ChargeToSoePeriods:      chargeToSoePeriods,
+		DischargeToSoePeriods:   dischargeToSoePeriods,
 		NivChasePeriods:         nivChasePeriods,
 		NivChargeCurve:          nivChargeCurve,
 		NivDischargeCurve:       nivDischargeCurve,
@@ -148,6 +158,7 @@ func TestController(test *testing.T) {
 		bessSoe                 float64   // the state of energy of the battery at this point in time
 		consumerDemand          float64   // the consumer demand at this point in time
 		imbalancePrice          float64   // the predicted system settelment price for this period
+		imbalanceVolume         float64   // the predicted system settelment volume for this period
 		siteImportPowerLimit    *float64  // site import limits applied for the test point, defaults to 9999 if nil
 		siteExportPowerLimit    *float64  // site export limits applied for the test point, defaults to 9999 if nil
 		expectedBessTargetPower float64   // the power command that we expect the controller to issue at this point in time
@@ -200,10 +211,15 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
 		{time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
 
-		// Skip to a time wher we are in 'charge to min' - the controller should charge to reach the minimum soe
+		// Skip to a time wher we are in 'charge to soe' - the controller should charge to reach the target soe
 		{time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+
+		// Skip to a time wher we are in 'discharge to soe' - the controller should discharge to reach the target soe
+		{time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+		{time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
+		{time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
 
 		// Skip to a time when both 'export avoidance' and 'import avoidance' are active
 		{time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
@@ -228,25 +244,12 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
 
 		// Test NIV chasing...
-		// Here we're too soon into the SP to niv chase - we don't yet trust the price prediction
-		{time: mustParseTime("2023-09-12T23:00:00+01:00"), bessSoe: 19, consumerDemand: 10, imbalancePrice: -99, expectedBessTargetPower: 0},
-		{time: mustParseTime("2023-09-12T23:09:59+01:00"), bessSoe: 19, consumerDemand: 10, imbalancePrice: +99, expectedBessTargetPower: 0},
 
-		// Imbalance price is between the charge and discharge curves - DuoS plus imbalance is 25p.kWh - no action
-		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 15.0, expectedBessTargetPower: 0},
-
-		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - charge at full rate
+		// Imbalance price is very attractive for charge - DUoS plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
 
-		// Imbalance price is attractive for charge - DUoS plus imbalance is 0p/kWh - but SoE is already high - so charge is set by curve following
-		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 160, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -66.66667},
-
-		// Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate
+		// Imbalance price is very attractive for discharge - DUoS plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
-
-		// Imbalance price is attractive for discharge - DUoS plus imbalance is 35p/kWh - but SoE is already low - so charge is set by curve following
-		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 30},
-		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 90, consumerDemand: 10, imbalancePrice: 25, expectedBessTargetPower: 0},
 
 		// Imbalance price is attractive for discharge - DUoS plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
 		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
@@ -274,8 +277,9 @@ func TestController(test *testing.T) {
 
 		// Update the mock modo client to return the test point's imbalance price
 		ctrl.config.ModoClient = &MockImbalancePricer{
-			price: point.imbalancePrice,
-			time:  timeutils.FloorHH(point.time),
+			price:  point.imbalancePrice,
+			volume: point.imbalanceVolume,
+			time:   timeutils.FloorHH(point.time),
 		}
 
 		if point.siteImportPowerLimit == nil {
@@ -309,18 +313,21 @@ func TestController(test *testing.T) {
 			test.Errorf("At time '%v' got unexpected bess target power: %f, expected: %f", point.time, mock.bessTargetPower, point.expectedBessTargetPower)
 			return
 		}
-
 	}
-
 }
 
 type MockImbalancePricer struct {
-	price float64
-	time  time.Time
+	price  float64
+	volume float64
+	time   time.Time
 }
 
 func (m *MockImbalancePricer) ImbalancePrice() (float64, time.Time) {
 	return m.price, m.time
+}
+
+func (m *MockImbalancePricer) ImbalanceVolume() (float64, time.Time) {
+	return m.volume, m.time
 }
 
 // microgridMock acts as a mock meter, BESS and consumer demand to enable testing of the controller.

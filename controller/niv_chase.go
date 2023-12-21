@@ -19,6 +19,7 @@ func nivChase(
 	nivChasePeriods []timeutils.ClockTimePeriod,
 	defaultPricing []TimedCharge,
 	chargeCurve, dischargeCurve cartesian.Curve,
+	curveShiftLong, curveShiftShort float64,
 	soe,
 	chargeEfficiency,
 	duosChargeImport,
@@ -54,6 +55,9 @@ func nivChase(
 	modoImbalancePrice, modoImbalancePriceSP := modoClient.ImbalancePrice()
 	foundModoImbalancePrice := currentSP.Equal(modoImbalancePriceSP)
 
+	modoImbalanceVolume, modoImbalanceVolumeSP := modoClient.ImbalanceVolume()
+	foundModoImbalanceVolume := currentSP.Equal(modoImbalanceVolumeSP)
+
 	// Make sure we have a price prediction for the current SP - sometimes Modo can take a while to generate a calculation, and in the mean-time will continue to
 	// publish the price for the previous SP.
 	if !foundModoImbalancePrice && !foundDefaultImbalancePrice {
@@ -72,8 +76,23 @@ func nivChase(
 	chargePrice := imbalancePrice + duosChargeImport
 	dischargePrice := imbalancePrice - duosChargeExport
 
-	chargeDistance := chargeCurve.VerticalDistance(cartesian.Point{X: chargePrice, Y: soe})
-	dischargeDistance := dischargeCurve.VerticalDistance(cartesian.Point{X: dischargePrice, Y: soe})
+	// Shift the curves depending on if the system is long or short - this is achieved in practice by adjusting the price input into the curve
+	shift := 0.0
+	shiftedChargePrice := chargePrice
+	shiftedDischargePrice := dischargePrice
+	if foundModoImbalanceVolume {
+		is_long := modoImbalanceVolume < 0
+		if is_long {
+			shift = -curveShiftLong
+		} else {
+			shift = curveShiftShort
+		}
+	}
+	shiftedChargePrice += shift
+	shiftedDischargePrice += shift
+
+	chargeDistance := chargeCurve.VerticalDistance(cartesian.Point{X: shiftedChargePrice, Y: soe})
+	dischargeDistance := dischargeCurve.VerticalDistance(cartesian.Point{X: shiftedDischargePrice, Y: soe})
 	energyDelta := 0.0
 
 	if chargeDistance > 0 {
@@ -91,6 +110,8 @@ func nivChase(
 		"time_left", timeLeftOfSP.Hours(),
 		"charge_price", chargePrice,
 		"discharge_price", dischargePrice,
+		"shifted_charge_price", shiftedChargePrice,
+		"shifted_discharge_price", shiftedDischargePrice,
 		"charge_distance", chargeDistance,
 		"discharge_distance", dischargeDistance,
 	)

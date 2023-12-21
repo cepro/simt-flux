@@ -14,6 +14,8 @@ type ClockTimePeriod struct {
 // reference time that must be within the `ClockTimePeriod`.
 // If `t` is outside of the `ClockTimePeriod` then the `ok` boolean is returned as false.
 //
+// This function is inclusive of the Period.Start, but exclusive of the Period.End.
+//
 // For example, calling on a ClockTimePeriod of "4pm to 6pm" using a reference `t` of "2023/10/19 16:53:00" would
 // yield the period: "2023/10/19 16:00:00 to 2023/10/19 18:00:00".
 //
@@ -28,7 +30,7 @@ func (p *ClockTimePeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 	startDateTime := p.Start.OnDate(year, month, day)
 	endDateTime := p.End.OnDate(year, month, day)
 
-	isContained := (startDateTime.Before(t) && endDateTime.After(t)) || t.Equal(startDateTime) || t.Equal(endDateTime)
+	isContained := (startDateTime.Before(t) && endDateTime.After(t)) || t.Equal(startDateTime)
 
 	if !isContained {
 		return Period{}, false

@@ -44,7 +44,7 @@ func TestAbsolutePeriod(t *testing.T) {
 		{"OutsideBefore", sixToTenAm, time.Date(2023, 8, 22, 0, 0, 0, 0, london), Period{}, false},
 		{"OutsideAfter", sixToTenAm, time.Date(2023, 8, 22, 11, 0, 0, 0, london), Period{}, false},
 		{"ContainsOnStartBoundary", sixToTenAm, time.Date(2023, 8, 22, 6, 0, 0, 0, london), sixTo10AmAbsolute, true},
-		{"ContainsOnEndBoundary", sixToTenAm, time.Date(2023, 8, 22, 10, 0, 0, 0, london), sixTo10AmAbsolute, true},
+		{"ContainsOnEndBoundary", sixToTenAm, time.Date(2023, 8, 22, 10, 0, 0, 0, london), sixTo10AmAbsolute, false},
 		{"ContainsInside", sixToTenAm, time.Date(2023, 8, 22, 9, 40, 0, 0, london), sixTo10AmAbsolute, true},
 	}
 	for _, subTest := range subTests {
