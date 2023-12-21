@@ -92,7 +92,16 @@
                 "end": "23:59:59:Europe/London"
             }
         ],
-        "chargeToMinPeriods": [
+        "chargeToSoePeriods": [
+        ],
+        "dischargeToSoePeriods": [
+            {
+                "soe": 0,
+                "period": {
+                    "start": "17:00:00:Europe/London",
+                    "end": "19:00:00:Europe/London"
+                }
+            }
         ],
         "nivChasePeriods": [
             {
@@ -102,28 +111,36 @@
         ],
         "nivChargeCurve": [
             {"x": -999999999, "y": 1430},
-            {"x": 0, "y": 1430},
-            {"x": 7, "y": 350},
-            {"x": 10, "y": 200}
+            {"x": 4, "y": 1430},
+            {"x": 6, "y": 1000},
+            {"x": 12, "y": 0}
         ],
         "nivDischargeCurve": [
-            {"x": 13, "y": 1430},
-            {"x": 13, "y": 1000},
-            {"x": 16, "y": 100},
-            {"x": 999999999, "y": 100}
+            {"x": 8, "y": 1430},
+            {"x": 25, "y": 1000},
+            {"x": 35, "y": 100},
+            {"x": 999999999, "y": 0}
         ],
+        "nivCurveShiftLong": 6,
+        "nivCurveShiftShort": 2,
         "nivDefaultPricing": [
+        ],
+        "chargesImport": [
             {
-                "rate": 5,
+                "rate": 2.28,
                 "weekdayPeriods": [
                     {
-                        "start": "17:00:00:Europe/London",
-                        "end": "19:00:00:Europe/London"
+                        "start": "00:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ],
+                "weekendPeriods": [
+                    {
+                        "start": "00:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
                     }
                 ]
-            }
-        ],
-        "duosChargesImport": [
+            },
             {
                 "rate": 11.385,
                 "weekdayPeriods": [
@@ -177,7 +194,7 @@
                 ]
             }
         ],
-        "duosChargesExport": [
+        "chargesExport": [
             {
                 "rate": -10.0540,
                 "weekdayPeriods": [
