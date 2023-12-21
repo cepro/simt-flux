@@ -43,11 +43,11 @@ type Config struct {
 	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
 	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
-	ImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
-	ExportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
-	ChargeToSoePeriods     []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
-	DischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	NivChasePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'niv chasing'
+	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
+	ExportAvoidancePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
+	ChargeToSoePeriods            []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
+	WeekdayDischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	NivChasePeriods               []timeutils.ClockTimePeriod     // the periods of time to activate 'niv chasing'
 
 	NivChargeCurve     cartesian.Curve // Price/SoE curve to charge to when NIV chasing
 	NivDischargeCurve  cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
@@ -105,10 +105,10 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"site_import_power_limit", c.config.SiteImportPowerLimit,
 		"site_export_power_limit", c.config.SiteExportPowerLimit,
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
-		"ctrl_import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
-		"ctrl_export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
+		"weekday_import_avoidance_periods", fmt.Sprintf("%+v", c.config.WeekdayImportAvoidancePeriods),
+		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
-		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
+		"weekday_discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.WeekdayDischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"niv_curve_shift_long", c.config.NivCurveShiftLong,
 		"niv_curve_shift_short", c.config.NivCurveShiftShort,
@@ -175,7 +175,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		),
 		dischargeToSoe(
 			t,
-			c.config.DischargeToSoePeriods,
+			c.config.WeekdayDischargeToSoePeriods,
 			c.bessSoe.value,
 			1.0, // Discharge efficiency is assumed to be 100%
 		),
@@ -195,7 +195,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		),
 		importAvoidance(
 			t,
-			c.config.ImportAvoidancePeriods,
+			c.config.WeekdayImportAvoidancePeriods,
 			c.SitePower(),
 			c.lastBessTargetPower,
 		),
@@ -333,9 +333,13 @@ func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
 }
 
 // importAvoidance returns control component for avoiding site imports.
-func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
+func importAvoidance(t time.Time, weekdayImportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
+	if !timeutils.IsWeekday(t) {
+		return controlComponent{isActive: false}
+	}
+
+	importAvoidancePeriod := periodContainingTime(t, weekdayImportAvoidancePeriods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
@@ -406,9 +410,13 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.ClockTimePeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.ClockTimePeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
-	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
+	if !timeutils.IsWeekday(t) {
+		return controlComponent{isActive: false}
+	}
+
+	periodWithSoe := periodWithSoeContainingTime(t, weekdayDischargeToSoePeriods)
 	if periodWithSoe == nil {
 		return controlComponent{isActive: false}
 	}

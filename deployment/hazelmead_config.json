@@ -80,7 +80,7 @@
         "bessDischargePowerLimit": 565,
         "siteImportPowerLimit": 220,
         "siteExportPowerLimit": 475,
-        "importAvoidancePeriods": [
+        "weekdayImportAvoidancePeriods": [
             {
                 "start": "16:30:00:Europe/London",
                 "end": "19:00:00:Europe/London"
@@ -94,7 +94,7 @@
         ],
         "chargeToSoePeriods": [
         ],
-        "dischargeToSoePeriods": [
+        "weekdayDischargeToSoePeriods": [
             {
                 "soe": 0,
                 "period": {

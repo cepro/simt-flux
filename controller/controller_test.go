@@ -130,25 +130,25 @@ func TestController(test *testing.T) {
 	bessCommands := make(chan telemetry.BessCommand, 1)
 	ctrlTickerChan := make(chan time.Time, 1)
 	ctrl := New(Config{
-		BessChargeEfficiency:    chargeEfficiency,
-		BessSoeMin:              20,
-		BessSoeMax:              180,
-		BessChargePowerLimit:    100,
-		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing the asymmetry
-		SiteImportPowerLimit:    9999, // this is replaced at each test iteration
-		SiteExportPowerLimit:    9999, // this is replaced at each test iteration
-		ImportAvoidancePeriods:  importAvoidancePeriods,
-		ExportAvoidancePeriods:  exportAvoidancePeriods,
-		ChargeToSoePeriods:      chargeToSoePeriods,
-		DischargeToSoePeriods:   dischargeToSoePeriods,
-		NivChasePeriods:         nivChasePeriods,
-		NivChargeCurve:          nivChargeCurve,
-		NivDischargeCurve:       nivDischargeCurve,
-		ChargesImport:           chargesImport,
-		ChargesExport:           chargesExport,
-		ModoClient:              &MockImbalancePricer{}, // this is replaced at each test iteration
-		MaxReadingAge:           5 * time.Second,
-		BessCommands:            bessCommands,
+		BessChargeEfficiency:          chargeEfficiency,
+		BessSoeMin:                    20,
+		BessSoeMax:                    180,
+		BessChargePowerLimit:          100,
+		BessDischargePowerLimit:       105,  // slightly higher discharge limit than charge limit for testing the asymmetry
+		SiteImportPowerLimit:          9999, // this is replaced at each test iteration
+		SiteExportPowerLimit:          9999, // this is replaced at each test iteration
+		WeekdayImportAvoidancePeriods: importAvoidancePeriods,
+		ExportAvoidancePeriods:        exportAvoidancePeriods,
+		ChargeToSoePeriods:            chargeToSoePeriods,
+		WeekdayDischargeToSoePeriods:  dischargeToSoePeriods,
+		NivChasePeriods:               nivChasePeriods,
+		NivChargeCurve:                nivChargeCurve,
+		NivDischargeCurve:             nivDischargeCurve,
+		ChargesImport:                 chargesImport,
+		ChargesExport:                 chargesExport,
+		ModoClient:                    &MockImbalancePricer{}, // this is replaced at each test iteration
+		MaxReadingAge:                 5 * time.Second,
+		BessCommands:                  bessCommands,
 	})
 	go ctrl.Run(ctx, ctrlTickerChan)
 
@@ -195,6 +195,9 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
 
+		// Skup to a time when we are in 'import avoidance' but it's at the weekend so it shouldn't apply
+		{time: mustParseTime("2023-09-09T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 0},
+
 		// Currently a discontinuity in time is not an issue for the controller...
 
 		// Skip to a time where we are outside of any configured acivity, the controller should do nothing
@@ -220,6 +223,9 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
 		{time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
 		{time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+
+		// Skup to a time when we are in 'discharge to soe' but it's at the weekend so it shouldn't apply
+		{time: mustParseTime("2023-09-10T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
 
 		// Skip to a time when both 'export avoidance' and 'import avoidance' are active
 		{time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},

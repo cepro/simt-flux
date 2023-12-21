@@ -73,29 +73,30 @@ type EmulationConfig struct {
 	EmulatedSiteMeter uuid.UUID `json:"emulatedSiteMeter"`
 }
 
+// TODO: Find elegant way to differentiate between weekend and weekday periods generically
 type ControllerConfig struct {
-	SiteMeterID             uuid.UUID                   `json:"siteMeter"`
-	BessMeterID             uuid.UUID                   `json:"bessMeter"`
-	Emulation               EmulationConfig             `json:"emulation"`
-	BessChargeEfficiency    float64                     `json:"bessChargeEfficiency"`
-	BessSoeMin              float64                     `json:"bessSoeMin"`
-	BessSoeMax              float64                     `json:"bessSoeMax"`
-	BessChargePowerLimit    float64                     `json:"bessChargePowerLimit"`
-	BessDischargePowerLimit float64                     `json:"bessDischargePowerLimit"`
-	SiteImportPowerLimit    float64                     `json:"siteImportPowerLimit"`
-	SiteExportPowerLimit    float64                     `json:"siteExportPowerLimit"`
-	ImportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
-	ExportAvoidancePeriods  []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
-	ChargeToSoePeriods      []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
-	DischargeToSoePeriods   []ClockTimePeriodWithSoe    `json:"dischargeToSoePeriods"`
-	NivChasePeriods         []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
-	NivChargeCurve          []cartesian.Point           `json:"nivChargeCurve"`
-	NivDischargeCurve       []cartesian.Point           `json:"nivDischargeCurve"`
-	NivCurveShiftLong       float64                     `json:"nivCurveShiftLong"`
-	NivCurveShiftShort      float64                     `json:"nivCurveShiftShort"`
-	NivDefaultPricing       []TimedCharge               `json:"nivDefaultPricing"`
-	ChargesImport           []TimedCharge               `json:"chargesImport"`
-	ChargesExport           []TimedCharge               `json:"chargesExport"`
+	SiteMeterID                   uuid.UUID                   `json:"siteMeter"`
+	BessMeterID                   uuid.UUID                   `json:"bessMeter"`
+	Emulation                     EmulationConfig             `json:"emulation"`
+	BessChargeEfficiency          float64                     `json:"bessChargeEfficiency"`
+	BessSoeMin                    float64                     `json:"bessSoeMin"`
+	BessSoeMax                    float64                     `json:"bessSoeMax"`
+	BessChargePowerLimit          float64                     `json:"bessChargePowerLimit"`
+	BessDischargePowerLimit       float64                     `json:"bessDischargePowerLimit"`
+	SiteImportPowerLimit          float64                     `json:"siteImportPowerLimit"`
+	SiteExportPowerLimit          float64                     `json:"siteExportPowerLimit"`
+	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekdayImportAvoidancePeriods"`
+	ExportAvoidancePeriods        []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
+	ChargeToSoePeriods            []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
+	WeekdayDischargeToSoePeriods  []ClockTimePeriodWithSoe    `json:"weekdayDischargeToSoePeriods"`
+	NivChasePeriods               []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
+	NivChargeCurve                []cartesian.Point           `json:"nivChargeCurve"`
+	NivDischargeCurve             []cartesian.Point           `json:"nivDischargeCurve"`
+	NivCurveShiftLong             float64                     `json:"nivCurveShiftLong"`
+	NivCurveShiftShort            float64                     `json:"nivCurveShiftShort"`
+	NivDefaultPricing             []TimedCharge               `json:"nivDefaultPricing"`
+	ChargesImport                 []TimedCharge               `json:"chargesImport"`
+	ChargesExport                 []TimedCharge               `json:"chargesExport"`
 }
 
 type TimedCharge struct {
