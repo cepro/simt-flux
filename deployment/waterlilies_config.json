@@ -78,9 +78,9 @@
         "bessSoeMax": 444,
         "bessChargePowerLimit": 222,
         "bessDischargePowerLimit": 222,
-        "siteImportPowerLimit": 100,
+        "siteImportPowerLimit": 140,
         "siteExportPowerLimit": 230,
-        "importAvoidancePeriods": [
+        "weekdayImportAvoidancePeriods": [
             {
                 "start": "16:30:00:Europe/London",
                 "end": "19:00:00:Europe/London"
@@ -92,26 +92,28 @@
                 "end": "23:59:59:Europe/London"
             }
         ],
-        "chargeToMinPeriods": [
+        "chargeToSoePeriods": [
+        ],
+        "weekdayDischargeToSoePeriods": [
         ],
         "nivChasePeriods": [
             {
                 "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
+                "end": "07:00:00:Europe/London"
             }
         ],
         "nivChargeCurve": [
             {"x": -999999999, "y": 444},
             {"x": 0, "y": 444},
-            {"x": 7, "y": 100},
-            {"x": 10, "y": 100}
+            {"x": 7, "y": 0}
         ],
         "nivDischargeCurve": [
-            {"x": 13, "y": 444},
-            {"x": 13, "y": 400},
-            {"x": 16, "y": 50},
+            {"x": 20, "y": 444},
+            {"x": 30, "y": 50},
             {"x": 999999999, "y": 50}
         ],
+        "nivCurveShiftLong": 3,
+        "nivCurveShiftShort": 0,
         "nivDefaultPricing": [
             {
                 "rate": 5,
