@@ -87,10 +87,7 @@
             }
         ],
         "exportAvoidancePeriods": [
-            {
-                "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
-            }
+
         ],
         "chargeToSoePeriods": [
         ],
