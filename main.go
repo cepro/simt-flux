@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
-	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
@@ -159,13 +158,8 @@ func main() {
 		ChargeToSoePeriods:            config.Controller.ChargeToSoePeriods,
 		WeekdayDischargeToSoePeriods:  config.Controller.WeekdayDischargeToSoePeriods,
 		NivChasePeriods:               config.Controller.NivChasePeriods,
-		NivChargeCurve:                cartesian.Curve{Points: config.Controller.NivChargeCurve},
-		NivDischargeCurve:             cartesian.Curve{Points: config.Controller.NivDischargeCurve},
-		NivCurveShiftLong:             config.Controller.NivCurveShiftLong,
-		NivCurveShiftShort:            config.Controller.NivCurveShiftShort,
-		NivDefaultPricing:             typeConvertTimedCharges(config.Controller.NivDefaultPricing),
-		ChargesImport:                 typeConvertTimedCharges(config.Controller.ChargesImport),
-		ChargesExport:                 typeConvertTimedCharges(config.Controller.ChargesExport),
+		ChargesImport:                 config.Controller.ChargesImport,
+		ChargesExport:                 config.Controller.ChargesExport,
 		ModoClient:                    modoClient,
 		MaxReadingAge:                 CONTROL_LOOP_PERIOD,
 		BessCommands:                  bess.Commands(),
@@ -227,13 +221,4 @@ func sendIfNonBlocking[V any](ch chan V, val V, messageTargetLogStr string) {
 	default:
 		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
 	}
-}
-
-// typeConvertTimedCharges converts the config.TimedCharge types to controller.TimedCharge types
-func typeConvertTimedCharges(configCharges []config.TimedCharge) []controller.TimedCharge {
-	ctrlCharges := make([]controller.TimedCharge, 0, len(configCharges))
-	for _, configCharge := range configCharges {
-		ctrlCharges = append(ctrlCharges, controller.TimedCharge(configCharge))
-	}
-	return ctrlCharges
 }

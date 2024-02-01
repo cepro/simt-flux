@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
@@ -48,15 +47,9 @@ type Config struct {
 	ExportAvoidancePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToSoePeriods            []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
 	WeekdayDischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	NivChasePeriods               []timeutils.ClockTimePeriod     // the periods of time to activate 'niv chasing'
-
-	NivChargeCurve     cartesian.Curve // Price/SoE curve to charge to when NIV chasing
-	NivDischargeCurve  cartesian.Curve // Price/SoE curve to discharge to when NIV chasing
-	NivCurveShiftLong  float64         // How much to shift the NIV price curves when the system is long
-	NivCurveShiftShort float64         // How much to shift the NIV price curves when the system is short
-	NivDefaultPricing  []TimedCharge   // Imbalance pricing that is assumed before Modo calculations are ready
-	ChargesImport      []TimedCharge   // Any charges that apply to importing power from the grid
-	ChargesExport      []TimedCharge   // Any charges that apply to exporting power from the grid
+	NivChasePeriods               []config.ClockTimePeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
+	ChargesImport                 []config.TimedCharge            // Any charges that apply to importing power from the grid
+	ChargesExport                 []config.TimedCharge            // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
@@ -65,9 +58,16 @@ type Config struct {
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
 }
 
+// PeriodWithSoe is similar to config.ClockTimePeriodWithSoe, except the Period is absolute, rather than a recurring clocktime
 type PeriodWithSoe struct {
 	Period timeutils.Period
 	Soe    float64
+}
+
+// PeriodWithNiv is similar to config.ClockTimePeriodWithNiv, except the Period is absolute, rather than a recurring clocktime
+type PeriodWithNiv struct {
+	Period timeutils.Period
+	Niv    config.NivConfig
 }
 
 // imbalancePricer is an interface onto any object that provides imbalance pricing and volumes
@@ -112,9 +112,6 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"weekday_discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.WeekdayDischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
-		"niv_curve_shift_long", c.config.NivCurveShiftLong,
-		"niv_curve_shift_short", c.config.NivCurveShiftShort,
-		"niv_default_pricing", fmt.Sprintf("%+v", c.config.NivDefaultPricing),
 	)
 
 	slog.Info("Controller running")
@@ -164,8 +161,8 @@ func (c *Controller) SitePower() float64 {
 func (c *Controller) runControlLoop(t time.Time) {
 
 	// Charges change depending on the time of day - get the current charges
-	chargesImport := sumTimedCharges(t, c.config.ChargesImport)
-	chargesExport := sumTimedCharges(t, c.config.ChargesExport)
+	chargesImport := config.SumTimedCharges(t, c.config.ChargesImport)
+	chargesExport := config.SumTimedCharges(t, c.config.ChargesExport)
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
@@ -184,11 +181,6 @@ func (c *Controller) runControlLoop(t time.Time) {
 		nivChase(
 			t,
 			c.config.NivChasePeriods,
-			c.config.NivDefaultPricing,
-			c.config.NivChargeCurve,
-			c.config.NivDischargeCurve,
-			c.config.NivCurveShiftLong,
-			c.config.NivCurveShiftShort,
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
 			chargesImport,
@@ -458,6 +450,21 @@ func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.ClockTim
 			return &PeriodWithSoe{
 				Period: period,
 				Soe:    ctPeriodWithSoe.Soe,
+			}
+		}
+	}
+	return nil
+}
+
+// periodWithNivContainingTime returns the PeriodWithNiv that overlaps the given time if there is one, otherwise it returns nil.
+// If there is more than one overlapping period than the first is returned.
+func periodWithNivContainingTime(t time.Time, ctPeriodsWithNiv []config.ClockTimePeriodWithNIV) *PeriodWithNiv {
+	for _, ctPeriodWithNiv := range ctPeriodsWithNiv {
+		period, ok := ctPeriodWithNiv.Period.AbsolutePeriod(t)
+		if ok {
+			return &PeriodWithNiv{
+				Period: period,
+				Niv:    ctPeriodWithNiv.Niv,
 			}
 		}
 	}

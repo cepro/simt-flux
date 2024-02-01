@@ -104,31 +104,50 @@
         ],
         "nivChasePeriods": [
             {
-                "start": "00:00:00:Europe/London",
-                "end": "07:00:00:Europe/London"
-            }
-        ],
-        "nivChargeCurve": [
-            {"x": -999999999, "y": 444},
-            {"x": 0, "y": 444},
-            {"x": 7, "y": 0}
-        ],
-        "nivDischargeCurve": [
-            {"x": 20, "y": 444},
-            {"x": 30, "y": 50},
-            {"x": 999999999, "y": 50}
-        ],
-        "nivCurveShiftLong": 3,
-        "nivCurveShiftShort": 0,
-        "nivDefaultPricing": [
+                "period": {
+                    "start": "00:00:00:Europe/London",
+                    "end": "07:00:00:Europe/London"
+                },
+                "niv": {
+                    "chargeCurve": {
+                        "points": [
+                            {"x": -999999999, "y": 444},
+                            {"x": 0, "y": 444},
+                            {"x": 7, "y": 0}
+                        ]
+                    },
+                    "dischargeCurve": {
+                        "points": [
+                            {"x": 40, "y": 444},
+                            {"x": 40, "y": 0},
+                            {"x": 999999999, "y": 0}
+                        ]
+                    },
+                    "curveShiftLong": 6,
+                    "curveShiftShort": 0,
+                    "defaultPricing": []
+                }
+            },
             {
-                "rate": 5,
-                "weekdayPeriods": [
-                    {
-                        "start": "17:00:00:Europe/London",
-                        "end": "19:00:00:Europe/London"
-                    }
-                ]
+                "period": {
+                    "start": "07:00:00:Europe/London",
+                    "end": "23:59:59:Europe/London"
+                },
+                "niv": {
+                    "chargeCurve": {
+                        "points": []
+                    },
+                    "dischargeCurve": {
+                        "points": [
+                            {"x": 40, "y": 444},
+                            {"x": 40, "y": 0},
+                            {"x": 999999999, "y": 0}
+                        ]
+                    },
+                    "curveShiftLong": 6,
+                    "curveShiftShort": 0,
+                    "defaultPricing": []
+                }
             }
         ],
         "duosChargesImport": [

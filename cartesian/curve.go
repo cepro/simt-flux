@@ -9,7 +9,7 @@ type Point struct {
 }
 
 type Curve struct {
-	Points []Point
+	Points []Point `json:"points"`
 }
 
 // VerticalDistance returns the vertical (y-axis) distance from the given point to the Curve, a positive number indicating that the

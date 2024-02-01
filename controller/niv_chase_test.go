@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cepro/besscontroller/cartesian"
+	"github.com/cepro/besscontroller/config"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
@@ -15,25 +16,31 @@ func TestNivChase(test *testing.T) {
 		test.Fatalf("Could not load location: %v", err)
 	}
 
-	nivChasePeriods := []timeutils.ClockTimePeriod{
+	nivChasePeriods := []config.ClockTimePeriodWithNIV{
 		{
-			Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
-		},
-	}
-
-	nivChargeCurve := cartesian.Curve{
-		Points: []cartesian.Point{
-			{X: -9999, Y: 180},
-			{X: 0, Y: 180},
-			{X: 20, Y: 0},
-		},
-	}
-	nivDischargeCurve := cartesian.Curve{
-		Points: []cartesian.Point{
-			{X: 30, Y: 180},
-			{X: 40, Y: 0},
-			{X: 9999, Y: 0},
+			Period: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			},
+			Niv: config.NivConfig{
+				ChargeCurve: cartesian.Curve{
+					Points: []cartesian.Point{
+						{X: -9999, Y: 180},
+						{X: 0, Y: 180},
+						{X: 20, Y: 0},
+					},
+				},
+				DischargeCurve: cartesian.Curve{
+					Points: []cartesian.Point{
+						{X: 30, Y: 180},
+						{X: 40, Y: 0},
+						{X: 9999, Y: 0},
+					},
+				},
+				CurveShiftLong:  0, // adjusted dynamically in test
+				CurveShiftShort: 0, // adjusted dynamically in test
+				DefaultPricing:  []config.TimedCharge{},
+			},
 		},
 	}
 
@@ -167,14 +174,15 @@ func TestNivChase(test *testing.T) {
 	for _, subTest := range subTests {
 		test.Run(subTest.name, func(t *testing.T) {
 
+			// update the nivChasePeriods config for this subtest
+			for i := range nivChasePeriods {
+				nivChasePeriods[i].Niv.CurveShiftLong = subTest.curveShiftLong
+				nivChasePeriods[i].Niv.CurveShiftShort = subTest.curveShiftShort
+			}
+
 			component := nivChase(
 				subTest.t,
 				nivChasePeriods,
-				[]TimedCharge{},
-				nivChargeCurve,
-				nivDischargeCurve,
-				subTest.curveShiftLong,
-				subTest.curveShiftShort,
 				subTest.soe,
 				0.85,
 				subTest.chargesImport,

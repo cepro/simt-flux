@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cepro/besscontroller/cartesian"
+	"github.com/cepro/besscontroller/config"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 	"golang.org/x/exp/slog"
 )
@@ -16,10 +17,7 @@ const (
 // nivChase returns the control component for NIV chasing, using the Modo imbalance price calculation.
 func nivChase(
 	t time.Time,
-	nivChasePeriods []timeutils.ClockTimePeriod,
-	defaultPricing []TimedCharge,
-	chargeCurve, dischargeCurve cartesian.Curve,
-	curveShiftLong, curveShiftShort float64,
+	nivChasePeriods []config.ClockTimePeriodWithNIV,
 	soe,
 	chargeEfficiency,
 	chargesImport,
@@ -29,8 +27,8 @@ func nivChase(
 
 	logger := slog.Default()
 
-	nivChasePeriod := periodContainingTime(t, nivChasePeriods)
-	if nivChasePeriod == nil {
+	periodWithNiv := periodWithNivContainingTime(t, nivChasePeriods)
+	if periodWithNiv == nil {
 		return controlComponent{isActive: false}
 	}
 
@@ -44,7 +42,7 @@ func nivChase(
 	}
 
 	// Check if we have default pricing for this period
-	defaultImbalancePrice, foundDefaultImbalancePrice := firstTimedCharges(t, defaultPricing)
+	defaultImbalancePrice, foundDefaultImbalancePrice := config.FirstTimedCharges(t, periodWithNiv.Niv.DefaultPricing)
 
 	// We only trust the imbalance price calcualation 10 minutes into the SP - unless a default was provided
 	if (timeIntoSP < time.Minute*10) && !foundDefaultImbalancePrice {
@@ -84,18 +82,18 @@ func nivChase(
 	if foundModoImbalanceVolume {
 		isLong := modoImbalanceVolume < 0
 		if isLong {
-			shift = -curveShiftLong
+			shift = -periodWithNiv.Niv.CurveShiftLong
 			imbalanceDirectionStr = "long"
 		} else {
-			shift = curveShiftShort
+			shift = periodWithNiv.Niv.CurveShiftShort
 			imbalanceDirectionStr = "short"
 		}
 	}
 	shiftedChargePrice += shift
 	shiftedDischargePrice += shift
 
-	chargeDistance := chargeCurve.VerticalDistance(cartesian.Point{X: shiftedChargePrice, Y: soe})
-	dischargeDistance := dischargeCurve.VerticalDistance(cartesian.Point{X: shiftedDischargePrice, Y: soe})
+	chargeDistance := periodWithNiv.Niv.ChargeCurve.VerticalDistance(cartesian.Point{X: shiftedChargePrice, Y: soe})
+	dischargeDistance := periodWithNiv.Niv.DischargeCurve.VerticalDistance(cartesian.Point{X: shiftedDischargePrice, Y: soe})
 	energyDelta := 0.0
 
 	if chargeDistance > 0 {
