@@ -154,6 +154,7 @@ func main() {
 		SiteImportPowerLimit:          config.Controller.SiteImportPowerLimit,
 		SiteExportPowerLimit:          config.Controller.SiteExportPowerLimit,
 		WeekdayImportAvoidancePeriods: config.Controller.WeekdayImportAvoidancePeriods,
+		WeekendImportAvoidancePeriods: config.Controller.WeekendImportAvoidancePeriods,
 		ExportAvoidancePeriods:        config.Controller.ExportAvoidancePeriods,
 		ChargeToSoePeriods:            config.Controller.ChargeToSoePeriods,
 		WeekdayDischargeToSoePeriods:  config.Controller.WeekdayDischargeToSoePeriods,

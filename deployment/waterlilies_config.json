@@ -82,8 +82,14 @@
         "siteExportPowerLimit": 230,
         "weekdayImportAvoidancePeriods": [
             {
-                "start": "16:30:00:Europe/London",
-                "end": "19:00:00:Europe/London"
+                "start": "08:00:00:Europe/London",
+                "end": "22:00:00:Europe/London"
+            }
+        ],
+        "weekendImportAvoidancePeriods": [
+            {
+                "start": "08:00:00:Europe/London",
+                "end": "22:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [

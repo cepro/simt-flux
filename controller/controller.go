@@ -43,7 +43,8 @@ type Config struct {
 	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
 	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
-	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance'
+	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' at the weekend
+	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' during weekdays
 	ExportAvoidancePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
 	ChargeToSoePeriods            []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
 	WeekdayDischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
@@ -106,6 +107,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"site_export_power_limit", c.config.SiteExportPowerLimit,
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"weekday_import_avoidance_periods", fmt.Sprintf("%+v", c.config.WeekdayImportAvoidancePeriods),
+		"weekend_import_avoidance_periods", fmt.Sprintf("%+v", c.config.WeekendImportAvoidancePeriods),
 		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"weekday_discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.WeekdayDischargeToSoePeriods),
@@ -196,6 +198,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		importAvoidance(
 			t,
 			c.config.WeekdayImportAvoidancePeriods,
+			c.config.WeekendImportAvoidancePeriods,
 			c.SitePower(),
 			c.lastBessTargetPower,
 		),
@@ -333,13 +336,15 @@ func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
 }
 
 // importAvoidance returns control component for avoiding site imports.
-func importAvoidance(t time.Time, weekdayImportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
+func importAvoidance(t time.Time, weekdayImportAvoidancePeriods, weekendImportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	if !timeutils.IsWeekday(t) {
-		return controlComponent{isActive: false}
+	// select the appropriate periods depending on if it's a weekday or weekend
+	periods := weekendImportAvoidancePeriods
+	if timeutils.IsWeekday(t) {
+		periods = weekdayImportAvoidancePeriods
 	}
 
-	importAvoidancePeriod := periodContainingTime(t, weekdayImportAvoidancePeriods)
+	importAvoidancePeriod := periodContainingTime(t, periods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}

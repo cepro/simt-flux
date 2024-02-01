@@ -86,6 +86,7 @@ type ControllerConfig struct {
 	SiteImportPowerLimit          float64                     `json:"siteImportPowerLimit"`
 	SiteExportPowerLimit          float64                     `json:"siteExportPowerLimit"`
 	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekdayImportAvoidancePeriods"`
+	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekendImportAvoidancePeriods"`
 	ExportAvoidancePeriods        []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToSoePeriods            []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
 	WeekdayDischargeToSoePeriods  []ClockTimePeriodWithSoe    `json:"weekdayDischargeToSoePeriods"`

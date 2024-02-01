@@ -86,8 +86,9 @@
                 "end": "19:00:00:Europe/London"
             }
         ],
+        "weekendImportAvoidancePeriods": [
+        ],
         "exportAvoidancePeriods": [
-
         ],
         "chargeToSoePeriods": [
         ],

@@ -27,7 +27,7 @@ func TestController(test *testing.T) {
 	if err != nil {
 		test.Fatalf("Could not load location: %v", err)
 	}
-	importAvoidancePeriods := []timeutils.ClockTimePeriod{
+	weekdayImportAvoidancePeriods := []timeutils.ClockTimePeriod{
 		{
 			Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
@@ -137,7 +137,8 @@ func TestController(test *testing.T) {
 		BessDischargePowerLimit:       105,  // slightly higher discharge limit than charge limit for testing the asymmetry
 		SiteImportPowerLimit:          9999, // this is replaced at each test iteration
 		SiteExportPowerLimit:          9999, // this is replaced at each test iteration
-		WeekdayImportAvoidancePeriods: importAvoidancePeriods,
+		WeekdayImportAvoidancePeriods: weekdayImportAvoidancePeriods,
+		WeekendImportAvoidancePeriods: []timeutils.ClockTimePeriod{},
 		ExportAvoidancePeriods:        exportAvoidancePeriods,
 		ChargeToSoePeriods:            chargeToSoePeriods,
 		WeekdayDischargeToSoePeriods:  dischargeToSoePeriods,
