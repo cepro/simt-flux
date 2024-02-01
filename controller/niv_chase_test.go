@@ -203,7 +203,7 @@ func TestNivChase(test *testing.T) {
 }
 
 func componentsEquivalent(c1, c2 controlComponent) bool {
-	if c1.isActive != c1.isActive {
+	if c1.isActive != c2.isActive {
 		return false
 	}
 	if !c1.isActive {
