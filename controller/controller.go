@@ -112,6 +112,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"weekday_discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.WeekdayDischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
+		"charges_import", fmt.Sprintf("%+v", c.config.ChargesImport),
+		"charges_export", fmt.Sprintf("%+v", c.config.ChargesExport),
 	)
 
 	slog.Info("Controller running")
