@@ -150,7 +150,7 @@
                 }
             }
         ],
-        "duosChargesImport": [
+        "chargesImport": [
             {
                 "rate": 11.385,
                 "weekdayPeriods": [
@@ -204,7 +204,7 @@
                 ]
             }
         ],
-        "duosChargesExport": [
+        "chargesExport": [
             {
                 "rate": -10.0540,
                 "weekdayPeriods": [
