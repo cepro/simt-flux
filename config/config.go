@@ -109,10 +109,10 @@ type ControllerConfig struct {
 }
 
 type Config struct {
-	Meters       MetersConfig       `json:"meters"`
-	Bess         BessConfig         `json:"bess"`
-	DataPlatform DataPlatformConfig `json:"dataPlatform"`
-	Controller   ControllerConfig   `json:"controller"`
+	Meters        MetersConfig         `json:"meters"`
+	Bess          BessConfig           `json:"bess"`
+	DataPlatforms []DataPlatformConfig `json:"dataPlatforms"`
+	Controller    ControllerConfig     `json:"controller"`
 }
 
 func Read(path string) (Config, error) {

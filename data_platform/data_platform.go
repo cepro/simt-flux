@@ -54,6 +54,10 @@ func New(supabaseUrl string, supabaseAnonKey string, supabaseUserKey string, sch
 	}, nil
 }
 
+func (d *DataPlatform) BufferRepositoryFilename() string {
+	return d.repository.Path()
+}
+
 // Run loops forever waiting for meter or bess readings, when they are available they are uploaded.
 func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 

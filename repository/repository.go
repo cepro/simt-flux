@@ -11,7 +11,8 @@ import (
 
 // repository stores telemetry to the local file system (sqlite) before it is uploaded to Supbase.
 type Repository struct {
-	db *gorm.DB
+	db   *gorm.DB
+	path string
 }
 
 func New(path string) (*Repository, error) {
@@ -27,8 +28,13 @@ func New(path string) (*Repository, error) {
 	}
 
 	return &Repository{
-		db: db,
+		db:   db,
+		path: path,
 	}, nil
+}
+
+func (r *Repository) Path() string {
+	return r.path
 }
 
 // convertReadingsForStorage returns the equivilent "stored type" (which includes an 'upload attempt count') for the given readings

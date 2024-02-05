@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
@@ -131,12 +133,29 @@ func main() {
 		go powerPackMock.Run(ctx, time.Second*time.Duration(config.Bess.Mock.PollIntervalSecs))
 	}
 
-	dataPlatform, err := dataplatform.New(config.DataPlatform.Supabase.Url, supabaseAnonKey, supabaseUserKey, config.DataPlatform.Supabase.Schema, "telemetry.sqlite")
-	if err != nil {
-		slog.Error("Failed to create data platform", "error", err)
-		return
+	// The configuration can define multiple "dataplatforms" - we upload telemetry to each one
+	dataPlatforms := make([]*dataplatform.DataPlatform, 0, len(config.DataPlatforms))
+	for _, dataPlatformConfig := range config.DataPlatforms {
+
+		// use the supabase url to create a unique sqlite buffer filename
+		bufferFilename := strings.TrimPrefix(dataPlatformConfig.Supabase.Url, "https://")
+		bufferFilename = strings.TrimPrefix(bufferFilename, "http://")
+		bufferFilename = fmt.Sprintf("telemetry_%s.sqlite", bufferFilename)
+
+		dataPlatform, err := dataplatform.New(
+			dataPlatformConfig.Supabase.Url,
+			supabaseAnonKey,
+			supabaseUserKey,
+			dataPlatformConfig.Supabase.Schema,
+			bufferFilename,
+		)
+		if err != nil {
+			slog.Error("Failed to create data platform", "supabase_url", dataPlatformConfig.Supabase.Url, "error", err)
+			return
+		}
+		go dataPlatform.Run(ctx, time.Second*time.Duration(dataPlatformConfig.UploadIntervalSecs))
+		dataPlatforms = append(dataPlatforms, dataPlatform)
 	}
-	go dataPlatform.Run(ctx, time.Second*time.Duration(config.DataPlatform.UploadIntervalSecs))
 
 	// Create modo client
 	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages"
@@ -192,10 +211,14 @@ func main() {
 						sendIfNonBlocking(meterReadings, emulatedReading, "Emulated meter reading")
 					}
 				}
-				sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, "Dataplatform meter readings")
+				for _, dataPlatform := range dataPlatforms {
+					sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, fmt.Sprintf("Dataplatform meter readings (%s)", dataPlatform.BufferRepositoryFilename()))
+				}
 			case bessReading := <-bess.Telemetry():
 				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
-				sendIfNonBlocking(dataPlatform.BessReadings, bessReading, "Dataplatform bess readings")
+				for _, dataPlatform := range dataPlatforms {
+					sendIfNonBlocking(dataPlatform.BessReadings, bessReading, fmt.Sprintf("Dataplatform bess readings (%s)", dataPlatform.BufferRepositoryFilename()))
+				}
 			}
 		}
 	}()

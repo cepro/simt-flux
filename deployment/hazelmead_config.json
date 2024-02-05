@@ -59,13 +59,15 @@
             "inverterRampRateDown": 75
         }
     },
-    "dataPlatform": {
-        "uploadIntervalSecs": 60,
-        "supabase": {
-            "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-            "schema": "marcus"
+    "dataPlatforms": [
+        {
+            "uploadIntervalSecs": 60,
+            "supabase": {
+                "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
+                "schema": "marcus"
+            }
         }
-    },
+    ],
     "controller": {
         "siteMeter": "9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c",
         "bessMeter": "8333c68b-d5e0-4caf-94f7-0e97c78b913a",
