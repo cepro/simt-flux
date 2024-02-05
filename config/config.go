@@ -15,6 +15,19 @@ type ClockTimePeriodWithSoe struct {
 	Soe    float64                   `json:"soe"`
 }
 
+type NivConfig struct {
+	ChargeCurve     cartesian.Curve `json:"chargeCurve"`
+	DischargeCurve  cartesian.Curve `json:"dischargeCurve"`
+	CurveShiftLong  float64         `json:"curveShiftLong"`
+	CurveShiftShort float64         `json:"curveShiftShort"`
+	DefaultPricing  []TimedCharge   `json:"defaultPricing"`
+}
+
+type ClockTimePeriodWithNIV struct {
+	Period timeutils.ClockTimePeriod `json:"period"`
+	Niv    NivConfig                 `json:"niv"`
+}
+
 type DeviceConfig struct {
 	Host             string    `json:"host"`
 	ID               uuid.UUID `json:"id"`
@@ -86,23 +99,13 @@ type ControllerConfig struct {
 	SiteImportPowerLimit          float64                     `json:"siteImportPowerLimit"`
 	SiteExportPowerLimit          float64                     `json:"siteExportPowerLimit"`
 	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekdayImportAvoidancePeriods"`
+	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekendImportAvoidancePeriods"`
 	ExportAvoidancePeriods        []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
 	ChargeToSoePeriods            []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
 	WeekdayDischargeToSoePeriods  []ClockTimePeriodWithSoe    `json:"weekdayDischargeToSoePeriods"`
-	NivChasePeriods               []timeutils.ClockTimePeriod `json:"nivChasePeriods"`
-	NivChargeCurve                []cartesian.Point           `json:"nivChargeCurve"`
-	NivDischargeCurve             []cartesian.Point           `json:"nivDischargeCurve"`
-	NivCurveShiftLong             float64                     `json:"nivCurveShiftLong"`
-	NivCurveShiftShort            float64                     `json:"nivCurveShiftShort"`
-	NivDefaultPricing             []TimedCharge               `json:"nivDefaultPricing"`
+	NivChasePeriods               []ClockTimePeriodWithNIV    `json:"nivChasePeriods"`
 	ChargesImport                 []TimedCharge               `json:"chargesImport"`
 	ChargesExport                 []TimedCharge               `json:"chargesExport"`
-}
-
-type TimedCharge struct {
-	Rate           float64                     `json:"rate"`
-	PeriodsWeekday []timeutils.ClockTimePeriod `json:"weekdayPeriods"`
-	PeriodsWeekend []timeutils.ClockTimePeriod `json:"weekendPeriods"`
 }
 
 type Config struct {

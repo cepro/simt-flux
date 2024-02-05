@@ -27,7 +27,7 @@ func TestController(test *testing.T) {
 	if err != nil {
 		test.Fatalf("Could not load location: %v", err)
 	}
-	importAvoidancePeriods := []timeutils.ClockTimePeriod{
+	weekdayImportAvoidancePeriods := []timeutils.ClockTimePeriod{
 		{
 			Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
 			End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
@@ -88,38 +88,48 @@ func TestController(test *testing.T) {
 			},
 		},
 	}
-	nivChasePeriods := []timeutils.ClockTimePeriod{
+
+	nivChasePeriods := []config.ClockTimePeriodWithNIV{
 		{
-			Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			Period: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			},
+			Niv: config.NivConfig{
+				ChargeCurve: cartesian.Curve{
+					Points: []cartesian.Point{
+						{X: -9999, Y: 180},
+						{X: 0, Y: 180},
+						{X: 20, Y: 0},
+					},
+				},
+				DischargeCurve: cartesian.Curve{
+					Points: []cartesian.Point{
+						{X: 30, Y: 180},
+						{X: 40, Y: 0},
+						{X: 9999, Y: 0},
+					},
+				},
+				CurveShiftLong:  0,
+				CurveShiftShort: 0,
+				DefaultPricing:  []config.TimedCharge{},
+			},
 		},
 	}
-	nivChargeCurve := cartesian.Curve{
-		Points: []cartesian.Point{
-			{X: -9999, Y: 180},
-			{X: 0, Y: 180},
-			{X: 20, Y: 0},
-		},
-	}
-	nivDischargeCurve := cartesian.Curve{
-		Points: []cartesian.Point{
-			{X: 30, Y: 180},
-			{X: 40, Y: 0},
-			{X: 9999, Y: 0},
-		},
-	}
-	chargesImport := []TimedCharge{
+
+	chargesPeriods := []timeutils.ClockTimePeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
+	chargesImport := []config.TimedCharge{
 		{
 			Rate:           10,
-			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
-			PeriodsWeekend: nivChasePeriods,
+			PeriodsWeekday: chargesPeriods,
+			PeriodsWeekend: chargesPeriods,
 		},
 	}
-	chargesExport := []TimedCharge{
+	chargesExport := []config.TimedCharge{
 		{
 			Rate:           -10,
-			PeriodsWeekday: nivChasePeriods, // This is unrealistic but convenient for the test conciseness
-			PeriodsWeekend: nivChasePeriods,
+			PeriodsWeekday: chargesPeriods,
+			PeriodsWeekend: chargesPeriods,
 		},
 	}
 
@@ -137,13 +147,12 @@ func TestController(test *testing.T) {
 		BessDischargePowerLimit:       105,  // slightly higher discharge limit than charge limit for testing the asymmetry
 		SiteImportPowerLimit:          9999, // this is replaced at each test iteration
 		SiteExportPowerLimit:          9999, // this is replaced at each test iteration
-		WeekdayImportAvoidancePeriods: importAvoidancePeriods,
+		WeekdayImportAvoidancePeriods: weekdayImportAvoidancePeriods,
+		WeekendImportAvoidancePeriods: []timeutils.ClockTimePeriod{},
 		ExportAvoidancePeriods:        exportAvoidancePeriods,
 		ChargeToSoePeriods:            chargeToSoePeriods,
 		WeekdayDischargeToSoePeriods:  dischargeToSoePeriods,
 		NivChasePeriods:               nivChasePeriods,
-		NivChargeCurve:                nivChargeCurve,
-		NivDischargeCurve:             nivDischargeCurve,
 		ChargesImport:                 chargesImport,
 		ChargesExport:                 chargesExport,
 		ModoClient:                    &MockImbalancePricer{}, // this is replaced at each test iteration
