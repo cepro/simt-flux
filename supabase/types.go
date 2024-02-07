@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	SUPABASE_BESS_READING_TABLE_NAME  = "bess_readings_foreign"
-	SUPABASE_METER_READING_TABLE_NAME = "meter_readings_foreign"
+	SUPABASE_BESS_READING_TABLE_NAME  = "mg_bess_readings"
+	SUPABASE_METER_READING_TABLE_NAME = "mg_meter_readings"
 )
 
 type SupabaseReadingMeta struct {
