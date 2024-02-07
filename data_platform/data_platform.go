@@ -110,7 +110,7 @@ func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 				}
 			}
 
-			slog.Info("Finished supabase upload routine", "bess_readings_fresh", nFreshBess, "meter_readings_fresh", nFreshMeter, "bess_readings_old", nOldBess, "meter_readings_old", nOldMeter)
+			slog.Info("Finished supabase upload routine", "bess_readings_fresh", nFreshBess, "meter_readings_fresh", nFreshMeter, "bess_readings_old", nOldBess, "meter_readings_old", nOldMeter, "buffer_path", d.repository.Path())
 		}
 	}
 }

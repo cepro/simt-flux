@@ -50,18 +50,6 @@ func main() {
 		return
 	}
 
-	// Read secrets from env vars
-	supabaseAnonKey, ok := os.LookupEnv("SUPABASE_ANON_KEY")
-	if !ok {
-		slog.Error("SUPABASE_ANON_KEY environment variable not specified")
-		return
-	}
-	supabaseUserKey := os.Getenv("SUPABASE_USER_KEY")
-	if !ok {
-		slog.Error("SUPABASE_USER_KEY environment variable not specified")
-		return
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	meterReadings := make(chan telemetry.MeterReading, 5)
@@ -141,6 +129,18 @@ func main() {
 		bufferFilename := strings.TrimPrefix(dataPlatformConfig.Supabase.Url, "https://")
 		bufferFilename = strings.TrimPrefix(bufferFilename, "http://")
 		bufferFilename = fmt.Sprintf("telemetry_%s.sqlite", bufferFilename)
+
+		// Read supabase key secrets from env vars
+		supabaseAnonKey, ok := os.LookupEnv(dataPlatformConfig.Supabase.AnonKeyEnvVar)
+		if !ok {
+			slog.Error("Wnvironment variable not found", "env_var", dataPlatformConfig.Supabase.AnonKeyEnvVar)
+			return
+		}
+		supabaseUserKey, ok := os.LookupEnv(dataPlatformConfig.Supabase.UserKeyEnvVar)
+		if !ok {
+			slog.Error("Wnvironment variable not found", "env_var", dataPlatformConfig.Supabase.UserKeyEnvVar)
+			return
+		}
 
 		dataPlatform, err := dataplatform.New(
 			dataPlatformConfig.Supabase.Url,

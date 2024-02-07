@@ -73,7 +73,9 @@ type BessConfig struct {
 type SupabaseConfig struct {
 	Url string `json:"url"`
 	// key is specified via env var
-	Schema string `json:"schema"`
+	Schema        string `json:"schema"`
+	AnonKeyEnvVar string `json:"anonKeyEnvVar"`
+	UserKeyEnvVar string `json:"userKeyEnvVar"`
 }
 
 type DataPlatformConfig struct {
