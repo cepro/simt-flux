@@ -63,7 +63,7 @@
         "uploadIntervalSecs": 60,
         "supabase": {
             "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-            "schema": "marcus"
+            "schema": "flows"
         }
     },
     "controller": {
@@ -103,26 +103,33 @@
         ],
         "nivChasePeriods": [
             {
-                "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
+                "period": {
+                    "start": "00:00:00:Europe/London",
+                    "end": "23:59:59:Europe/London"
+                },
+                "niv": {
+                    "chargeCurve": {
+                        "points": [
+                            {"x": -999999999, "y": 1280},
+                            {"x": 4, "y": 1280},
+                            {"x": 6, "y": 1000},
+                            {"x": 12, "y": 0}
+                        ]
+                    },
+                    "dischargeCurve": {
+                        "points": [
+                            {"x": 8, "y": 1280},
+                            {"x": 18, "y": 1000},
+                            {"x": 25, "y": 1000},
+                            {"x": 35, "y": 100},
+                            {"x": 999999999, "y": 0}
+                        ]
+                    },
+                    "curveShiftLong": 6,
+                    "curveShiftShort": 2,
+                    "defaultPricing": []
+                }
             }
-        ],
-        "nivChargeCurve": [
-            {"x": -999999999, "y": 1280},
-            {"x": 4, "y": 1280},
-            {"x": 6, "y": 1000},
-            {"x": 12, "y": 0}
-        ],
-        "nivDischargeCurve": [
-            {"x": 8, "y": 1280},
-            {"x": 18, "y": 1000},
-            {"x": 25, "y": 1000},
-            {"x": 35, "y": 100},
-            {"x": 999999999, "y": 0}
-        ],
-        "nivCurveShiftLong": 6,
-        "nivCurveShiftShort": 2,
-        "nivDefaultPricing": [
         ],
         "chargesImport": [
             {

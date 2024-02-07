@@ -59,15 +59,13 @@
             "inverterRampRateDown": 75
         }
     },
-    "dataPlatforms": [
-        {
-            "uploadIntervalSecs": 60,
-            "supabase": {
-                "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-                "schema": "marcus"
-            }
+    "dataPlatform": {
+        "uploadIntervalSecs": 60,
+        "supabase": {
+            "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
+            "schema": "flows"
         }
-    ],
+    },
     "controller": {
         "siteMeter": "9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c",
         "bessMeter": "8333c68b-d5e0-4caf-94f7-0e97c78b913a",
@@ -105,25 +103,33 @@
         ],
         "nivChasePeriods": [
             {
-                "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
+                "period": {
+                    "start": "00:00:00:Europe/London",
+                    "end": "23:59:59:Europe/London"
+                },
+                "niv": {
+                    "chargeCurve": {
+                        "points": [
+                            {"x": -999999999, "y": 1280},
+                            {"x": -2, "y": 1280},
+                            {"x": 6, "y": 400},
+                            {"x": 12, "y": 0}                
+                        ]
+                    },
+                    "dischargeCurve": {
+                        "points": [
+                            {"x": 8, "y": 1280},
+                            {"x": 14, "y": 400},
+                            {"x": 35, "y": 100},
+                            {"x": 999999999, "y": 0}
+                
+                        ]
+                    },
+                    "curveShiftLong": 3,
+                    "curveShiftShort": 3,
+                    "defaultPricing": []
+                }
             }
-        ],
-        "nivChargeCurve": [
-            {"x": -999999999, "y": 1280},
-            {"x": -2, "y": 1280},
-            {"x": 6, "y": 400},
-            {"x": 12, "y": 0}
-        ],
-        "nivDischargeCurve": [
-            {"x": 8, "y": 1280},
-            {"x": 14, "y": 400},
-            {"x": 35, "y": 100},
-            {"x": 999999999, "y": 0}
-        ],
-        "nivCurveShiftLong": 3,
-        "nivCurveShiftShort": 3,
-        "nivDefaultPricing": [
         ],
         "chargesImport": [
             {

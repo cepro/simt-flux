@@ -63,7 +63,7 @@
         "uploadIntervalSecs": 60,
         "supabase": {
             "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-            "schema": "marcus"
+            "schema": "flows"
         }
     },
     "controller": {
