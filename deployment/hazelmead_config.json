@@ -64,7 +64,18 @@
             "uploadIntervalSecs": 60,
             "supabase": {
                 "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-                "schema": "flows"
+                "schema": "flows",
+                "anonKeyEnvVar": "SUPABASE_ANON_KEY_QA",
+                "userKeyEnvVar": "SUPABASE_USER_KEY_QA"
+            }
+        },
+        {
+            "uploadIntervalSecs": 60,
+            "supabase": {
+                "url": "https://pqlwxerasppsyleweruk.supabase.co",
+                "schema": "flows",
+                "anonKeyEnvVar": "SUPABASE_ANON_KEY_PROD",
+                "userKeyEnvVar": "SUPABASE_USER_KEY_PROD"
             }
         }
     ],
