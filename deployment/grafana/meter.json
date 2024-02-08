@@ -19,14 +19,14 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 8,
+  "id": 11,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "postgres",
-        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+        "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
       },
       "fieldConfig": {
         "defaults": {
@@ -34,6 +34,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -77,7 +78,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": [
           {
@@ -189,12 +191,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+            "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time_b,\n  energy_imported_phase_a_active_delta as phase_a_import,\n  energy_exported_phase_a_active_delta as phase_a_export,\n  energy_imported_phase_b_active_delta as phase_b_import,\n  energy_exported_phase_b_active_delta as phase_b_export,\n  energy_imported_phase_c_active_delta as phase_c_import,\n  energy_exported_phase_c_active_delta as phase_c_export\nFROM\n  marcus.meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
+          "rawSql": "SELECT\n  time_b,\n  energy_imported_phase_a_active_delta as phase_a_import,\n  energy_exported_phase_a_active_delta as phase_a_export,\n  energy_imported_phase_b_active_delta as phase_b_import,\n  energy_exported_phase_b_active_delta as phase_b_export,\n  energy_imported_phase_c_active_delta as phase_c_import,\n  energy_exported_phase_c_active_delta as phase_c_export\nFROM\n  flows.mg_meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -217,13 +219,13 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+            "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
           },
           "editorMode": "code",
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\n  time_b,\n  energy_imported_active_delta as total_import,\n  energy_exported_active_delta as total_export\nFROM\n  marcus.meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
+          "rawSql": "SELECT\n  time_b,\n  energy_imported_active_delta as total_import,\n  energy_exported_active_delta as total_export\nFROM\n  flows.mg_meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
           "refId": "B",
           "sql": {
             "columns": [
@@ -250,7 +252,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+        "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
       },
       "description": "",
       "fieldConfig": {
@@ -259,6 +261,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -302,7 +305,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": []
       },
@@ -329,12 +333,12 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+            "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  time_b,\n  power_total_active_avg as active,\n  power_total_reactive_avg as reactive,\n  power_total_apparent_avg as apparent\nFROM\n  marcus.meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
+          "rawSql": "SELECT\n  time_b,\n  power_total_active_avg as active,\n  power_total_reactive_avg as reactive,\n  power_total_apparent_avg as apparent\nFROM\n  mg_meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
           "refId": "A",
           "sql": {
             "columns": [
@@ -361,7 +365,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+        "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
       },
       "fieldConfig": {
         "defaults": {
@@ -369,6 +373,7 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -411,7 +416,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unitScale": true
         },
         "overrides": [
           {
@@ -474,13 +480,13 @@
         {
           "datasource": {
             "type": "postgres",
-            "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+            "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
           },
           "editorMode": "code",
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT\n  time_b,\n  energy_imported_active_min as total_import,\n  energy_exported_active_min as total_export\n  FROM\n  marcus.meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
+          "rawSql": "SELECT\n  time_b,\n  energy_imported_active_min as total_import,\n  energy_exported_active_min as total_export\n  FROM\n  mg_meter_readings_5m\nWHERE\n  $__timeFilter(time_b)\n  AND device_id = '$meter'\nORDER BY\n  time_b",
           "refId": "B",
           "sql": {
             "columns": [
@@ -506,8 +512,7 @@
     }
   ],
   "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": [
@@ -519,16 +524,16 @@
         },
         "datasource": {
           "type": "postgres",
-          "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+          "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
         },
-        "definition": "SELECT DISTINCT site from marcus.device_registry",
+        "definition": "SELECT DISTINCT site from mg_device_registry",
         "hide": 0,
         "includeAll": false,
         "label": "Site",
         "multi": false,
         "name": "site",
         "options": [],
-        "query": "SELECT DISTINCT site from marcus.device_registry",
+        "query": "SELECT DISTINCT site from mg_device_registry",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -543,16 +548,16 @@
         },
         "datasource": {
           "type": "postgres",
-          "uid": "eeba52b7-d8eb-4950-a9c3-f8cd63f86045"
+          "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
         },
-        "definition": "SELECT DISTINCT name from marcus.device_registry WHERE site='$site' AND type='meter'",
+        "definition": "SELECT DISTINCT name from mg_device_registry WHERE site='$site' AND type='meter'",
         "hide": 0,
         "includeAll": false,
         "label": "Meter name",
         "multi": false,
         "name": "meter_name",
         "options": [],
-        "query": "SELECT DISTINCT name from marcus.device_registry WHERE site='$site' AND type='meter'",
+        "query": "SELECT DISTINCT name from mg_device_registry WHERE site='$site' AND type='meter'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -567,16 +572,16 @@
         },
         "datasource": {
           "type": "postgres",
-          "uid": "a5a3040c-b9a8-42a8-a989-76b7a2b2ccbe"
+          "uid": "d20d8b4f-6ec4-4cd5-a94d-71334433360a"
         },
-        "definition": "SELECT device_id from marcus.device_registry WHERE site='$site' AND name='$meter_name'",
+        "definition": "SELECT device_id from mg_device_registry WHERE site='$site' AND name='$meter_name'",
         "hide": 0,
         "includeAll": false,
         "label": "Meter",
         "multi": false,
         "name": "meter",
         "options": [],
-        "query": "SELECT device_id from marcus.device_registry WHERE site='$site' AND name='$meter_name'",
+        "query": "SELECT device_id from mg_device_registry WHERE site='$site' AND name='$meter_name'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -593,6 +598,6 @@
   "timezone": "",
   "title": "Meter",
   "uid": "acfc7736-5a29-46a4-aabd-753b8d467cd6",
-  "version": 13,
+  "version": 2,
   "weekStart": ""
 }
