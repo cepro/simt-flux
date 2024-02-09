@@ -64,7 +64,18 @@
             "uploadIntervalSecs": 60,
             "supabase": {
                 "url": "https://rkzgrxssutcwrauaazjz.supabase.co",
-                "schema": "flows"
+                "schema": "flows",
+                "anonKeyEnvVar": "SUPABASE_ANON_KEY_QA",
+                "userKeyEnvVar": "SUPABASE_USER_KEY_QA"
+            }
+        },
+        {
+            "uploadIntervalSecs": 60,
+            "supabase": {
+                "url": "https://pqlwxerasppsyleweruk.supabase.co",
+                "schema": "flows",
+                "anonKeyEnvVar": "SUPABASE_ANON_KEY_PROD",
+                "userKeyEnvVar": "SUPABASE_USER_KEY_PROD"
             }
         }
     ],
@@ -115,7 +126,7 @@
                             {"x": -999999999, "y": 1280},
                             {"x": -2, "y": 1280},
                             {"x": 6, "y": 400},
-                            {"x": 12, "y": 0}                
+                            {"x": 12, "y": 0}
                         ]
                     },
                     "dischargeCurve": {
@@ -124,7 +135,6 @@
                             {"x": 14, "y": 400},
                             {"x": 35, "y": 100},
                             {"x": 999999999, "y": 0}
-                
                         ]
                     },
                     "curveShiftLong": 3,
