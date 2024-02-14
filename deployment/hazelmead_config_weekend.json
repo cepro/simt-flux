@@ -87,7 +87,7 @@
             "emulatedSiteMeter": null
         },
         "bessChargeEfficiency": 0.85,
-        "bessSoeMin": 0,
+        "bessSoeMin": 20,
         "bessSoeMax": 1280,
         "bessChargePowerLimit": 565,
         "bessDischargePowerLimit": 565,
