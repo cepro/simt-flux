@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	imbalancePriceUrl  = "https://data-api.modoenergy.com/v1/widgets/system-price/"
-	imbalanceVolumeUrl = "https://data-api.modoenergy.com/v1/widgets/system-imbalance/"
+	imbalancePriceUrl  = "https://admin.modo.energy/v1/data-api/widgets/system-price/"
+	imbalanceVolumeUrl = "https://admin.modo.energy/v1/data-api/widgets/system-imbalance/"
 )
 
 type Client struct {
