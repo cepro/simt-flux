@@ -96,20 +96,16 @@
         "bessDischargePowerLimit": 222,
         "siteImportPowerLimit": 140,
         "siteExportPowerLimit": 230,
-        "weekdayImportAvoidancePeriods": [
+        "importAvoidancePeriods": [
             {
-                "start": "07:00:00:Europe/London",
-                "end": "23:00:00:Europe/London"
-            }
-        ],
-        "weekendImportAvoidancePeriods": [
-            {
+                "days": "all",
                 "start": "07:00:00:Europe/London",
                 "end": "23:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
             {
+                "days": "all",
                 "start": "00:00:00:Europe/London",
                 "end": "23:59:59:Europe/London"
             }
@@ -121,6 +117,7 @@
         "nivChasePeriods": [
             {
                 "period": {
+                    "days": "all",
                     "start": "00:00:00:Europe/London",
                     "end": "07:00:00:Europe/London"
                 },

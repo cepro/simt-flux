@@ -96,22 +96,22 @@
         "bessDischargePowerLimit": 565,
         "siteImportPowerLimit": 220,
         "siteExportPowerLimit": 475,
-        "weekdayImportAvoidancePeriods": [
+        "importAvoidancePeriods": [
             {
+                "days": "weekdays",
                 "start": "16:30:00:Europe/London",
                 "end": "19:00:00:Europe/London"
             }
-        ],
-        "weekendImportAvoidancePeriods": [
         ],
         "exportAvoidancePeriods": [
         ],
         "chargeToSoePeriods": [
         ],
-        "weekdayDischargeToSoePeriods": [
+        "dischargeToSoePeriods": [
             {
                 "soe": 0,
                 "period": {
+                    "days": "weekdays",
                     "start": "17:00:00:Europe/London",
                     "end": "19:00:00:Europe/London"
                 }
@@ -120,6 +120,7 @@
         "nivChasePeriods": [
             {
                 "period": {
+                    "days": "weekdays",
                     "start": "00:00:00:Europe/London",
                     "end": "23:59:59:Europe/London"
                 },
@@ -145,8 +146,39 @@
                     "curveShiftShort": 2,
                     "defaultPricing": []
                 }
+            },
+            {
+                "period": {
+                    "days": "weekends",
+                    "start": "00:00:00:Europe/London",
+                    "end": "23:59:59:Europe/London"
+                },
+                "niv": {
+                    "chargeCurve": {
+                        "points": [
+                            {"x": -999999999, "y": 1280},
+                            {"x": -2, "y": 1280},
+                            {"x": 6, "y": 400},
+                            {"x": 12, "y": 0}
+                        ]
+                    },
+                    "dischargeCurve": {
+                        "points": [
+                            {"x": 8, "y": 1280},
+                            {"x": 14, "y": 400},
+                            {"x": 35, "y": 100},
+                            {"x": 999999999, "y": 0}
+                        ]
+                    },
+                    "curveShiftLong": 3,
+                    "curveShiftShort": 3,
+                    "defaultPricing": []
+                }
             }
         ],
+
+
+
         "chargesImport": [
             {
                 "rate": 2.28,
