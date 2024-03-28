@@ -36,9 +36,9 @@ type PowerPack struct {
 
 // TeslaOptions defines parameters that are set internally on the PowerPack via modbus
 type TeslaOptions struct {
-	RampRateUp   float64 // sets the maximum ramp up rate at the inverters
-	RampRateDown float64 // sets the maximum ramp down rate at the inverters
-	AlwaysOnMode bool    // if true, then equipment will not enter power saving modes, meaning it is more responsive, but less efficient
+	RampRateUp       float64 // sets the maximum ramp up rate at the inverters
+	RampRateDown     float64 // sets the maximum ramp down rate at the inverters
+	AlwaysActiveMode bool    // if true, then equipment will not enter power saving modes, meaning it is more responsive, but less efficient
 }
 
 func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64, teslaOptions TeslaOptions) (*PowerPack, error) {
@@ -124,12 +124,12 @@ func (p *PowerPack) initializeBessIfRequired() error {
 		return fmt.Errorf("set ramp down rate: %w", err)
 	}
 
-	err = p.client.WriteMetric(realPowerCommandBlock.Metrics["AlwaysActive"], boolToUint16(p.teslaOptions.AlwaysOnMode))
+	err = p.client.WriteMetric(realPowerCommandBlock.Metrics["AlwaysActive"], boolToUint16(p.teslaOptions.AlwaysActiveMode))
 	if err != nil {
 		return fmt.Errorf("set always active mode: %w", err)
 	}
 
-	p.logger.Info("Applied powerpack ramp settings")
+	p.logger.Info(fmt.Sprintf("Applied powerpack tesla options: %+v", p.teslaOptions))
 
 	p.haveInitializedBess = true
 

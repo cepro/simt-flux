@@ -63,7 +63,7 @@ type PowerPackConfig struct {
 type PowerPackTeslaOptions struct {
 	InverterRampRateUp   float64 `json:"inverterRampRateUp"`
 	InverterRampRateDown float64 `json:"inverterRampRateDown"`
-	AlwaysOn             bool    `json:"alwaysOn"`
+	AlwaysActive         bool    `json:"alwaysActive"`
 }
 
 type MockBessConfig struct {

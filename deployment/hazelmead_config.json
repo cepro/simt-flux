@@ -58,7 +58,7 @@
             "teslaOptions": {
                 "inverterRampRateUp": 75,
                 "inverterRampRateDown": 75,
-                "alwaysOn": true
+                "alwaysActive": false
             }
         }
     },

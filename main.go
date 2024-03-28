@@ -101,9 +101,9 @@ func main() {
 			ppConfig.NameplateEnergy,
 			ppConfig.NameplatePower,
 			powerpack.TeslaOptions{
-				RampRateUp:   ppConfig.TeslaOptions.InverterRampRateUp,
-				RampRateDown: ppConfig.TeslaOptions.InverterRampRateDown,
-				AlwaysOnMode: ppConfig.TeslaOptions.AlwaysOn,
+				RampRateUp:       ppConfig.TeslaOptions.InverterRampRateUp,
+				RampRateDown:     ppConfig.TeslaOptions.InverterRampRateDown,
+				AlwaysActiveMode: ppConfig.TeslaOptions.AlwaysActive,
 			},
 		)
 		if err != nil {
