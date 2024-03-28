@@ -55,8 +55,11 @@
             "pollIntervalSecs": 2,
             "nameplatePower": 222,
             "nameplateEnergy": 444,
-            "inverterRampRateUp": 50,
-            "inverterRampRateDown": 50
+            "teslaOptions": {
+                "inverterRampRateUp": 50,
+                "inverterRampRateDown": 50,
+                "alwaysActive": true
+            }
         }
     },
     "dataPlatforms": [

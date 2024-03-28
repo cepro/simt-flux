@@ -51,12 +51,19 @@ type MockMeterConfig struct {
 	DeviceConfig
 }
 
-type PowerPackBessConfig struct {
+type PowerPackConfig struct {
 	DeviceConfig
-	NameplatePower       float64 `json:"nameplatePower"`
-	NameplateEnergy      float64 `json:"nameplateEnergy"`
+	NameplatePower  float64               `json:"nameplatePower"`
+	NameplateEnergy float64               `json:"nameplateEnergy"`
+	TeslaOptions    PowerPackTeslaOptions `json:"teslaOptions"`
+}
+
+// PowerPackTeslaOptions contains settings which are applied via Modbus onto the tesla hardware.
+// (maybe this struct could have a better name).
+type PowerPackTeslaOptions struct {
 	InverterRampRateUp   float64 `json:"inverterRampRateUp"`
 	InverterRampRateDown float64 `json:"inverterRampRateDown"`
+	AlwaysActive         bool    `json:"alwaysActive"`
 }
 
 type MockBessConfig struct {
@@ -66,8 +73,8 @@ type MockBessConfig struct {
 }
 
 type BessConfig struct {
-	PowerPack *PowerPackBessConfig `json:"powerPack"`
-	Mock      *MockBessConfig      `json:"mock"`
+	PowerPack *PowerPackConfig `json:"powerPack"`
+	Mock      *MockBessConfig  `json:"mock"`
 }
 
 type SupabaseConfig struct {
