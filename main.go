@@ -100,8 +100,11 @@ func main() {
 			ppConfig.Host,
 			ppConfig.NameplateEnergy,
 			ppConfig.NameplatePower,
-			ppConfig.InverterRampRateUp,
-			ppConfig.InverterRampRateDown,
+			powerpack.TeslaOptions{
+				RampRateUp:   ppConfig.TeslaOptions.InverterRampRateUp,
+				RampRateDown: ppConfig.TeslaOptions.InverterRampRateDown,
+				AlwaysOnMode: ppConfig.TeslaOptions.AlwaysOn,
+			},
 		)
 		if err != nil {
 			slog.Error("Failed to create power pack", "error", err)

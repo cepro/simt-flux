@@ -55,8 +55,11 @@
             "pollIntervalSecs": 2,
             "nameplatePower": 565,
             "nameplateEnergy": 1609,
-            "inverterRampRateUp": 75,
-            "inverterRampRateDown": 75
+            "teslaOptions": {
+                "inverterRampRateUp": 75,
+                "inverterRampRateDown": 75,
+                "alwaysOn": true
+            }
         }
     },
     "dataPlatforms": [
@@ -87,7 +90,7 @@
             "emulatedSiteMeter": null
         },
         "bessChargeEfficiency": 0.85,
-        "bessSoeMin": 20,
+        "bessSoeMin": 30,
         "bessSoeMax": 1280,
         "bessChargePowerLimit": 565,
         "bessDischargePowerLimit": 565,

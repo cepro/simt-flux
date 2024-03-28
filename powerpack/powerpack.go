@@ -16,13 +16,14 @@ const (
 	MODBUS_TIMEOUT_SECS = uint16(10)
 )
 
+// PowerPack represents a Tesla battery (actually a PowerPack or a MegaPack)
 type PowerPack struct {
 	host            string
 	id              uuid.UUID
 	nameplateEnergy float64
 	nameplatePower  float64
-	rampRateUp      float64
-	rampRateDown    float64
+
+	teslaOptions TeslaOptions
 
 	telemetry              chan telemetry.BessReading
 	commands               chan telemetry.BessCommand
@@ -33,7 +34,14 @@ type PowerPack struct {
 	logger                 *slog.Logger
 }
 
-func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower, rampRateUp, rampRateDown float64) (*PowerPack, error) {
+// TeslaOptions defines parameters that are set internally on the PowerPack via modbus
+type TeslaOptions struct {
+	RampRateUp   float64 // sets the maximum ramp up rate at the inverters
+	RampRateDown float64 // sets the maximum ramp down rate at the inverters
+	AlwaysOnMode bool    // if true, then equipment will not enter power saving modes, meaning it is more responsive, but less efficient
+}
+
+func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64, teslaOptions TeslaOptions) (*PowerPack, error) {
 
 	logger := slog.Default().With("bess_id", id, "host", host)
 
@@ -47,8 +55,7 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower, rampRateUp,
 		id:                     id,
 		nameplateEnergy:        nameplateEnergy,
 		nameplatePower:         nameplatePower,
-		rampRateUp:             rampRateUp,
-		rampRateDown:           rampRateDown,
+		teslaOptions:           teslaOptions,
 		telemetry:              make(chan telemetry.BessReading, 1),
 		commands:               make(chan telemetry.BessCommand, 1),
 		client:                 client,
@@ -100,28 +107,29 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 	}
 }
 
+// initializeBessIfRequired runs through the intial configuration of the PowerPack, if it hasn't already been done.
 func (p *PowerPack) initializeBessIfRequired() error {
 
 	if p.haveInitializedBess {
 		return nil
 	}
 
-	err := p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampUp"], uint32(p.rampRateUp*1000)) // kW/s to W/s
+	err := p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampUp"], uint32(p.teslaOptions.RampRateUp*1000)) // kW/s to W/s
 	if err != nil {
 		return fmt.Errorf("set ramp up rate: %w", err)
 	}
 
-	err = p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampDown"], uint32(p.rampRateDown*1000)) // kW/s to W/s
+	err = p.client.WriteMetric(realPowerRampParametersBlock.Metrics["RampDown"], uint32(p.teslaOptions.RampRateDown*1000)) // kW/s to W/s
 	if err != nil {
 		return fmt.Errorf("set ramp down rate: %w", err)
 	}
 
-	err = p.client.WriteMetric(realPowerCommandBlock.Metrics["AlwaysActive"], uint16(1))
+	err = p.client.WriteMetric(realPowerCommandBlock.Metrics["AlwaysActive"], boolToUint16(p.teslaOptions.AlwaysOnMode))
 	if err != nil {
 		return fmt.Errorf("set always active mode: %w", err)
 	}
 
-	p.logger.Info(fmt.Sprintf("Applied powerpack ramp settings"))
+	p.logger.Info("Applied powerpack ramp settings")
 
 	p.haveInitializedBess = true
 
@@ -216,5 +224,14 @@ func (p *PowerPack) nextHeartbeat() uint16 {
 		return 0xAA55
 	} else {
 		return 0x55AA
+	}
+}
+
+// boolToUint16 converts a boolean value to an integer for transmission over modbus
+func boolToUint16(b bool) uint16 {
+	if b {
+		return 1
+	} else {
+		return 0
 	}
 }
