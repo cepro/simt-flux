@@ -45,8 +45,8 @@ type Config struct {
 	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' at the weekend
 	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' during weekdays
 	ExportAvoidancePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
-	ChargeToSoePeriods            []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
-	WeekdayDischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	ChargeToSoePeriods            []config.DayedPeriodWithSoe     // the periods of time to charge the battery, and the level that the battery should be recharged to
+	WeekdayDischargeToSoePeriods  []config.DayedPeriodWithSoe     // the periods of time to discharge the battery, and the level that the battery should be discharged to
 	NivChasePeriods               []config.ClockTimePeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
 	ChargesImport                 []config.TimedCharge            // Any charges that apply to importing power from the grid
 	ChargesExport                 []config.TimedCharge            // Any charges that apply to exporting power from the grid
@@ -378,7 +378,7 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePe
 }
 
 // chargeToSoe returns the control component for charging the battery to a minimum SoE.
-func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
+func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
 	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
 	if periodWithSoe == nil {
@@ -409,7 +409,7 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.ClockTimePeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
 	if !timeutils.IsWeekday(t) {
 		return controlComponent{isActive: false}
@@ -445,7 +445,7 @@ func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.ClockTime
 
 // periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
 // If there is more than one overlapping period than the first is returned.
-func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.ClockTimePeriodWithSoe) *PeriodWithSoe {
+func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.DayedPeriodWithSoe) *PeriodWithSoe {
 	for _, ctPeriodWithSoe := range ctPeriodsWithSoe {
 		period, ok := ctPeriodWithSoe.Period.AbsolutePeriod(t)
 		if ok {

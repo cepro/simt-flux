@@ -63,7 +63,7 @@ func TestController(test *testing.T) {
 			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
 		},
 	}
-	chargeToSoePeriods := []config.ClockTimePeriodWithSoe{
+	chargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 130,
 			Period: timeutils.ClockTimePeriod{
@@ -79,7 +79,7 @@ func TestController(test *testing.T) {
 			},
 		},
 	}
-	dischargeToSoePeriods := []config.ClockTimePeriodWithSoe{
+	dischargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 70,
 			Period: timeutils.ClockTimePeriod{

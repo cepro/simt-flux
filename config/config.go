@@ -10,9 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type ClockTimePeriodWithSoe struct {
-	Period timeutils.ClockTimePeriod `json:"period"`
-	Soe    float64                   `json:"soe"`
+// DayedPeriod gives a period of time on particular days
+type DayedPeriod struct {
+	timeutils.ClockTimePeriod        // The period, e.g. "4pm to 6pm"
+	Days                      string `json:"days"` // Indicates the days on which this period applies, can be "weekends", "weekdays", or "all"
+}
+
+type DayedPeriodWithSoe struct {
+	Period DayedPeriod `json:"period"`
+	Soe    float64     `json:"soe"`
 }
 
 type NivConfig struct {
@@ -97,24 +103,23 @@ type EmulationConfig struct {
 
 // TODO: Find elegant way to differentiate between weekend and weekday periods generically
 type ControllerConfig struct {
-	SiteMeterID                   uuid.UUID                   `json:"siteMeter"`
-	BessMeterID                   uuid.UUID                   `json:"bessMeter"`
-	Emulation                     EmulationConfig             `json:"emulation"`
-	BessChargeEfficiency          float64                     `json:"bessChargeEfficiency"`
-	BessSoeMin                    float64                     `json:"bessSoeMin"`
-	BessSoeMax                    float64                     `json:"bessSoeMax"`
-	BessChargePowerLimit          float64                     `json:"bessChargePowerLimit"`
-	BessDischargePowerLimit       float64                     `json:"bessDischargePowerLimit"`
-	SiteImportPowerLimit          float64                     `json:"siteImportPowerLimit"`
-	SiteExportPowerLimit          float64                     `json:"siteExportPowerLimit"`
-	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekdayImportAvoidancePeriods"`
-	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod `json:"weekendImportAvoidancePeriods"`
-	ExportAvoidancePeriods        []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
-	ChargeToSoePeriods            []ClockTimePeriodWithSoe    `json:"chargeToSoePeriods"`
-	WeekdayDischargeToSoePeriods  []ClockTimePeriodWithSoe    `json:"weekdayDischargeToSoePeriods"`
-	NivChasePeriods               []ClockTimePeriodWithNIV    `json:"nivChasePeriods"`
-	ChargesImport                 []TimedCharge               `json:"chargesImport"`
-	ChargesExport                 []TimedCharge               `json:"chargesExport"`
+	SiteMeterID                  uuid.UUID                   `json:"siteMeter"`
+	BessMeterID                  uuid.UUID                   `json:"bessMeter"`
+	Emulation                    EmulationConfig             `json:"emulation"`
+	BessChargeEfficiency         float64                     `json:"bessChargeEfficiency"`
+	BessSoeMin                   float64                     `json:"bessSoeMin"`
+	BessSoeMax                   float64                     `json:"bessSoeMax"`
+	BessChargePowerLimit         float64                     `json:"bessChargePowerLimit"`
+	BessDischargePowerLimit      float64                     `json:"bessDischargePowerLimit"`
+	SiteImportPowerLimit         float64                     `json:"siteImportPowerLimit"`
+	SiteExportPowerLimit         float64                     `json:"siteExportPowerLimit"`
+	ImportAvoidancePeriods       []timeutils.ClockTimePeriod `json:"importAvoidancePeriods"`
+	ExportAvoidancePeriods       []timeutils.ClockTimePeriod `json:"exportAvoidancePeriods"`
+	ChargeToSoePeriods           []DayedPeriodWithSoe        `json:"chargeToSoePeriods"`
+	WeekdayDischargeToSoePeriods []DayedPeriodWithSoe        `json:"weekdayDischargeToSoePeriods"`
+	NivChasePeriods              []ClockTimePeriodWithNIV    `json:"nivChasePeriods"`
+	ChargesImport                []TimedCharge               `json:"chargesImport"`
+	ChargesExport                []TimedCharge               `json:"chargesExport"`
 }
 
 type Config struct {
