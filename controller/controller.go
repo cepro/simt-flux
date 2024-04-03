@@ -47,8 +47,8 @@ type Config struct {
 	ChargeToSoePeriods     []config.DayedPeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
 	DischargeToSoePeriods  []config.DayedPeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
 	NivChasePeriods        []config.DayedPeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
-	ChargesImport          []config.TimedCharge        // Any charges that apply to importing power from the grid
-	ChargesExport          []config.TimedCharge        // Any charges that apply to exporting power from the grid
+	RatesImport            []config.TimedRate          // Any charges that apply to importing power from the grid
+	RatesExport            []config.TimedRate          // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
@@ -110,8 +110,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
-		"charges_import", fmt.Sprintf("%+v", c.config.ChargesImport),
-		"charges_export", fmt.Sprintf("%+v", c.config.ChargesExport),
+		"rates_import", fmt.Sprintf("%+v", c.config.RatesImport),
+		"rates_export", fmt.Sprintf("%+v", c.config.RatesExport),
 	)
 
 	slog.Info("Controller running")
@@ -160,9 +160,9 @@ func (c *Controller) SitePower() float64 {
 // runControlLoop inspects the latest telemetry and controls the battery according to the highest priority control component.
 func (c *Controller) runControlLoop(t time.Time) {
 
-	// Charges change depending on the time of day - get the current charges
-	chargesImport := config.SumTimedCharges(t, c.config.ChargesImport)
-	chargesExport := config.SumTimedCharges(t, c.config.ChargesExport)
+	// Rates change depending on the time of day - get the current rates
+	ratesImport := config.SumTimedRates(t, c.config.RatesImport)
+	ratesExport := config.SumTimedRates(t, c.config.RatesExport)
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
@@ -183,8 +183,8 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.config.NivChasePeriods,
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
-			chargesImport,
-			chargesExport,
+			ratesImport,
+			ratesExport,
 			c.config.ModoClient,
 		),
 		importAvoidance(
@@ -227,8 +227,8 @@ func (c *Controller) runControlLoop(t time.Time) {
 		"site_power_limits_active", limits.sitePower,
 		"bess_power_limits_active", limits.bessPower,
 		"bess_soe_limits_active", limits.bessSoe,
-		"charges_import", chargesImport,
-		"charges_export", chargesExport,
+		"rates_import", ratesImport,
+		"rates_export", ratesExport,
 		"bess_last_target_power", c.lastBessTargetPower,
 		"bess_target_power", bessTargetPower,
 	)

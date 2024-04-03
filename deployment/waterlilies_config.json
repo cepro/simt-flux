@@ -166,7 +166,7 @@
                 }
             }
         ],
-        "chargesImport": [
+        "ratesImport": [
             {
                 "comment": "DUoS red import",
                 "rate": 11.385,
@@ -226,7 +226,7 @@
                 ]
             }
         ],
-        "chargesExport": [
+        "ratesExport": [
             {
                 "comment": "DUoS red export",
                 "rate": -10.0540,

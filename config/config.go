@@ -20,7 +20,7 @@ type NivConfig struct {
 	DischargeCurve  cartesian.Curve `json:"dischargeCurve"`
 	CurveShiftLong  float64         `json:"curveShiftLong"`
 	CurveShiftShort float64         `json:"curveShiftShort"`
-	DefaultPricing  []TimedCharge   `json:"defaultPricing"`
+	DefaultPricing  []TimedRate     `json:"defaultPricing"`
 }
 
 type DayedPeriodWithNIV struct {
@@ -111,8 +111,8 @@ type ControllerConfig struct {
 	ChargeToSoePeriods      []DayedPeriodWithSoe    `json:"chargeToSoePeriods"`
 	DischargeToSoePeriods   []DayedPeriodWithSoe    `json:"dischargeToSoePeriods"`
 	NivChasePeriods         []DayedPeriodWithNIV    `json:"nivChasePeriods"`
-	ChargesImport           []TimedCharge           `json:"chargesImport"`
-	ChargesExport           []TimedCharge           `json:"chargesExport"`
+	RatesImport             []TimedRate             `json:"ratesImport"`
+	RatesExport             []TimedRate             `json:"ratesExport"`
 }
 
 type Config struct {

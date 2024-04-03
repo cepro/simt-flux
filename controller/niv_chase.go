@@ -20,8 +20,8 @@ func nivChase(
 	nivChasePeriods []config.DayedPeriodWithNIV,
 	soe,
 	chargeEfficiency,
-	chargesImport,
-	chargesExport float64,
+	rateImport,
+	rateExport float64,
 	modoClient imbalancePricer,
 ) controlComponent {
 
@@ -42,7 +42,7 @@ func nivChase(
 	}
 
 	// Check if we have default pricing for this period
-	defaultImbalancePrice, foundDefaultImbalancePrice := config.FirstTimedCharges(t, periodWithNiv.Niv.DefaultPricing)
+	defaultImbalancePrice, foundDefaultImbalancePrice := config.FirstTimedRate(t, periodWithNiv.Niv.DefaultPricing)
 
 	// We only trust the imbalance price calcualation 10 minutes into the SP - unless a default was provided
 	if (timeIntoSP < time.Minute*10) && !foundDefaultImbalancePrice {
@@ -71,8 +71,8 @@ func nivChase(
 		imbalancePrice = modoImbalancePrice
 	}
 
-	chargePrice := imbalancePrice + chargesImport
-	dischargePrice := imbalancePrice - chargesExport
+	chargePrice := imbalancePrice + rateImport
+	dischargePrice := imbalancePrice - rateExport
 
 	// Shift the curves depending on if the system is long or short - this is achieved in practice by adjusting the price input into the curve
 	shift := 0.0

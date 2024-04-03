@@ -52,7 +52,7 @@ func TestNivChase(test *testing.T) {
 				DischargeCurve:  cartesian.Curve{}, // adjusted dynamically in test
 				CurveShiftLong:  0,                 // adjusted dynamically in test
 				CurveShiftShort: 0,                 // adjusted dynamically in test
-				DefaultPricing:  []config.TimedCharge{},
+				DefaultPricing:  []config.TimedRate{},
 			},
 		},
 	}
@@ -67,8 +67,8 @@ func TestNivChase(test *testing.T) {
 		curveShiftShort          float64
 		imbalancePrice           float64
 		imbalanceVolume          float64
-		chargesImport            float64
-		chargesExport            float64
+		ratesImport              float64
+		ratesExport              float64
 		expectedControlComponent controlComponent
 	}
 
@@ -203,8 +203,8 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          0.0,
-			chargesImport:            5,
-			chargesExport:            -5,
+			ratesImport:              5,
+			ratesExport:              -5,
 			expectedControlComponent: activeControlComponent(60),
 		},
 		{
@@ -217,8 +217,8 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          500.0,
-			chargesImport:            10,
-			chargesExport:            -10,
+			ratesImport:              10,
+			ratesExport:              -10,
 			expectedControlComponent: controlComponent{},
 		},
 		{
@@ -231,8 +231,8 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           35.0,
 			imbalanceVolume:          500.0,
-			chargesImport:            10,
-			chargesExport:            -10,
+			ratesImport:              10,
+			ratesExport:              -10,
 			expectedControlComponent: activeControlComponent(600),
 		},
 		{
@@ -245,8 +245,8 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           -999,
 			imbalanceVolume:          0,
-			chargesImport:            10,
-			chargesExport:            -10,
+			ratesImport:              10,
+			ratesExport:              -10,
 			expectedControlComponent: controlComponent{},
 		},
 		{
@@ -259,8 +259,8 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           999,
 			imbalanceVolume:          0,
-			chargesImport:            10,
-			chargesExport:            -10,
+			ratesImport:              10,
+			ratesExport:              -10,
 			expectedControlComponent: controlComponent{},
 		},
 	}
@@ -280,8 +280,8 @@ func TestNivChase(test *testing.T) {
 				nivChasePeriods,
 				subTest.soe,
 				0.85,
-				subTest.chargesImport,
-				subTest.chargesExport,
+				subTest.ratesImport,
+				subTest.ratesExport,
 				&MockImbalancePricer{
 					price:  subTest.imbalancePrice,
 					volume: subTest.imbalanceVolume,
