@@ -166,12 +166,6 @@ func (c *Controller) runControlLoop(t time.Time) {
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
 	components := []controlComponent{
-		chargeToSoe(
-			t,
-			c.config.ChargeToSoePeriods,
-			c.bessSoe.value,
-			c.config.BessChargeEfficiency,
-		),
 		dischargeToSoe(
 			t,
 			c.config.DischargeToSoePeriods,
@@ -186,6 +180,12 @@ func (c *Controller) runControlLoop(t time.Time) {
 			ratesImport,
 			ratesExport,
 			c.config.ModoClient,
+		),
+		chargeToSoe(
+			t,
+			c.config.ChargeToSoePeriods,
+			c.bessSoe.value,
+			c.config.BessChargeEfficiency,
 		),
 		importAvoidance(
 			t,
