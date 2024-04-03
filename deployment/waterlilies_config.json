@@ -88,7 +88,7 @@
         "emulation": {
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
-        },
+        }, 
         "bessChargeEfficiency": 0.85,
         "bessSoeMin": 20,
         "bessSoeMax": 444,
@@ -241,7 +241,7 @@
             {
                 "comment": "DUoS amber export",
                 "rate": -0.4350,
-                "weekdayPeriods": [
+                "periods": [
                     {
                         "days": "weekdays",
                         "start": "07:30:00:Europe/London",

@@ -265,7 +265,7 @@
             {
                 "comment": "DUoS amber export",
                 "rate": -0.4350,
-                "weekdayPeriods": [
+                "periods": [
                     {
                         "days": "weekdays",
                         "start": "07:30:00:Europe/London",
