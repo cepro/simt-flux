@@ -109,7 +109,7 @@
                 }
             }
         ],
-        "chargesImport": [
+        "ratesImport": [
             {
                 "rate": 11.385,
                 "weekdayPeriods": [
@@ -163,7 +163,7 @@
                 ]
             }
         ],
-        "chargesExport": [
+        "ratesExport": [
             {
                 "rate": -10.0540,
                 "weekdayPeriods": [

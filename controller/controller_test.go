@@ -148,19 +148,19 @@ func TestController(test *testing.T) {
 				},
 				CurveShiftLong:  0,
 				CurveShiftShort: 0,
-				DefaultPricing:  []config.TimedCharge{},
+				DefaultPricing:  []config.TimedRate{},
 			},
 		},
 	}
 
 	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
-	chargesImport := []config.TimedCharge{
+	ratesImport := []config.TimedRate{
 		{
 			Rate:    10,
 			Periods: chargesPeriods,
 		},
 	}
-	chargesExport := []config.TimedCharge{
+	ratesExport := []config.TimedRate{
 		{
 			Rate:    -10,
 			Periods: chargesPeriods,
@@ -186,8 +186,8 @@ func TestController(test *testing.T) {
 		ChargeToSoePeriods:      chargeToSoePeriods,
 		DischargeToSoePeriods:   dischargeToSoePeriods,
 		NivChasePeriods:         nivChasePeriods,
-		ChargesImport:           chargesImport,
-		ChargesExport:           chargesExport,
+		RatesImport:             ratesImport,
+		RatesExport:             ratesExport,
 		ModoClient:              &MockImbalancePricer{}, // this is replaced at each test iteration
 		MaxReadingAge:           5 * time.Second,
 		BessCommands:            bessCommands,
