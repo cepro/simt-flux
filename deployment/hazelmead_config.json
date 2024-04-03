@@ -181,67 +181,69 @@
 
         "chargesImport": [
             {
+                "description": "Bryt supplier import",
                 "rate": 2.28,
-                "weekdayPeriods": [
+                "periods": [
                     {
-                        "start": "00:00:00:Europe/London",
-                        "end": "23:59:59:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
-                    {
+                        "days": "all",
                         "start": "00:00:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
                 ]
             },
             {
+                "description": "DUoS red import",
                 "rate": 11.385,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
-                ],
-                "weekendPeriods": []
+                ]
             },
             {
+                "description": "DUoS amber import",
                 "rate": 0.444,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
                 ]
             },
             {
+                "description": "DUoS green import",
                 "rate": 0.026,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
+                        "days": "weekends",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
@@ -250,52 +252,58 @@
         ],
         "chargesExport": [
             {
+                "description": "DUoS red export",
                 "rate": -10.0540,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
-                ],
-                "weekendPeriods": []
+                ]
             },
             {
+                "description": "DUoS amber export",
                 "rate": -0.4350,
                 "weekdayPeriods": [
                     {
+                        "days": "weekdays",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
                 ]
             },
             {
+                "description": "DUoS green export",
                 "rate": -0.027,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
+                        "days": "weekends",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }

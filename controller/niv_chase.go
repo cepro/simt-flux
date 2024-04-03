@@ -17,7 +17,7 @@ const (
 // nivChase returns the control component for NIV chasing, using the Modo imbalance price calculation.
 func nivChase(
 	t time.Time,
-	nivChasePeriods []config.ClockTimePeriodWithNIV,
+	nivChasePeriods []config.DayedPeriodWithNIV,
 	soe,
 	chargeEfficiency,
 	chargesImport,

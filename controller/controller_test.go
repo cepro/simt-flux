@@ -27,73 +27,109 @@ func TestController(test *testing.T) {
 	if err != nil {
 		test.Fatalf("Could not load location: %v", err)
 	}
-	weekdayImportAvoidancePeriods := []timeutils.ClockTimePeriod{
+	importAvoidancePeriods := []timeutils.DayedPeriod{
 		{
-			Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.WeekdayDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.WeekdayDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.WeekdayDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			Days: timeutils.WeekdayDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			},
 		},
 	}
-	exportAvoidancePeriods := []timeutils.ClockTimePeriod{
+	exportAvoidancePeriods := []timeutils.DayedPeriod{
 		{
-			Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.AllDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.AllDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.AllDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+			},
 		},
 		{
-			Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-			End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+			Days: timeutils.AllDays,
+			ClockTimePeriod: timeutils.ClockTimePeriod{
+				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+			},
 		},
 	}
 	chargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 130,
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+				},
 			},
 		},
 		{
 			Soe: 190,
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
+				},
 			},
 		},
 	}
 	dischargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 70,
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
+				},
 			},
 		},
 	}
 
-	nivChasePeriods := []config.ClockTimePeriodWithNIV{
+	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+				},
 			},
 			Niv: config.NivConfig{
 				ChargeCurve: cartesian.Curve{
@@ -117,19 +153,17 @@ func TestController(test *testing.T) {
 		},
 	}
 
-	chargesPeriods := []timeutils.ClockTimePeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
+	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
 	chargesImport := []config.TimedCharge{
 		{
-			Rate:           10,
-			PeriodsWeekday: chargesPeriods,
-			PeriodsWeekend: chargesPeriods,
+			Rate:    10,
+			Periods: chargesPeriods,
 		},
 	}
 	chargesExport := []config.TimedCharge{
 		{
-			Rate:           -10,
-			PeriodsWeekday: chargesPeriods,
-			PeriodsWeekend: chargesPeriods,
+			Rate:    -10,
+			Periods: chargesPeriods,
 		},
 	}
 
@@ -140,24 +174,23 @@ func TestController(test *testing.T) {
 	bessCommands := make(chan telemetry.BessCommand, 1)
 	ctrlTickerChan := make(chan time.Time, 1)
 	ctrl := New(Config{
-		BessChargeEfficiency:          chargeEfficiency,
-		BessSoeMin:                    20,
-		BessSoeMax:                    180,
-		BessChargePowerLimit:          100,
-		BessDischargePowerLimit:       105,  // slightly higher discharge limit than charge limit for testing the asymmetry
-		SiteImportPowerLimit:          9999, // this is replaced at each test iteration
-		SiteExportPowerLimit:          9999, // this is replaced at each test iteration
-		WeekdayImportAvoidancePeriods: weekdayImportAvoidancePeriods,
-		WeekendImportAvoidancePeriods: []timeutils.ClockTimePeriod{},
-		ExportAvoidancePeriods:        exportAvoidancePeriods,
-		ChargeToSoePeriods:            chargeToSoePeriods,
-		WeekdayDischargeToSoePeriods:  dischargeToSoePeriods,
-		NivChasePeriods:               nivChasePeriods,
-		ChargesImport:                 chargesImport,
-		ChargesExport:                 chargesExport,
-		ModoClient:                    &MockImbalancePricer{}, // this is replaced at each test iteration
-		MaxReadingAge:                 5 * time.Second,
-		BessCommands:                  bessCommands,
+		BessChargeEfficiency:    chargeEfficiency,
+		BessSoeMin:              20,
+		BessSoeMax:              180,
+		BessChargePowerLimit:    100,
+		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing the asymmetry
+		SiteImportPowerLimit:    9999, // this is replaced at each test iteration
+		SiteExportPowerLimit:    9999, // this is replaced at each test iteration
+		ImportAvoidancePeriods:  importAvoidancePeriods,
+		ExportAvoidancePeriods:  exportAvoidancePeriods,
+		ChargeToSoePeriods:      chargeToSoePeriods,
+		DischargeToSoePeriods:   dischargeToSoePeriods,
+		NivChasePeriods:         nivChasePeriods,
+		ChargesImport:           chargesImport,
+		ChargesExport:           chargesExport,
+		ModoClient:              &MockImbalancePricer{}, // this is replaced at each test iteration
+		MaxReadingAge:           5 * time.Second,
+		BessCommands:            bessCommands,
 	})
 	go ctrl.Run(ctx, ctrlTickerChan)
 

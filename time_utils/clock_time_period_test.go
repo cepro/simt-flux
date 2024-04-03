@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestAbsolutePeriod(t *testing.T) {
+func TestClockTimeAbsolutePeriod(t *testing.T) {
 	london, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		t.Errorf("Failed to load London time: %v", err)

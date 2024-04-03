@@ -38,11 +38,14 @@ func TestNivChase(test *testing.T) {
 		},
 	}
 
-	nivChasePeriods := []config.ClockTimePeriodWithNIV{
+	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+				},
 			},
 			Niv: config.NivConfig{
 				ChargeCurve:     cartesian.Curve{}, // adjusted dynamically in test
