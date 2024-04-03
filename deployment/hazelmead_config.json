@@ -181,7 +181,7 @@
 
         "chargesImport": [
             {
-                "description": "Bryt supplier import",
+                "comment": "Bryt supplier import",
                 "rate": 2.28,
                 "periods": [
                     {
@@ -192,7 +192,7 @@
                 ]
             },
             {
-                "description": "DUoS red import",
+                "comment": "DUoS red import",
                 "rate": 11.385,
                 "periods": [
                     {
@@ -203,7 +203,7 @@
                 ]
             },
             {
-                "description": "DUoS amber import",
+                "comment": "DUoS amber import",
                 "rate": 0.444,
                 "periods": [
                     {
@@ -224,7 +224,7 @@
                 ]
             },
             {
-                "description": "DUoS green import",
+                "comment": "DUoS green import",
                 "rate": 0.026,
                 "periods": [
                     {
@@ -252,7 +252,7 @@
         ],
         "chargesExport": [
             {
-                "description": "DUoS red export",
+                "comment": "DUoS red export",
                 "rate": -10.0540,
                 "periods": [
                     {
@@ -263,7 +263,7 @@
                 ]
             },
             {
-                "description": "DUoS amber export",
+                "comment": "DUoS amber export",
                 "rate": -0.4350,
                 "weekdayPeriods": [
                     {
@@ -284,7 +284,7 @@
                 ]
             },
             {
-                "description": "DUoS green export",
+                "comment": "DUoS green export",
                 "rate": -0.027,
                 "periods": [
                     {
