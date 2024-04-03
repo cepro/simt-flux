@@ -7,21 +7,16 @@ import (
 )
 
 type TimedCharge struct {
-	Rate           float64                     `json:"rate"`
-	PeriodsWeekday []timeutils.ClockTimePeriod `json:"weekdayPeriods"`
-	PeriodsWeekend []timeutils.ClockTimePeriod `json:"weekendPeriods"`
+	Rate    float64                 `json:"rate"`
+	Periods []timeutils.DayedPeriod `json:"periods"`
 }
 
 // perKwhRate returns the applicable p/kWh rate and a boolean indicating if the rate applies to the given time or not.
-func (d *TimedCharge) perKwhRate(t time.Time) (float64, bool) {
-	periods := d.PeriodsWeekend
-	if timeutils.IsWeekday(t) {
-		periods = d.PeriodsWeekday
-	}
+func (c *TimedCharge) perKwhRate(t time.Time) (float64, bool) {
 
-	for _, period := range periods {
-		if period.Contains(t) {
-			return d.Rate, true
+	for _, dayedPeriod := range c.Periods {
+		if dayedPeriod.Contains(t) {
+			return c.Rate, true
 		}
 	}
 	return 0, false

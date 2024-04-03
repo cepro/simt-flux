@@ -42,14 +42,13 @@ type Config struct {
 	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
 	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
-	WeekdayImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' at the weekend
-	WeekendImportAvoidancePeriods []timeutils.ClockTimePeriod     // the periods of time to activate 'import avoidance' during weekdays
-	ExportAvoidancePeriods        []timeutils.ClockTimePeriod     // the periods of time to activate 'export avoidance'
-	ChargeToSoePeriods            []config.ClockTimePeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
-	WeekdayDischargeToSoePeriods  []config.ClockTimePeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	NivChasePeriods               []config.ClockTimePeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
-	ChargesImport                 []config.TimedCharge            // Any charges that apply to importing power from the grid
-	ChargesExport                 []config.TimedCharge            // Any charges that apply to exporting power from the grid
+	ImportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'import avoidance'
+	ExportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'export avoidance'
+	ChargeToSoePeriods     []config.DayedPeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
+	DischargeToSoePeriods  []config.DayedPeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	NivChasePeriods        []config.DayedPeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
+	ChargesImport          []config.TimedCharge        // Any charges that apply to importing power from the grid
+	ChargesExport          []config.TimedCharge        // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
@@ -106,11 +105,10 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"site_import_power_limit", c.config.SiteImportPowerLimit,
 		"site_export_power_limit", c.config.SiteExportPowerLimit,
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
-		"weekday_import_avoidance_periods", fmt.Sprintf("%+v", c.config.WeekdayImportAvoidancePeriods),
-		"weekend_import_avoidance_periods", fmt.Sprintf("%+v", c.config.WeekendImportAvoidancePeriods),
+		"import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
-		"weekday_discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.WeekdayDischargeToSoePeriods),
+		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"charges_import", fmt.Sprintf("%+v", c.config.ChargesImport),
 		"charges_export", fmt.Sprintf("%+v", c.config.ChargesExport),
@@ -176,7 +174,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		),
 		dischargeToSoe(
 			t,
-			c.config.WeekdayDischargeToSoePeriods,
+			c.config.DischargeToSoePeriods,
 			c.bessSoe.value,
 			1.0, // Discharge efficiency is assumed to be 100%
 		),
@@ -191,8 +189,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		),
 		importAvoidance(
 			t,
-			c.config.WeekdayImportAvoidancePeriods,
-			c.config.WeekendImportAvoidancePeriods,
+			c.config.ImportAvoidancePeriods,
 			c.SitePower(),
 			c.lastBessTargetPower,
 		),
@@ -330,15 +327,9 @@ func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
 }
 
 // importAvoidance returns control component for avoiding site imports.
-func importAvoidance(t time.Time, weekdayImportAvoidancePeriods, weekendImportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
+func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	// select the appropriate periods depending on if it's a weekday or weekend
-	periods := weekendImportAvoidancePeriods
-	if timeutils.IsWeekday(t) {
-		periods = weekdayImportAvoidancePeriods
-	}
-
-	importAvoidancePeriod := periodContainingTime(t, periods)
+	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
@@ -357,7 +348,7 @@ func importAvoidance(t time.Time, weekdayImportAvoidancePeriods, weekendImportAv
 }
 
 // exportAvoidance returns the control component for avoiding site exports.
-func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePeriod, sitePower, lastTargetPower float64) controlComponent {
+func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	exportAvoidancePeriod := periodContainingTime(t, exportAvoidancePeriods)
 	if exportAvoidancePeriod == nil {
@@ -378,7 +369,7 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.ClockTimePe
 }
 
 // chargeToSoe returns the control component for charging the battery to a minimum SoE.
-func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
+func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
 	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
 	if periodWithSoe == nil {
@@ -409,13 +400,13 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.ClockTimePeriodWithSoe
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.ClockTimePeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
 	if !timeutils.IsWeekday(t) {
 		return controlComponent{isActive: false}
 	}
 
-	periodWithSoe := periodWithSoeContainingTime(t, weekdayDischargeToSoePeriods)
+	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
 	if periodWithSoe == nil {
 		return controlComponent{isActive: false}
 	}
@@ -445,13 +436,13 @@ func dischargeToSoe(t time.Time, weekdayDischargeToSoePeriods []config.ClockTime
 
 // periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
 // If there is more than one overlapping period than the first is returned.
-func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.ClockTimePeriodWithSoe) *PeriodWithSoe {
-	for _, ctPeriodWithSoe := range ctPeriodsWithSoe {
-		period, ok := ctPeriodWithSoe.Period.AbsolutePeriod(t)
+func periodWithSoeContainingTime(t time.Time, dayedPeriodsWithSoe []config.DayedPeriodWithSoe) *PeriodWithSoe {
+	for _, dayedPeriodWithSoe := range dayedPeriodsWithSoe {
+		period, ok := dayedPeriodWithSoe.Period.AbsolutePeriod(t)
 		if ok {
 			return &PeriodWithSoe{
 				Period: period,
-				Soe:    ctPeriodWithSoe.Soe,
+				Soe:    dayedPeriodWithSoe.Soe,
 			}
 		}
 	}
@@ -460,13 +451,13 @@ func periodWithSoeContainingTime(t time.Time, ctPeriodsWithSoe []config.ClockTim
 
 // periodWithNivContainingTime returns the PeriodWithNiv that overlaps the given time if there is one, otherwise it returns nil.
 // If there is more than one overlapping period than the first is returned.
-func periodWithNivContainingTime(t time.Time, ctPeriodsWithNiv []config.ClockTimePeriodWithNIV) *PeriodWithNiv {
-	for _, ctPeriodWithNiv := range ctPeriodsWithNiv {
-		period, ok := ctPeriodWithNiv.Period.AbsolutePeriod(t)
+func periodWithNivContainingTime(t time.Time, dayedPeriodsWithNiv []config.DayedPeriodWithNIV) *PeriodWithNiv {
+	for _, dayedPeriodWithNiv := range dayedPeriodsWithNiv {
+		period, ok := dayedPeriodWithNiv.Period.AbsolutePeriod(t)
 		if ok {
 			return &PeriodWithNiv{
 				Period: period,
-				Niv:    ctPeriodWithNiv.Niv,
+				Niv:    dayedPeriodWithNiv.Niv,
 			}
 		}
 	}
@@ -475,9 +466,10 @@ func periodWithNivContainingTime(t time.Time, ctPeriodsWithNiv []config.ClockTim
 
 // periodContainingTime returns the first period that overlaps the given time if there is one, otherwise it returns nil.
 // If there is more than one overlapping period than the first is returned.
-func periodContainingTime(t time.Time, clockTimePeriods []timeutils.ClockTimePeriod) *timeutils.Period {
-	for _, clockTimePeriod := range clockTimePeriods {
-		period, ok := clockTimePeriod.AbsolutePeriod(t)
+func periodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) *timeutils.Period {
+
+	for _, dayedPeriod := range dayedPeriods {
+		period, ok := dayedPeriod.AbsolutePeriod(t)
 		if ok {
 			return &period
 		}

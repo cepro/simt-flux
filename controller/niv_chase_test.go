@@ -38,11 +38,14 @@ func TestNivChase(test *testing.T) {
 		},
 	}
 
-	nivChasePeriods := []config.ClockTimePeriodWithNIV{
+	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+			Period: timeutils.DayedPeriod{
+				Days: timeutils.AllDays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
+				},
 			},
 			Niv: config.NivConfig{
 				ChargeCurve:     cartesian.Curve{}, // adjusted dynamically in test
@@ -231,6 +234,34 @@ func TestNivChase(test *testing.T) {
 			chargesImport:            10,
 			chargesExport:            -10,
 			expectedControlComponent: activeControlComponent(600),
+		},
+		{
+			name:                     "Test blank curves - don't charge even if prices are very negative",
+			t:                        mustParseTime("2023-09-12T23:10:00+01:00"),
+			soe:                      0.0,
+			chargeCurve:              cartesian.Curve{},
+			dischargeCurve:           cartesian.Curve{},
+			curveShiftLong:           0.0,
+			curveShiftShort:          0.0,
+			imbalancePrice:           -999,
+			imbalanceVolume:          0,
+			chargesImport:            10,
+			chargesExport:            -10,
+			expectedControlComponent: controlComponent{},
+		},
+		{
+			name:                     "Test blank curves - don't discharge even if prices are very high",
+			t:                        mustParseTime("2023-09-12T23:10:00+01:00"),
+			soe:                      200.0,
+			chargeCurve:              cartesian.Curve{},
+			dischargeCurve:           cartesian.Curve{},
+			curveShiftLong:           0.0,
+			curveShiftShort:          0.0,
+			imbalancePrice:           999,
+			imbalanceVolume:          0,
+			chargesImport:            10,
+			chargesExport:            -10,
+			expectedControlComponent: controlComponent{},
 		},
 	}
 	for _, subTest := range subTests {

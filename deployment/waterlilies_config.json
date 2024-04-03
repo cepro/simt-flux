@@ -88,7 +88,7 @@
         "emulation": {
             "bessIsEmulated": false,
             "emulatedSiteMeter": null
-        },
+        }, 
         "bessChargeEfficiency": 0.85,
         "bessSoeMin": 20,
         "bessSoeMax": 444,
@@ -96,31 +96,29 @@
         "bessDischargePowerLimit": 222,
         "siteImportPowerLimit": 140,
         "siteExportPowerLimit": 230,
-        "weekdayImportAvoidancePeriods": [
+        "importAvoidancePeriods": [
             {
-                "start": "07:00:00:Europe/London",
-                "end": "23:00:00:Europe/London"
-            }
-        ],
-        "weekendImportAvoidancePeriods": [
-            {
+                "days": "all",
                 "start": "07:00:00:Europe/London",
                 "end": "23:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
             {
+                "days": "all",
                 "start": "00:00:00:Europe/London",
                 "end": "23:59:59:Europe/London"
             }
         ],
         "chargeToSoePeriods": [
         ],
-        "weekdayDischargeToSoePeriods": [
+        "dischargeToSoePeriods": [
         ],
         "nivChasePeriods": [
             {
+                "comment": "Overnight charging, aiming for a long system price (even though our actual rates are fixed).",
                 "period": {
+                    "days": "all",
                     "start": "00:00:00:Europe/London",
                     "end": "07:00:00:Europe/London"
                 },
@@ -145,7 +143,9 @@
                 }
             },
             {
+                "comment": "Allow discharging into exceptionally high system prices, but this must account for the high price of imports (~25p).",
                 "period": {
+                    "days": "all",
                     "start": "07:00:00:Europe/London",
                     "end": "23:59:59:Europe/London"
                 },
@@ -160,7 +160,7 @@
                             {"x": 999999999, "y": 0}
                         ]
                     },
-                    "curveShiftLong": 6,
+                    "curveShiftLong": 0,
                     "curveShiftShort": 0,
                     "defaultPricing": []
                 }
@@ -168,52 +168,58 @@
         ],
         "chargesImport": [
             {
+                "comment": "DUoS red import",
                 "rate": 11.385,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
-                ],
-                "weekendPeriods": []
+                ]
             },
             {
+                "comment": "DUoS amber import",
                 "rate": 0.444,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
                 ]
             },
             {
+                "comment": "DUoS green import",
                 "rate": 0.026,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
+                        "days": "weekends",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
@@ -222,52 +228,58 @@
         ],
         "chargesExport": [
             {
+                "comment": "DUoS red export",
                 "rate": -10.0540,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
-                ],
-                "weekendPeriods": []
+                ]
             },
             {
+                "comment": "DUoS amber export",
                 "rate": -0.4350,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
                 ]
             },
             {
+                "comment": "DUoS green export",
                 "rate": -0.027,
-                "weekdayPeriods": [
+                "periods": [
                     {
+                        "days": "weekdays",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
+                        "days": "weekdays",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
-                    }
-                ],
-                "weekendPeriods": [
+                    },
                     {
+                        "days": "weekends",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
+                        "days": "weekends",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
