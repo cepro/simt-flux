@@ -111,12 +111,21 @@
             }
         ],
         "chargeToSoePeriods": [
+            {
+                "comment": "If we didn't have any luck charging by imbalance prices, we still want to get some charge in on night time prices.",
+                "soe": 200,
+                "period": {
+                    "days": "all",
+                    "start": "05:00:00:Europe/London",
+                    "end": "07:00:00:Europe/London"
+                }
+            }
         ],
         "dischargeToSoePeriods": [
         ],
         "nivChasePeriods": [
             {
-                "comment": "Overnight charging, aiming for a long system price (even though our actual rates are fixed).",
+                "comment": "Overnight charging up to 200kWh, aiming for a long system price (even though our actual rates are fixed).",
                 "period": {
                     "days": "all",
                     "start": "00:00:00:Europe/London",
@@ -125,8 +134,8 @@
                 "niv": {
                     "chargeCurve": {
                         "points": [
-                            {"x": -999999999, "y": 444},
-                            {"x": 0, "y": 444},
+                            {"x": -999999999, "y": 200},
+                            {"x": 0, "y": 200},
                             {"x": 7, "y": 0}
                         ]
                     },
