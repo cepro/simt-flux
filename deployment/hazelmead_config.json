@@ -144,7 +144,19 @@
                     },
                     "curveShiftLong": 6,
                     "curveShiftShort": 2,
-                    "defaultPricing": []
+                    "defaultPricing": [],
+                    "pricePrediction": {
+                        "whenShort": {
+                            "allowPrediction": false,
+                            "volumeCutoff": 0.0,
+                            "timeCutoffSecs": 0
+                        },
+                        "whenLong": {
+                            "allowPrediction": true,
+                            "volumeCutoff": 150.0,
+                            "timeCutoffSecs": 900
+                        }
+                    }
                 }
             },
             {
@@ -172,7 +184,19 @@
                     },
                     "curveShiftLong": 3,
                     "curveShiftShort": 3,
-                    "defaultPricing": []
+                    "defaultPricing": [],
+                    "pricePrediction": {
+                        "whenShort": {
+                            "allowPrediction": false,
+                            "volumeCutoff": 0.0,
+                            "timeCutoffSecs": 0
+                        },
+                        "whenLong": {
+                            "allowPrediction": true,
+                            "volumeCutoff": 150.0,
+                            "timeCutoffSecs": 900
+                        }
+                    }
                 }
             }
         ],
