@@ -153,7 +153,7 @@
                         },
                         "whenLong": {
                             "allowPrediction": true,
-                            "volumeCutoff": 150.0,
+                            "volumeCutoff": 150000.0,
                             "timeCutoffSecs": 900
                         }
                     }
@@ -193,7 +193,7 @@
                         },
                         "whenLong": {
                             "allowPrediction": true,
-                            "volumeCutoff": 150.0,
+                            "volumeCutoff": 150000.0,
                             "timeCutoffSecs": 900
                         }
                     }

@@ -295,7 +295,7 @@ func TestPredictImbalance(test *testing.T) {
 		},
 		WhenLong: config.NivPredictionDirectionConfig{
 			AllowPrediction: true,
-			VolumeCutoff:    0,
+			VolumeCutoff:    3,
 			TimeCutoffSecs:  60 * 15,
 		},
 	}
@@ -379,7 +379,7 @@ func TestPredictImbalance(test *testing.T) {
 			expectedOK:            false,
 		},
 		{
-			name:                  "Don't allow prediction when imbalance volume is smaller than cutoff",
+			name:                  "Don't allow prediction when imbalance volume is smaller than cutoff when short",
 			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
 			nivPredictionConfig:   nivPredictionConfig,
 			modoImbalancePrice:    10,
@@ -390,7 +390,7 @@ func TestPredictImbalance(test *testing.T) {
 			expectedOK:            false,
 		},
 		{
-			name:                  "Allow prediction when imbalance volume is greater than cutoff",
+			name:                  "Allow prediction when imbalance volume is greater than cutoff when short",
 			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
 			nivPredictionConfig:   nivPredictionConfig,
 			modoImbalancePrice:    10,
@@ -398,6 +398,28 @@ func TestPredictImbalance(test *testing.T) {
 			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
 			expectedPrice:         10,
 			expectedVolume:        205,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Don't allow prediction when imbalance volume is smaller than cutoff when long",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   -2,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         0,
+			expectedVolume:        0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Allow prediction when imbalance volume is greater than cutoff when long",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   -20,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         10,
+			expectedVolume:        -20,
 			expectedOK:            true,
 		},
 	}

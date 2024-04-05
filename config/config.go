@@ -33,7 +33,7 @@ type NivPredictionConfig struct {
 // in the code, but in the config it's used only for previosu modo data
 type NivPredictionDirectionConfig struct {
 	AllowPrediction bool    `json:"allowPrediction"`
-	VolumeCutoff    float64 `json:"volumeCutoff"`
+	VolumeCutoff    float64 `json:"volumeCutoff"` // imbalance volume in kWh
 	TimeCutoffSecs  int     `json:"timeCutoffSecs"`
 }
 
