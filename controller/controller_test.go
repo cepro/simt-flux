@@ -27,30 +27,39 @@ func TestController(test *testing.T) {
 	if err != nil {
 		test.Fatalf("Could not load location: %v", err)
 	}
+
+	weekdays := timeutils.Days{
+		Name:     timeutils.WeekdayDaysName,
+		Location: london,
+	}
+	alldays := timeutils.Days{
+		Name:     timeutils.WeekdayDaysName,
+		Location: london,
+	}
 	importAvoidancePeriods := []timeutils.DayedPeriod{
 		{
-			Days: timeutils.WeekdayDays,
+			Days: weekdays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.WeekdayDays,
+			Days: weekdays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.WeekdayDays,
+			Days: weekdays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.WeekdayDays,
+			Days: weekdays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
@@ -59,28 +68,28 @@ func TestController(test *testing.T) {
 	}
 	exportAvoidancePeriods := []timeutils.DayedPeriod{
 		{
-			Days: timeutils.AllDays,
+			Days: alldays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.AllDays,
+			Days: alldays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.AllDays,
+			Days: alldays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
 			},
 		},
 		{
-			Days: timeutils.AllDays,
+			Days: alldays,
 			ClockTimePeriod: timeutils.ClockTimePeriod{
 				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
 				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
@@ -91,7 +100,7 @@ func TestController(test *testing.T) {
 		{
 			Soe: 130,
 			Period: timeutils.DayedPeriod{
-				Days: timeutils.AllDays,
+				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
@@ -101,7 +110,7 @@ func TestController(test *testing.T) {
 		{
 			Soe: 190,
 			Period: timeutils.DayedPeriod{
-				Days: timeutils.AllDays,
+				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
@@ -113,7 +122,7 @@ func TestController(test *testing.T) {
 		{
 			Soe: 70,
 			Period: timeutils.DayedPeriod{
-				Days: timeutils.AllDays,
+				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
@@ -125,7 +134,7 @@ func TestController(test *testing.T) {
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
 			Period: timeutils.DayedPeriod{
-				Days: timeutils.AllDays,
+				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},

@@ -98,14 +98,14 @@
         "siteExportPowerLimit": 230,
         "importAvoidancePeriods": [
             {
-                "days": "all",
+                "days": "all:Europe/London",
                 "start": "07:00:00:Europe/London",
                 "end": "23:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
             {
-                "days": "all",
+                "days": "all:Europe/London",
                 "start": "00:00:00:Europe/London",
                 "end": "23:59:59:Europe/London"
             }
@@ -115,7 +115,7 @@
                 "comment": "If we didn't have any luck charging by imbalance prices, we still want to get some charge in on night time prices.",
                 "soe": 200,
                 "period": {
-                    "days": "all",
+                    "days": "all:Europe/London",
                     "start": "05:00:00:Europe/London",
                     "end": "07:00:00:Europe/London"
                 }
@@ -127,7 +127,7 @@
             {
                 "comment": "Overnight charging up to 200kWh, aiming for a long system price (even though our actual rates are fixed).",
                 "period": {
-                    "days": "all",
+                    "days": "all:Europe/London",
                     "start": "00:00:00:Europe/London",
                     "end": "07:00:00:Europe/London"
                 },
@@ -154,7 +154,7 @@
             {
                 "comment": "Allow discharging into exceptionally high system prices, but this must account for the high price of imports (~25p).",
                 "period": {
-                    "days": "all",
+                    "days": "all:Europe/London",
                     "start": "07:00:00:Europe/London",
                     "end": "23:59:59:Europe/London"
                 },
@@ -181,7 +181,7 @@
                 "rate": 11.385,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
@@ -192,17 +192,17 @@
                 "rate": 0.444,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
@@ -213,22 +213,22 @@
                 "rate": 0.026,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
@@ -241,7 +241,7 @@
                 "rate": -10.0540,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "17:00:00:Europe/London",
                         "end": "19:00:00:Europe/London"
                     }
@@ -252,17 +252,17 @@
                 "rate": -0.4350,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "07:30:00:Europe/London",
                         "end": "17:00:00:Europe/London"
                     },
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "19:00:00:Europe/London",
                         "end": "21:30:00:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "16:30:00:Europe/London",
                         "end": "19:30:00:Europe/London"
                     }
@@ -273,22 +273,22 @@
                 "rate": -0.027,
                 "periods": [
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "00:00:00:Europe/London",
                         "end": "07:30:00:Europe/London"
                     },
                     {
-                        "days": "weekdays",
+                        "days": "weekdays:Europe/London",
                         "start": "21:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "00:00:00:Europe/London",
                         "end": "16:30:00:Europe/London"
                     },
                     {
-                        "days": "weekends",
+                        "days": "weekends:Europe/London",
                         "start": "19:30:00:Europe/London",
                         "end": "23:59:59:Europe/London"
                     }
