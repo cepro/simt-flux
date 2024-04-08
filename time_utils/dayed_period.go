@@ -1,24 +1,13 @@
 package timeutils
 
 import (
-	"fmt"
 	"time"
-)
-
-// Days is a string representation of the different ways to configure days. At the moment, only a few options are
-// required, but we could allow any combination of days in the future. E.g. with a string like "weekends|monday|wednesday".
-type Days string
-
-const (
-	WeekendDays = "weekends"
-	WeekdayDays = "weekdays"
-	AllDays     = "all"
 )
 
 // DayedPeriod gives a period of time on particular days
 type DayedPeriod struct {
 	ClockTimePeriod      // The period in clock time, e.g. "4pm to 6pm"
-	Days            Days `json:"days"` // Indicates the days on which this period applies, can be "weekends", "weekdays", or "all"
+	Days            Days `json:"days"` // Indicates the days on which this period applies
 }
 
 // AbsolutePeriod returns the equivilent `Period` instance for the given `DayedPeriod`, using `t` as the
@@ -37,7 +26,7 @@ type DayedPeriod struct {
 // result in false being returned as the given time is at the wrong time of day (even though the day itself is okay).
 func (d *DayedPeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 
-	if !d.IsOnDay(t) {
+	if !d.Days.IsOnDay(t) {
 		return Period{}, false
 	}
 
@@ -49,25 +38,4 @@ func (d *DayedPeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 func (d *DayedPeriod) Contains(t time.Time) bool {
 	_, contains := d.AbsolutePeriod(t)
 	return contains
-}
-
-func (d *DayedPeriod) IsOnDay(t time.Time) bool {
-	switch d.Days {
-	case AllDays:
-		return true // the day is always okay
-	case WeekdayDays:
-		if IsWeekday(t) {
-			return true
-		} else {
-			return false
-		}
-	case WeekendDays:
-		if !IsWeekday(t) {
-			return true
-		} else {
-			return false
-		}
-	default:
-		panic(fmt.Sprintf("Unknown day specification: '%s'", d.Days))
-	}
 }

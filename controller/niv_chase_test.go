@@ -41,7 +41,10 @@ func TestNivChase(test *testing.T) {
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
 			Period: timeutils.DayedPeriod{
-				Days: timeutils.AllDays,
+				Days: timeutils.Days{
+					Name:     timeutils.AllDaysName,
+					Location: london,
+				},
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
