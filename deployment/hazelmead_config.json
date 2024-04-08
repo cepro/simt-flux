@@ -187,9 +187,9 @@
                     "defaultPricing": [],
                     "pricePrediction": {
                         "whenShort": {
-                            "allowPrediction": false,
-                            "volumeCutoff": 0.0,
-                            "timeCutoffSecs": 0
+                            "allowPrediction": true,
+                            "volumeCutoff": 250000.0,
+                            "timeCutoffSecs": 300
                         },
                         "whenLong": {
                             "allowPrediction": true,
