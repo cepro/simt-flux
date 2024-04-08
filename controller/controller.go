@@ -71,8 +71,8 @@ type PeriodWithNiv struct {
 
 // imbalancePricer is an interface onto any object that provides imbalance pricing and volumes
 type imbalancePricer interface {
-	ImbalancePrice() (float64, time.Time)
-	ImbalanceVolume() (float64, time.Time)
+	ImbalancePrice() (float64, time.Time)  // ImbalancePrice returns the last cached imbalance price, and the settlement period time that it corresponds to
+	ImbalanceVolume() (float64, time.Time) // ImbalanceVolume returns the last cached imbalance volume, and the settlement period time that it corresponds to
 }
 
 // controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc

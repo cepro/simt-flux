@@ -74,30 +74,6 @@ func TestNivChase(test *testing.T) {
 
 	subTests := []subTest{
 		{
-			name:                     "No NIV chasing before we trust the imbalance price at 10mins into the SP - test1",
-			t:                        mustParseTime("2023-09-12T23:00:00+01:00"),
-			soe:                      19.0,
-			chargeCurve:              chargeCurve1,
-			dischargeCurve:           dischargeCurve1,
-			curveShiftLong:           0.0,
-			curveShiftShort:          0.0,
-			imbalancePrice:           -99,
-			imbalanceVolume:          0.0,
-			expectedControlComponent: controlComponent{},
-		},
-		{
-			name:                     "No NIV chasing before we trust the imbalance price at 10mins into the SP - test2",
-			t:                        mustParseTime("2023-09-12T23:09:59+01:00"),
-			soe:                      19.0,
-			chargeCurve:              chargeCurve1,
-			dischargeCurve:           dischargeCurve1,
-			curveShiftLong:           0.0,
-			curveShiftShort:          0.0,
-			imbalancePrice:           +99,
-			imbalanceVolume:          0.0,
-			expectedControlComponent: controlComponent{},
-		},
-		{
 			name:                     "Imbalance price is between the charge and discharge curves - no action",
 			t:                        mustParseTime("2023-09-12T23:10:00+01:00"),
 			soe:                      100.0,
@@ -291,6 +267,177 @@ func TestNivChase(test *testing.T) {
 
 			if !componentsEquivalent(component, subTest.expectedControlComponent) {
 				t.Errorf("got %v, expected %v", component, subTest.expectedControlComponent)
+			}
+		})
+	}
+
+}
+
+func TestPredictImbalance(test *testing.T) {
+
+	type subTest struct {
+		name                  string
+		t                     time.Time
+		nivPredictionConfig   config.NivPredictionConfig
+		modoImbalancePrice    float64
+		modoImbalanceVolume   float64
+		modoImbalanceDataTime time.Time
+		expectedPrice         float64
+		expectedVolume        float64
+		expectedOK            bool
+	}
+
+	nivPredictionConfig := config.NivPredictionConfig{
+		WhenShort: config.NivPredictionDirectionConfig{
+			AllowPrediction: true,
+			VolumeCutoff:    200,
+			TimeCutoffSecs:  60 * 15,
+		},
+		WhenLong: config.NivPredictionDirectionConfig{
+			AllowPrediction: true,
+			VolumeCutoff:    3,
+			TimeCutoffSecs:  60 * 15,
+		},
+	}
+
+	subTests := []subTest{
+		{
+			name:                  "Don't trust Modo data for the first 10mins of the SP - 1",
+			t:                     mustParseTime("2023-09-12T23:00:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    -10,
+			modoImbalanceVolume:   -11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T23:00:00+01:00"),
+			expectedPrice:         0.0,
+			expectedVolume:        0.0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Don't trust Modo data for the first 10mins of the SP - 2",
+			t:                     mustParseTime("2023-09-12T23:09:59+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    -10,
+			modoImbalanceVolume:   -11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T23:00:00+01:00"),
+			expectedPrice:         0.0,
+			expectedVolume:        0.0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Trust Modo data after the first 10mins of the SP - 1",
+			t:                     mustParseTime("2023-09-12T23:10:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    5,
+			modoImbalanceVolume:   6,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T23:00:00+01:00"),
+			expectedPrice:         5,
+			expectedVolume:        6,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Trust Modo data after the first 10mins of the SP - 2",
+			t:                     mustParseTime("2023-09-12T23:29:59+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    5,
+			modoImbalanceVolume:   6,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T23:00:00+01:00"),
+			expectedPrice:         5,
+			expectedVolume:        6,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Allow prediction using previous SP data for first 15mins - 1",
+			t:                     mustParseTime("2023-09-12T23:00:01+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    -10,
+			modoImbalanceVolume:   -11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         -10,
+			expectedVolume:        -11,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Allow prediction using previous SP data for first 15mins - 2",
+			t:                     mustParseTime("2023-09-12T23:14:59+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    -10,
+			modoImbalanceVolume:   -11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         -10,
+			expectedVolume:        -11,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Don't allow prediction using previous SP data after the first 15mins",
+			t:                     mustParseTime("2023-09-12T23:15:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    -10,
+			modoImbalanceVolume:   -11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         0,
+			expectedVolume:        0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Don't allow prediction when imbalance volume is smaller than cutoff when short",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   11,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         0,
+			expectedVolume:        0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Allow prediction when imbalance volume is greater than cutoff when short",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   205,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         10,
+			expectedVolume:        205,
+			expectedOK:            true,
+		},
+		{
+			name:                  "Don't allow prediction when imbalance volume is smaller than cutoff when long",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   -2,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         0,
+			expectedVolume:        0,
+			expectedOK:            false,
+		},
+		{
+			name:                  "Allow prediction when imbalance volume is greater than cutoff when long",
+			t:                     mustParseTime("2023-09-12T23:05:00+01:00"),
+			nivPredictionConfig:   nivPredictionConfig,
+			modoImbalancePrice:    10,
+			modoImbalanceVolume:   -20,
+			modoImbalanceDataTime: mustParseTime("2023-09-12T22:30:00+01:00"),
+			expectedPrice:         10,
+			expectedVolume:        -20,
+			expectedOK:            true,
+		},
+	}
+	for _, subTest := range subTests {
+		test.Run(subTest.name, func(t *testing.T) {
+
+			price, volume, ok := predictImbalance(
+				subTest.t,
+				subTest.nivPredictionConfig,
+				&MockImbalancePricer{
+					price:  subTest.modoImbalancePrice,
+					volume: subTest.modoImbalanceVolume,
+					time:   subTest.modoImbalanceDataTime,
+				},
+			)
+
+			if price != subTest.expectedPrice || volume != subTest.expectedVolume || ok != subTest.expectedOK {
+				t.Errorf("got %f, %f, %t, expected %f, %f, %t", price, volume, ok, subTest.expectedPrice, subTest.expectedVolume, subTest.expectedOK)
 			}
 		})
 	}

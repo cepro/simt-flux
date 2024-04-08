@@ -16,11 +16,25 @@ type DayedPeriodWithSoe struct {
 }
 
 type NivConfig struct {
-	ChargeCurve     cartesian.Curve `json:"chargeCurve"`
-	DischargeCurve  cartesian.Curve `json:"dischargeCurve"`
-	CurveShiftLong  float64         `json:"curveShiftLong"`
-	CurveShiftShort float64         `json:"curveShiftShort"`
-	DefaultPricing  []TimedRate     `json:"defaultPricing"`
+	ChargeCurve     cartesian.Curve     `json:"chargeCurve"`
+	DischargeCurve  cartesian.Curve     `json:"dischargeCurve"`
+	CurveShiftLong  float64             `json:"curveShiftLong"`
+	CurveShiftShort float64             `json:"curveShiftShort"`
+	DefaultPricing  []TimedRate         `json:"defaultPricing"`
+	Prediction      NivPredictionConfig `json:"pricePrediction"`
+}
+
+type NivPredictionConfig struct {
+	WhenShort NivPredictionDirectionConfig `json:"whenShort"`
+	WhenLong  NivPredictionDirectionConfig `json:"whenLong"`
+}
+
+// TODO: think about naming here 'prediction' is used for both up to date modo and previous modo
+// in the code, but in the config it's used only for previosu modo data
+type NivPredictionDirectionConfig struct {
+	AllowPrediction bool    `json:"allowPrediction"`
+	VolumeCutoff    float64 `json:"volumeCutoff"` // imbalance volume in kWh
+	TimeCutoffSecs  int     `json:"timeCutoffSecs"`
 }
 
 type DayedPeriodWithNIV struct {
