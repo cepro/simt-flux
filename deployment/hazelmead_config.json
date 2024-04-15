@@ -183,13 +183,13 @@
                         ]
                     },
                     "curveShiftLong": 3,
-                    "curveShiftShort": 3,
+                    "curveShiftShort": 4,
                     "defaultPricing": [],
                     "pricePrediction": {
                         "whenShort": {
                             "allowPrediction": true,
                             "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 300
+                            "timeCutoffSecs": 600
                         },
                         "whenLong": {
                             "allowPrediction": true,
