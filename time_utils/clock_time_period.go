@@ -23,9 +23,22 @@ type ClockTimePeriod struct {
 // result in false being returned as the given time is outside of the ClockTimePeriod.
 func (p *ClockTimePeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 
-	year, month, day := t.Date()
+	if p.Start.Location.String() != p.End.Location.String() {
+		// TODO: using the String() method here is not great- perhaps there is a better way of comparing time.Location instances?
+		panic("Clock time period must start and end in the same timezone")
+	}
 
-	// TODO: support periods that span over midnight
+	msStart := p.Start.Hour*int(time.Hour) + p.Start.Minute*int(time.Minute) + p.Start.Second*int(time.Second)
+	msEnd := p.End.Hour*int(time.Hour) + p.End.Minute*int(time.Minute) + p.End.Second*int(time.Second)
+	if msEnd < msStart {
+		panic("Clock time period must end after it starts")
+		// We do not currently support periods that cross midnight
+	}
+
+	// Make sure that `t` is in the relevant timezone for the ClockTimePeriod configuration, otherwise the day can be wrong
+	// if it is near midnight and there is a timezone offset
+	t = t.In(p.Start.Location)
+	year, month, day := t.Date()
 
 	startDateTime := p.Start.OnDate(year, month, day)
 	endDateTime := p.End.OnDate(year, month, day)

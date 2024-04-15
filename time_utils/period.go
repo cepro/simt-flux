@@ -7,3 +7,10 @@ type Period struct {
 	Start time.Time
 	End   time.Time
 }
+
+// Equal returns true if the two period instances contain the start and end times.
+// These may be in different timezones but must be at the same instant in time.
+// See the documentation on the Time type for the pitfalls of using == with Time values; most code should use Equal instead.
+func (p Period) Equal(p2 Period) bool {
+	return p.Start.Equal(p2.End) && p.End.Equal(p2.End)
+}
