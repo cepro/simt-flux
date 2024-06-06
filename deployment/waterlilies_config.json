@@ -99,8 +99,8 @@
         "importAvoidancePeriods": [
             {
                 "days": "all:Europe/London",
-                "start": "07:00:00:Europe/London",
-                "end": "23:00:00:Europe/London"
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
@@ -111,51 +111,15 @@
             }
         ],
         "chargeToSoePeriods": [
-            {
-                "comment": "If we didn't have any luck charging by imbalance prices, we still want to get some charge in on night time prices.",
-                "soe": 200,
-                "period": {
-                    "days": "all:Europe/London",
-                    "start": "05:00:00:Europe/London",
-                    "end": "07:00:00:Europe/London"
-                }
-            }
         ],
         "dischargeToSoePeriods": [
         ],
         "nivChasePeriods": [
             {
-                "comment": "Overnight charging up to 200kWh, aiming for a long system price (even though our actual rates are fixed).",
-                "period": {
-                    "days": "all:Europe/London",
-                    "start": "00:00:00:Europe/London",
-                    "end": "07:00:00:Europe/London"
-                },
-                "niv": {
-                    "chargeCurve": {
-                        "points": [
-                            {"x": -999999999, "y": 200},
-                            {"x": 0, "y": 200},
-                            {"x": 7, "y": 0}
-                        ]
-                    },
-                    "dischargeCurve": {
-                        "points": [
-                            {"x": 40, "y": 444},
-                            {"x": 40, "y": 0},
-                            {"x": 999999999, "y": 0}
-                        ]
-                    },
-                    "curveShiftLong": 6,
-                    "curveShiftShort": 0,
-                    "defaultPricing": []
-                }
-            },
-            {
                 "comment": "Allow discharging into exceptionally high system prices, but this must account for the high price of imports (~25p).",
                 "period": {
                     "days": "all:Europe/London",
-                    "start": "07:00:00:Europe/London",
+                    "start": "00:00:00:Europe/London",
                     "end": "23:59:59:Europe/London"
                 },
                 "niv": {
