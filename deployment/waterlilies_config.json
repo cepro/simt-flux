@@ -100,7 +100,17 @@
             {
                 "days": "all:Europe/London",
                 "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
+                "end": "02:00:00:Europe/London"
+            },
+            {
+                "days": "all:Europe/London",
+                "start": "03:00:00:Europe/London",
+                "end": "05:00:00:Europe/London"
+            },
+            {
+                "days": "all:Europe/London",
+                "start": "06:00:00:Europe/London",
+                "end": "23:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
