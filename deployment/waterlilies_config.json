@@ -58,7 +58,7 @@
             "teslaOptions": {
                 "inverterRampRateUp": 50,
                 "inverterRampRateDown": 50,
-                "alwaysActive": true
+                "alwaysActive": false
             }
         }
     },
@@ -99,18 +99,8 @@
         "importAvoidancePeriods": [
             {
                 "days": "all:Europe/London",
-                "start": "00:00:00:Europe/London",
-                "end": "02:00:00:Europe/London"
-            },
-            {
-                "days": "all:Europe/London",
-                "start": "03:00:00:Europe/London",
-                "end": "05:00:00:Europe/London"
-            },
-            {
-                "days": "all:Europe/London",
-                "start": "06:00:00:Europe/London",
-                "end": "23:00:00:Europe/London"
+                "start": "07:00:00:Europe/London",
+                "end": "19:00:00:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
@@ -123,6 +113,14 @@
         "chargeToSoePeriods": [
         ],
         "dischargeToSoePeriods": [
+            {
+                "soe": 100,
+                "period": {
+                    "days": "weekdays:Europe/London",
+                    "start": "17:00:00:Europe/London",
+                    "end": "19:00:0:Europe/London"
+                }
+            }
         ],
         "nivChasePeriods": [
             {
