@@ -99,6 +99,11 @@
         "importAvoidancePeriods": [
         ],
         "exportAvoidancePeriods": [
+            {
+                "days": "all:Europe/London",
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
+            }
         ],
         "chargeToSoePeriods": [
             {
@@ -153,7 +158,7 @@
                         "whenShort": {
                             "allowPrediction": true,
                             "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 0
+                            "timeCutoffSecs": 900
                         },
                         "whenLong": {
                             "allowPrediction": true,
@@ -195,7 +200,7 @@
                         "whenShort": {
                             "allowPrediction": true,
                             "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 0
+                            "timeCutoffSecs": 900
                         },
                         "whenLong": {
                             "allowPrediction": true,

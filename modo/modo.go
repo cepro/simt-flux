@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -13,33 +14,48 @@ import (
 )
 
 const (
-	imbalancePriceUrl  = "https://admin.modo.energy/v1/data-api/widgets/system-price/"
-	imbalanceVolumeUrl = "https://admin.modo.energy/v1/data-api/widgets/system-imbalance/"
+	imbalancePriceUrlStr  = "https://api.modoenergy.com/pub/v1/gb/modo/markets/system-price-live"
+	imbalanceVolumeUrlStr = "https://api.modoenergy.com/pub/v1/gb/modo/markets/niv-live"
 )
 
 type Client struct {
 	client                    http.Client
-	lock                      sync.RWMutex // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
-	lastImbalancePrice        float64      // SSP in p/kWh
-	lastImbalancePriceSPTime  time.Time    // Settlement period that the imbalance price relates to
-	lastImbalanceVolume       float64      // Imbalance volume in kWh
-	lastImbalanceVolumeSPTime time.Time    // Settlement period that the imbalance volume relates to
+	lock                      sync.RWMutex   // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
+	lastImbalancePrice        float64        // SSP in p/kWh
+	lastImbalancePriceSPTime  time.Time      // Settlement period that the imbalance price relates to
+	lastImbalanceVolume       float64        // Imbalance volume in kWh
+	lastImbalanceVolumeSPTime time.Time      // Settlement period that the imbalance volume relates to
+	londonLocation            *time.Location // Just a cache of the London timezone location so it's not re-created every time
 	logger                    *slog.Logger
 }
 
-type imbalancePriceResponse struct {
+type imbalancePriceResponseItem struct {
 	Date              string  `json:"date"`
 	SettlementPeriod  int     `json:"settlement_period"`
 	PricePoundsPerMwh float64 `json:"system_price"` // Modo returns SSP in £/MWh
 }
 
-type imbalanceVolumeResponse struct {
+type imbalancePriceResponse struct {
+	Results []imbalancePriceResponseItem `json:"results"`
+}
+
+type imbalanceVolumeResponseItem struct {
 	Date             string  `json:"date"`
 	SettlementPeriod int     `json:"settlement_period"`
 	VolumeMwh        float64 `json:"niv"` // Modo returns imbalance volume in MWh
 }
 
+type imbalanceVolumeResponse struct {
+	Results []imbalanceVolumeResponseItem `json:"results"`
+}
+
 func New(client http.Client) *Client {
+
+	londonLocation, err := time.LoadLocation("Europe/London")
+	if err != nil {
+		panic("Could not load Europe/London location")
+	}
+
 	return &Client{
 		client:                    client,
 		lock:                      sync.RWMutex{},
@@ -47,6 +63,7 @@ func New(client http.Client) *Client {
 		lastImbalancePriceSPTime:  time.Time{},
 		lastImbalanceVolume:       math.NaN(),
 		lastImbalanceVolumeSPTime: time.Time{},
+		londonLocation:            londonLocation,
 		logger:                    slog.Default(),
 	}
 }
@@ -61,11 +78,12 @@ func (c *Client) Run(ctx context.Context, period time.Duration) error {
 			return ctx.Err()
 		case <-ticker.C:
 
-			// TODO: we should have a read lock activated here
+			c.lock.RLock()
 			previousImbalancePrice := c.lastImbalancePrice
 			previousImbalancePriceSPTime := c.lastImbalancePriceSPTime
 			previousImbalanceVolume := c.lastImbalanceVolume
 			previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
+			c.lock.RUnlock()
 
 			err := c.updateImbalancePrice()
 			if err != nil {
@@ -102,7 +120,7 @@ func (c *Client) ImbalancePrice() (float64, time.Time) {
 	return c.lastImbalancePrice, c.lastImbalancePriceSPTime
 }
 
-// ImbalancePrice returns the last cached imbalance volume, and the settlement period time that it corresponds to
+// ImbalanceVolume returns the last cached imbalance volume, and the settlement period time that it corresponds to
 func (c *Client) ImbalanceVolume() (float64, time.Time) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -152,46 +170,84 @@ func (c *Client) updateImbalanceVolume() error {
 	return nil
 }
 
-// requestImbalancePrice returns Modo's imbalance price calculation, or an error.
-func (c *Client) requestImbalancePrice() (imbalancePriceResponse, error) {
-	response, err := c.client.Get(imbalancePriceUrl)
+// requestImbalancePrice returns Modo's latest imbalance price calculation, or an error.
+func (c *Client) requestImbalancePrice() (imbalancePriceResponseItem, error) {
+
+	modoUrl, err := url.Parse(imbalancePriceUrlStr)
 	if err != nil {
-		return imbalancePriceResponse{}, fmt.Errorf("get system price: %w", err)
+		return imbalancePriceResponseItem{}, err
+	}
+
+	dateStr := time.Now().In(c.londonLocation).Format("2006-01-02")
+
+	params := url.Values{}
+	params.Add("date_from", dateStr)
+	params.Add("date_to", dateStr)
+	modoUrl.RawQuery = params.Encode()
+
+	response, err := c.client.Get(modoUrl.String())
+	if err != nil {
+		return imbalancePriceResponseItem{}, fmt.Errorf("get system price: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return imbalancePriceResponse{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
+		return imbalancePriceResponseItem{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
 	}
 
 	parsedResponse := imbalancePriceResponse{}
 	err = json.NewDecoder(response.Body).Decode(&parsedResponse)
 	if err != nil {
-		return imbalancePriceResponse{}, fmt.Errorf("parse body: %w", err)
+		return imbalancePriceResponseItem{}, fmt.Errorf("parse body: %w", err)
 	}
 
-	return parsedResponse, nil
+	if len(parsedResponse.Results) < 1 {
+		return imbalancePriceResponseItem{}, fmt.Errorf("no results for this day yet")
+	}
+
+	latestResult := parsedResponse.Results[0]
+
+	return latestResult, nil
 }
 
 // requestImbalanceVolume returns Modo's imbalance price calculation, or an error.
-func (c *Client) requestImbalanceVolume() (imbalanceVolumeResponse, error) {
-	response, err := c.client.Get(imbalanceVolumeUrl)
+func (c *Client) requestImbalanceVolume() (imbalanceVolumeResponseItem, error) {
+
+	modoUrl, err := url.Parse(imbalanceVolumeUrlStr)
 	if err != nil {
-		return imbalanceVolumeResponse{}, fmt.Errorf("get system imbalance: %w", err)
+		return imbalanceVolumeResponseItem{}, err
+	}
+
+	dateStr := time.Now().In(c.londonLocation).Format("2006-01-02")
+
+	params := url.Values{}
+	params.Add("date_from", dateStr)
+	params.Add("date_to", dateStr)
+	modoUrl.RawQuery = params.Encode()
+
+	response, err := c.client.Get(modoUrl.String())
+	if err != nil {
+		return imbalanceVolumeResponseItem{}, fmt.Errorf("get niv: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return imbalanceVolumeResponse{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
+		return imbalanceVolumeResponseItem{}, fmt.Errorf("unexpected status code: %d", response.StatusCode)
 	}
 
 	parsedResponse := imbalanceVolumeResponse{}
 	err = json.NewDecoder(response.Body).Decode(&parsedResponse)
 	if err != nil {
-		return imbalanceVolumeResponse{}, fmt.Errorf("parse body: %w", err)
+		return imbalanceVolumeResponseItem{}, fmt.Errorf("parse body: %w", err)
 	}
 
-	return parsedResponse, nil
+	if len(parsedResponse.Results) < 1 {
+		return imbalanceVolumeResponseItem{}, fmt.Errorf("no results for this day yet")
+	}
+
+	latestResult := parsedResponse.Results[0]
+
+	return latestResult, nil
 }
 
 // timeOfSettlementPeriod returns the start time of the 30min settlement period denoted by the given date and SP number, or an error

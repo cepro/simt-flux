@@ -402,10 +402,6 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, be
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
 func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
-	if !timeutils.IsWeekday(t) {
-		return controlComponent{isActive: false}
-	}
-
 	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
 	if periodWithSoe == nil {
 		return controlComponent{isActive: false}
