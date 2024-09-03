@@ -96,203 +96,211 @@
         "bessDischargePowerLimit": 565,
         "siteImportPowerLimit": 220,
         "siteExportPowerLimit": 475,
-        "importAvoidancePeriods": [
-        ],
-        "exportAvoidancePeriods": [
-            {
-                "days": "all:Europe/London",
-                "start": "00:00:00:Europe/London",
-                "end": "23:59:59:Europe/London"
-            }
-        ],
-        "chargeToSoePeriods": [
-            {
-                "soe": 1050,
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "14:00:00:Europe/London",
-                    "end": "17:00:00:Europe/London"
-                }
-            }
-        ],
-        "dischargeToSoePeriods": [
-            {
-                "soe": 0,
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "17:00:00:Europe/London",
-                    "end": "19:00:00:Europe/London"
-                }
-            }
-        ],
-        "nivChasePeriods": [
-            {
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "00:00:00:Europe/London",
-                    "end": "12:00:00:Europe/London"
-                },
-                "niv": {
-                    "chargeCurve": {
-                        "points": [
-                            {"x": -999999999, "y": 1280},
-                            {"x": -2, "y": 1280},
-                            {"x": 0, "y": 1050},
-                            {"x": 6, "y": 1050},
-                            {"x": 12, "y": 0}
-                        ]
+        "controlComponents": {
+
+            "importAvoidanceWhenShort": [
+                {
+                    "shortPrediction": {
+                        "allowPrediction": true,
+                        "volumeCutoff": 250000.0,
+                        "timeCutoffSecs": 800
                     },
-                    "dischargeCurve": {
-                        "points": [
-                            {"x": 10, "y": 1280},
-                            {"x": 12, "y": 1050},
-                            {"x": 25, "y": 1050},
-                            {"x": 35, "y": 100},
-                            {"x": 999999999, "y": 0}
-                        ]
-                    },
-                    "curveShiftLong": 6,
-                    "curveShiftShort": 2,
-                    "defaultPricing": [],
-                    "pricePrediction": {
-                        "whenShort": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 900
-                        },
-                        "whenLong": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 150000.0,
-                            "timeCutoffSecs": 900
-                        }
+                    "period": {
+                        "days": "all:Europe/London",
+                        "start": "00:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
                     }
                 }
-            },
-            {
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "12:00:00:Europe/London",
-                    "end": "19:00:00:Europe/London"
-                },
-                "niv": {
-                    "chargeCurve": {
-                        "points": [
-                            {"x": -999999999, "y": 1280},
-                            {"x": -2, "y": 1280},
-                            {"x": 0, "y": 1050},
-                            {"x": 9, "y": 1050},
-                            {"x": 12, "y": 0}
-                        ]
-                    },
-                    "dischargeCurve": {
-                        "points": [
-                            {"x": 10, "y": 1280},
-                            {"x": 12, "y": 1050},
-                            {"x": 25, "y": 1050},
-                            {"x": 35, "y": 100},
-                            {"x": 999999999, "y": 0}
-                        ]
-                    },
-                    "curveShiftLong": 6,
-                    "curveShiftShort": 2,
-                    "defaultPricing": [],
-                    "pricePrediction": {
-                        "whenShort": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 900
-                        },
-                        "whenLong": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 150000.0,
-                            "timeCutoffSecs": 900
-                        }
-                    }
-                }
-            },
-            {
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "19:00:00:Europe/London",
-                    "end": "23:59:59:Europe/London"
-                },
-                "niv": {
-                    "chargeCurve": {
-                        "points": [
-                            {"x": -999999999, "y": 1280},
-                            {"x": -2, "y": 1280},
-                            {"x": 0, "y": 1050},
-                            {"x": 2, "y": 1050},
-                            {"x": 5, "y": 0}
-                        ]
-                    },
-                    "dischargeCurve": {
-                        "points": [
-                            {"x": 10, "y": 1280},
-                            {"x": 12, "y": 1050},
-                            {"x": 25, "y": 1050},
-                            {"x": 35, "y": 100},
-                            {"x": 999999999, "y": 0}
-                        ]
-                    },
-                    "curveShiftLong": 4,
-                    "curveShiftShort": 2,
-                    "defaultPricing": [],
-                    "pricePrediction": {
-                        "whenShort": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 0
-                        },
-                        "whenLong": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 150000.0,
-                            "timeCutoffSecs": 900
-                        }
-                    }
-                }
-            },
-            {
-                "period": {
-                    "days": "weekends:Europe/London",
+            ],
+            "importAvoidance": [],
+            "exportAvoidance": [
+                {
+                    "days": "all:Europe/London",
                     "start": "00:00:00:Europe/London",
                     "end": "23:59:59:Europe/London"
-                },
-                "niv": {
-                    "chargeCurve": {
-                        "points": [
-                            {"x": -999999999, "y": 1280},
-                            {"x": -2, "y": 1280},
-                            {"x": 6, "y": 400},
-                            {"x": 12, "y": 0}
-                        ]
+                }
+            ],
+            "chargeToSoe": [
+            ],
+            "dischargeToSoe": [
+                {
+                    "soe": 0,
+                    "period": {
+                        "days": "weekdays:Europe/London",
+                        "start": "17:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    }
+                }
+            ],
+            "nivChase": [
+                {
+                    "period": {
+                        "days": "weekdays:Europe/London",
+                        "start": "00:00:00:Europe/London",
+                        "end": "12:00:00:Europe/London"
                     },
-                    "dischargeCurve": {
-                        "points": [
-                            {"x": 8, "y": 1280},
-                            {"x": 14, "y": 400},
-                            {"x": 35, "y": 100},
-                            {"x": 999999999, "y": 0}
-                        ]
-                    },
-                    "curveShiftLong": 3,
-                    "curveShiftShort": 3,
-                    "defaultPricing": [],
-                    "pricePrediction": {
-                        "whenShort": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 250000.0,
-                            "timeCutoffSecs": 600
+                    "niv": {
+                        "chargeCurve": {
+                            "points": [
+                                {"x": -999999999, "y": 1280},
+                                {"x": -2, "y": 1280},
+                                {"x": 0, "y": 1050},
+                                {"x": 6, "y": 1050},
+                                {"x": 12, "y": 0}
+                            ]
                         },
-                        "whenLong": {
-                            "allowPrediction": true,
-                            "volumeCutoff": 150000.0,
-                            "timeCutoffSecs": 900
+                        "dischargeCurve": {
+                            "points": [
+                                {"x": 10, "y": 1280},
+                                {"x": 12, "y": 1050},
+                                {"x": 25, "y": 1050},
+                                {"x": 35, "y": 100},
+                                {"x": 999999999, "y": 0}
+                            ]
+                        },
+                        "curveShiftLong": 6,
+                        "curveShiftShort": 2,
+                        "defaultPricing": [],
+                        "pricePrediction": {
+                            "whenShort": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 250000.0,
+                                "timeCutoffSecs": 900
+                            },
+                            "whenLong": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 150000.0,
+                                "timeCutoffSecs": 900
+                            }
+                        }
+                    }
+                },
+                {
+                    "period": {
+                        "days": "weekdays:Europe/London",
+                        "start": "12:00:00:Europe/London",
+                        "end": "19:00:00:Europe/London"
+                    },
+                    "niv": {
+                        "chargeCurve": {
+                            "points": [
+                                {"x": -999999999, "y": 1280},
+                                {"x": -2, "y": 1280},
+                                {"x": 0, "y": 1050},
+                                {"x": 9, "y": 1050},
+                                {"x": 12, "y": 0}
+                            ]
+                        },
+                        "dischargeCurve": {
+                            "points": [
+                                {"x": 10, "y": 1280},
+                                {"x": 12, "y": 1050},
+                                {"x": 25, "y": 1050},
+                                {"x": 35, "y": 100},
+                                {"x": 999999999, "y": 0}
+                            ]
+                        },
+                        "curveShiftLong": 6,
+                        "curveShiftShort": 2,
+                        "defaultPricing": [],
+                        "pricePrediction": {
+                            "whenShort": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 250000.0,
+                                "timeCutoffSecs": 900
+                            },
+                            "whenLong": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 150000.0,
+                                "timeCutoffSecs": 900
+                            }
+                        }
+                    }
+                },
+                {
+                    "period": {
+                        "days": "weekdays:Europe/London",
+                        "start": "19:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    },
+                    "niv": {
+                        "chargeCurve": {
+                            "points": [
+                                {"x": -999999999, "y": 1280},
+                                {"x": -2, "y": 1280},
+                                {"x": 0, "y": 1050},
+                                {"x": 2, "y": 1050},
+                                {"x": 5, "y": 0}
+                            ]
+                        },
+                        "dischargeCurve": {
+                            "points": [
+                                {"x": 10, "y": 1280},
+                                {"x": 12, "y": 1050},
+                                {"x": 25, "y": 1050},
+                                {"x": 35, "y": 100},
+                                {"x": 999999999, "y": 0}
+                            ]
+                        },
+                        "curveShiftLong": 4,
+                        "curveShiftShort": 2,
+                        "defaultPricing": [],
+                        "pricePrediction": {
+                            "whenShort": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 250000.0,
+                                "timeCutoffSecs": 0
+                            },
+                            "whenLong": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 150000.0,
+                                "timeCutoffSecs": 900
+                            }
+                        }
+                    }
+                },
+                {
+                    "period": {
+                        "days": "weekends:Europe/London",
+                        "start": "00:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    },
+                    "niv": {
+                        "chargeCurve": {
+                            "points": [
+                                {"x": -999999999, "y": 1280},
+                                {"x": -2, "y": 1280},
+                                {"x": 6, "y": 400},
+                                {"x": 12, "y": 0}
+                            ]
+                        },
+                        "dischargeCurve": {
+                            "points": [
+                                {"x": 8, "y": 1280},
+                                {"x": 14, "y": 400},
+                                {"x": 35, "y": 100},
+                                {"x": 999999999, "y": 0}
+                            ]
+                        },
+                        "curveShiftLong": 3,
+                        "curveShiftShort": 3,
+                        "defaultPricing": [],
+                        "pricePrediction": {
+                            "whenShort": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 250000.0,
+                                "timeCutoffSecs": 600
+                            },
+                            "whenLong": {
+                                "allowPrediction": true,
+                                "volumeCutoff": 150000.0,
+                                "timeCutoffSecs": 900
+                            }
                         }
                     }
                 }
-            }
-        ],
+            ]
+        },
 
 
 
@@ -300,6 +308,17 @@
             {
                 "comment": "Bryt supplier import",
                 "rate": 2.28,
+                "periods": [
+                    {
+                        "days": "all:Europe/London",
+                        "start": "00:00:00:Europe/London",
+                        "end": "23:59:59:Europe/London"
+                    }
+                ]
+            },
+            {
+                "comment": "Final consumption levies",
+                "rate": 6.0,
                 "periods": [
                     {
                         "days": "all:Europe/London",
