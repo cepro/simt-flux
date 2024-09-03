@@ -102,7 +102,7 @@ func (c *Client) ImbalancePrice() (float64, time.Time) {
 	return c.lastImbalancePrice, c.lastImbalancePriceSPTime
 }
 
-// ImbalancePrice returns the last cached imbalance volume, and the settlement period time that it corresponds to
+// ImbalanceVolume returns the last cached imbalance volume, and the settlement period time that it corresponds to
 func (c *Client) ImbalanceVolume() (float64, time.Time) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
