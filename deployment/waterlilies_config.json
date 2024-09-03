@@ -99,8 +99,8 @@
         "importAvoidancePeriods": [
             {
                 "days": "all:Europe/London",
-                "start": "07:00:00:Europe/London",
-                "end": "19:00:00:Europe/London"
+                "start": "00:00:00:Europe/London",
+                "end": "23:59:59:Europe/London"
             }
         ],
         "exportAvoidancePeriods": [
@@ -113,14 +113,6 @@
         "chargeToSoePeriods": [
         ],
         "dischargeToSoePeriods": [
-            {
-                "soe": 100,
-                "period": {
-                    "days": "weekdays:Europe/London",
-                    "start": "17:00:00:Europe/London",
-                    "end": "19:00:0:Europe/London"
-                }
-            }
         ],
         "nivChasePeriods": [
             {
