@@ -139,10 +139,12 @@ func predictImbalance(t time.Time, nivPredictionConfig config.NivPredictionConfi
 			logger.Info("Too soon into settlement period to trust modo calculation")
 			return 0.0, 0.0, false
 		}
+		// We have a valid prediction for the current SP
 		return modoImbalancePrice, modoImbalanceVolume, true
 	}
 
-	// We may be able to use the previous SP's imbalance data as a prediction for the first minutes of this SP.
+	// We don't have Modo data for this SP, but we may be able to use the previous SP's imbalance data as a prediction
+	// for the first minutes of this SP.
 	if modoDataIsForPreviousSP {
 		// There is different prediction configuration depeneding on if the system was short or long in the previous SP.
 		directionalConfig := config.NivPredictionDirectionConfig{}

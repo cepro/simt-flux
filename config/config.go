@@ -10,6 +10,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type ImportAvoidanceWhenShortConfig struct {
+	Period          timeutils.DayedPeriod        `json:"period"`
+	ShortPrediction NivPredictionDirectionConfig `json:"shortPrediction"`
+}
+
 type DayedPeriodWithSoe struct {
 	Period timeutils.DayedPeriod `json:"period"`
 	Soe    float64               `json:"soe"`
@@ -109,6 +114,15 @@ type EmulationConfig struct {
 	EmulatedSiteMeter uuid.UUID `json:"emulatedSiteMeter"`
 }
 
+type ControlComponentsConfig struct {
+	ImportAvoidancePeriods   []timeutils.DayedPeriod          `json:"importAvoidancePeriods"`
+	ExportAvoidancePeriods   []timeutils.DayedPeriod          `json:"exportAvoidancePeriods"`
+	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `json:"importAvoidanceWhenShort"`
+	ChargeToSoePeriods       []DayedPeriodWithSoe             `json:"chargeToSoePeriods"`
+	DischargeToSoePeriods    []DayedPeriodWithSoe             `json:"dischargeToSoePeriods"`
+	NivChasePeriods          []DayedPeriodWithNIV             `json:"nivChasePeriods"`
+}
+
 type ControllerConfig struct {
 	SiteMeterID             uuid.UUID               `json:"siteMeter"`
 	BessMeterID             uuid.UUID               `json:"bessMeter"`
@@ -120,11 +134,7 @@ type ControllerConfig struct {
 	BessDischargePowerLimit float64                 `json:"bessDischargePowerLimit"`
 	SiteImportPowerLimit    float64                 `json:"siteImportPowerLimit"`
 	SiteExportPowerLimit    float64                 `json:"siteExportPowerLimit"`
-	ImportAvoidancePeriods  []timeutils.DayedPeriod `json:"importAvoidancePeriods"`
-	ExportAvoidancePeriods  []timeutils.DayedPeriod `json:"exportAvoidancePeriods"`
-	ChargeToSoePeriods      []DayedPeriodWithSoe    `json:"chargeToSoePeriods"`
-	DischargeToSoePeriods   []DayedPeriodWithSoe    `json:"dischargeToSoePeriods"`
-	NivChasePeriods         []DayedPeriodWithNIV    `json:"nivChasePeriods"`
+	ControlComponents       ControlComponentsConfig `json:"controlComponents"`
 	RatesImport             []TimedRate             `json:"ratesImport"`
 	RatesExport             []TimedRate             `json:"ratesExport"`
 }

@@ -16,10 +16,13 @@ import (
 // It supports the following modes:
 // Import Avoidance: discharges power into the microgrid if it detects an import from the national grid.
 // Export Avoidance: takes power from the microgrid if it detects an export onto the national grid.
-// Charge to min: If the SoE of the battery is below a minimum then it is charged up to that minimum.
+// Import Avoidance when short: discharges into the microgrid if it detects an import from the national grid AND the system is short (prices are likely high)
+// Charge to SoE: If the SoE of the battery is below a minimum then it is charged up to that minimum.
+// Discharge to SoE: If the SoE of the battery is above a maximum then it is charged up to that maximum.
+// Niv chasing: the imbalance price is used to influence charge/discharges
 //
 // Put new site meter and bess readings onto the `SiteMeterReadings` and `BessReadings` channels. Instruction commands for
-// the BESS will be output onto the `BessCommands` channel.
+// the BESS will be output onto the `BessCommands` channel (supplied via the Config).
 type Controller struct {
 	SiteMeterReadings chan telemetry.MeterReading
 	BessReadings      chan telemetry.BessReading
@@ -42,19 +45,28 @@ type Config struct {
 	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
 	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
-	ImportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'import avoidance'
-	ExportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'export avoidance'
-	ChargeToSoePeriods     []config.DayedPeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
-	DischargeToSoePeriods  []config.DayedPeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	NivChasePeriods        []config.DayedPeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
-	RatesImport            []config.TimedRate          // Any charges that apply to importing power from the grid
-	RatesExport            []config.TimedRate          // Any charges that apply to exporting power from the grid
+	// Configuration of the different modes of operation:
+	ImportAvoidancePeriods   []timeutils.DayedPeriod                 // the periods of time to activate 'import avoidance'
+	ExportAvoidancePeriods   []timeutils.DayedPeriod                 // the periods of time to activate 'export avoidance'
+	ImportAvoidanceWhenShort []config.ImportAvoidanceWhenShortConfig // periods of time to activate 'import avoidance when short'
+	ChargeToSoePeriods       []config.DayedPeriodWithSoe             // the periods of time to charge the battery, and the level that the battery should be recharged to
+	DischargeToSoePeriods    []config.DayedPeriodWithSoe             // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	NivChasePeriods          []config.DayedPeriodWithNIV             // the periods of time to activate 'niv chasing', and the associated configuraiton
+
+	RatesImport []config.TimedRate // Any charges that apply to importing power from the grid
+	RatesExport []config.TimedRate // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
 	MaxReadingAge time.Duration // the maximum age of telemetry data before it's considered too stale to operate on, and the controller is stopped until new readings are available
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
+}
+
+// TODO: fix
+type Blah struct {
+	Period          timeutils.Period
+	ShortPrediction config.NivPredictionDirectionConfig
 }
 
 // PeriodWithSoe is similar to config.ClockTimePeriodWithSoe, except the Period is absolute, rather than a recurring clocktime
@@ -78,11 +90,12 @@ type imbalancePricer interface {
 // controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc
 type controlComponent struct {
 	name         string       // Friendly name of this component for debug logging
-	isActive     bool         // Set True if this control component is activated, or false if it is not doing anything
+	isActive     bool         // Set True if this control component is activated, or False if it is not doing anything
 	targetPower  float64      // The power associated with this control component
-	controlPoint controlPoint // Where the power should be applied
+	controlPoint controlPoint // The point where the targetPower should be applied
 }
 
+// New creates a new Controller using the given Config
 func New(config Config) *Controller {
 	return &Controller{
 		SiteMeterReadings: make(chan telemetry.MeterReading, 1),
@@ -107,6 +120,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
+		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
@@ -326,6 +340,42 @@ func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
 	}
 }
 
+// TODO: try to clean up all these different periodContainingTime functions?
+
+// importAvoidanceWhenShort returns control component for avoiding site imports, based on imbalance status
+func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenShortConfig, sitePower, lastTargetPower float64, modoClient imbalancePricer) controlComponent {
+
+	// TODO: fix
+	blah := blahContainingTime(t, configs)
+	if blah == nil {
+		return controlComponent{isActive: false}
+	}
+
+	_, imbalanceVolume, gotPrediction := predictImbalance(t, nivConfig.Prediction, modoClient)
+	if !gotPrediction {
+		// We don't have any pricing data available, so do nothing
+		return controlComponent{isActive: false}
+	}
+
+	if imbalanceVolume <= 0 {
+		// We aren't short, so do nothing
+		return controlComponent{isActive: false}
+	}
+
+	importAvoidancePower := sitePower + lastTargetPower
+	if importAvoidancePower < 0 {
+		// We are exporting, so do nothing
+		return controlComponent{isActive: false}
+	}
+
+	return controlComponent{
+		name:         "import_avoidance_when_short",
+		isActive:     true,
+		targetPower:  0, // Target zero power at the site boundary
+		controlPoint: controlPointSite,
+	}
+}
+
 // importAvoidance returns control component for avoiding site imports.
 func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
@@ -428,6 +478,21 @@ func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithS
 		targetPower:  dichargePower,
 		controlPoint: controlPointBess,
 	}
+}
+
+// TODO: clean up
+// blahContainingTime
+func blahContainingTime(t time.Time, configs []config.ImportAvoidanceWhenShortConfig) *Blah {
+	for _, config := range configs {
+		period, ok := config.Period.AbsolutePeriod(t)
+		if ok {
+			return &Blah{
+				Period:          period,
+				ShortPrediction: config.ShortPrediction,
+			}
+		}
+	}
+	return nil
 }
 
 // periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
