@@ -74,7 +74,7 @@ controller:
   bessMeter: 8333c68b-d5e0-4caf-94f7-0e97c78b913a
   emulation:
     bessIsEmulated: false
-    emulatedSiteMeter: 
+    emulatedSiteMeter: null
   bessChargeEfficiency: 0.85
   bessSoeMin: 30
   bessSoeMax: 1280
@@ -237,25 +237,25 @@ controller:
               timeCutoffSecs: 900
 
   ratesImport:
-    - comment: Bryt supplier import
+    - # Bryt supplier import
       rate: 2.28
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
-    - comment: Final consumption levies
+    - # Final consumption levies
       rate: 6
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
-    - comment: DUoS red import
+    - # DUoS red import
       rate: 11.385
       periods:
         - days: weekdays:Europe/London
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
-    - comment: DUoS amber import
+    - # DUoS amber import
       rate: 0.444
       periods:
         - days: weekdays:Europe/London
@@ -267,7 +267,7 @@ controller:
         - days: weekends:Europe/London
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
-    - comment: DUoS green import
+    - # DUoS green import
       rate: 0.026
       periods:
         - days: weekdays:Europe/London
@@ -283,13 +283,13 @@ controller:
           start: 19:30:00:Europe/London
           end: 23:59:59:Europe/London
   ratesExport:
-    - comment: DUoS red export
+    - # DUoS red export
       rate: -10.054
       periods:
         - days: weekdays:Europe/London
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
-    - comment: DUoS amber export
+    - # DUoS amber export
       rate: -0.435
       periods:
         - days: weekdays:Europe/London
@@ -301,7 +301,7 @@ controller:
         - days: weekends:Europe/London
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
-    - comment: DUoS green export
+    - # DUoS green export
       rate: -0.027
       periods:
         - days: weekdays:Europe/London
