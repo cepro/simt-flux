@@ -6,8 +6,8 @@ import (
 
 // DayedPeriod gives a period of time on particular days
 type DayedPeriod struct {
-	ClockTimePeriod      // The period in clock time, e.g. "4pm to 6pm"
-	Days            Days `json:"days"` // Indicates the days on which this period applies
+	ClockTimePeriod `yaml:",inline"` // The period in clock time, e.g. "4pm to 6pm"
+	Days            Days             `yaml:"days"` // Indicates the days on which this period applies
 }
 
 // AbsolutePeriod returns the equivilent `Period` instance for the given `DayedPeriod`, using `t` as the

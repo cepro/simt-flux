@@ -7,7 +7,7 @@ import (
 	"github.com/cepro/besscontroller/cartesian"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v2"
 )
 
 type ImportAvoidanceWhenShortConfig struct {
@@ -71,19 +71,19 @@ type MetersConfig struct {
 }
 
 type Acuvim2MeterConfig struct {
-	DeviceConfig
-	Pt1 float64 `yaml:"pt1"`
-	Pt2 float64 `yaml:"pt2"`
-	Ct1 float64 `yaml:"ct1"`
-	Ct2 float64 `yaml:"ct2"`
+	DeviceConfig `yaml:",inline"`
+	Pt1          float64 `yaml:"pt1"`
+	Pt2          float64 `yaml:"pt2"`
+	Ct1          float64 `yaml:"ct1"`
+	Ct2          float64 `yaml:"ct2"`
 }
 
 type MockMeterConfig struct {
-	DeviceConfig
+	DeviceConfig `yaml:",inline"`
 }
 
 type PowerPackConfig struct {
-	DeviceConfig
+	DeviceConfig    `yaml:",inline"`
 	NameplatePower  float64               `yaml:"nameplatePower"`
 	NameplateEnergy float64               `yaml:"nameplateEnergy"`
 	TeslaOptions    PowerPackTeslaOptions `yaml:"teslaOptions"`
@@ -98,7 +98,7 @@ type PowerPackTeslaOptions struct {
 }
 
 type MockBessConfig struct {
-	DeviceConfig
+	DeviceConfig    `yaml:",inline"`
 	NameplatePower  float64 `yaml:"nameplatePower"`
 	NameplateEnergy float64 `yaml:"nameplateEnergy"`
 }
@@ -127,12 +127,12 @@ type EmulationConfig struct {
 }
 
 type ControlComponentsConfig struct {
-	ImportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"importAvoidancePeriods"`
-	ExportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"exportAvoidancePeriods"`
+	ImportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"importAvoidance"`
+	ExportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"exportAvoidance"`
 	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `yaml:"importAvoidanceWhenShort"`
-	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoePeriods"`
-	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoePeriods"`
-	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChasePeriods"`
+	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoe"`
+	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoe"`
+	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChase"`
 }
 
 type ControllerConfig struct {

@@ -4,12 +4,12 @@ import "math"
 
 // Point represents a cartesian X,Y point
 type Point struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	X float64 `yaml:"x"`
+	Y float64 `yaml:"y"`
 }
 
 type Curve struct {
-	Points []Point `json:"points"`
+	Points []Point `yaml:"points"`
 }
 
 // VerticalDistance returns the vertical (y-axis) distance from the given point to the Curve, a positive number indicating that the

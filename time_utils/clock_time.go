@@ -1,7 +1,6 @@
 package timeutils
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,11 +15,12 @@ type ClockTime struct {
 	Location *time.Location
 }
 
-func (c *ClockTime) UnmarshalJSON(data []byte) error {
+func (c *ClockTime) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
+	err := unmarshal(&str)
+	if err != nil {
+		return fmt.Errorf("to string: %w", err)
 	}
 
 	elements := strings.Split(str, ":")
