@@ -136,12 +136,12 @@ func main() {
 		// Read supabase key secrets from env vars
 		supabaseAnonKey, ok := os.LookupEnv(dataPlatformConfig.Supabase.AnonKeyEnvVar)
 		if !ok {
-			slog.Error("Wnvironment variable not found", "env_var", dataPlatformConfig.Supabase.AnonKeyEnvVar)
+			slog.Error("Environment variable not found", "env_var", dataPlatformConfig.Supabase.AnonKeyEnvVar)
 			return
 		}
 		supabaseUserKey, ok := os.LookupEnv(dataPlatformConfig.Supabase.UserKeyEnvVar)
 		if !ok {
-			slog.Error("Wnvironment variable not found", "env_var", dataPlatformConfig.Supabase.UserKeyEnvVar)
+			slog.Error("Environment variable not found", "env_var", dataPlatformConfig.Supabase.UserKeyEnvVar)
 			return
 		}
 

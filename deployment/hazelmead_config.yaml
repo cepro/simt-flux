@@ -87,7 +87,7 @@ controller:
       - shortPrediction:
           allowPrediction: true
           volumeCutoff: 0
-          timeCutoffSecs: 600  # 10mins
+          timeCutoffSecs: 1200  # 20mins
         period:
           days: all:Europe/London
           start: 00:00:00:Europe/London

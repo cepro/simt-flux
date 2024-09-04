@@ -195,6 +195,13 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.SitePower(),
 			c.lastBessTargetPower,
 		),
+		importAvoidanceWhenShort(
+			t,
+			c.config.ImportAvoidanceWhenShort,
+			c.SitePower(),
+			c.lastBessTargetPower,
+			c.config.ModoClient,
+		),
 	}
 
 	// Select the highest priority component that is active, or default to a zero-power "idle" component

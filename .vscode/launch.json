@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "${workspaceFolder}",
             "args": [
-                "-f", "deployment/waterlilies_config_debug.json"
+                "-f", "deployment/hazelmead_config.yaml"
               ],
             "env": {
                 "SUPABASE_ANON_KEY": "${env:SUPABASE_ANON_KEY}",

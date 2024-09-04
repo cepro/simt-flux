@@ -5,7 +5,7 @@ After=multi-user.target
 [Service]
 Type=idle
 EnvironmentFile=/home/pi/bess_controller/envvars
-ExecStart=/home/pi/bess_controller/bess_controller_rpi -f /home/pi/bess_controller/config.json
+ExecStart=/home/pi/bess_controller/bess_controller_rpi -f /home/pi/bess_controller/config.yaml
 Restart=always
 RestartSec=16
 StandardOutput=journal
