@@ -11,13 +11,21 @@ import (
 )
 
 type ImportAvoidanceWhenShortConfig struct {
-	Period          timeutils.DayedPeriod        `json:"period"`
+	DayedPeriod     timeutils.DayedPeriod        `json:"period"`
 	ShortPrediction NivPredictionDirectionConfig `json:"shortPrediction"`
 }
 
+func (c ImportAvoidanceWhenShortConfig) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
+}
+
 type DayedPeriodWithSoe struct {
-	Period timeutils.DayedPeriod `json:"period"`
-	Soe    float64               `json:"soe"`
+	DayedPeriod timeutils.DayedPeriod `json:"period"`
+	Soe         float64               `json:"soe"`
+}
+
+func (c DayedPeriodWithSoe) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
 }
 
 type NivConfig struct {
@@ -43,8 +51,12 @@ type NivPredictionDirectionConfig struct {
 }
 
 type DayedPeriodWithNIV struct {
-	Period timeutils.DayedPeriod `json:"period"`
-	Niv    NivConfig             `json:"niv"`
+	DayedPeriod timeutils.DayedPeriod `json:"period"`
+	Niv         NivConfig             `json:"niv"`
+}
+
+func (c DayedPeriodWithNIV) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
 }
 
 type DeviceConfig struct {

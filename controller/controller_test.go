@@ -99,7 +99,7 @@ func TestController(test *testing.T) {
 	chargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 130,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
@@ -109,7 +109,7 @@ func TestController(test *testing.T) {
 		},
 		{
 			Soe: 190,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
@@ -121,7 +121,7 @@ func TestController(test *testing.T) {
 	dischargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 70,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
@@ -133,7 +133,7 @@ func TestController(test *testing.T) {
 
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
@@ -162,7 +162,7 @@ func TestController(test *testing.T) {
 		},
 	}
 
-	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
+	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].DayedPeriod} // This is unrealistic but convenient for the test conciseness
 	ratesImport := []config.TimedRate{
 		{
 			Rate:    10,

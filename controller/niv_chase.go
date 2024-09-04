@@ -18,7 +18,7 @@ const (
 // nivChase returns the control component for NIV chasing, using the Modo imbalance price calculation.
 func nivChase(
 	t time.Time,
-	nivChasePeriods []config.DayedPeriodWithNIV,
+	configs []config.DayedPeriodWithNIV,
 	soe,
 	chargeEfficiency,
 	rateImport,
@@ -28,18 +28,15 @@ func nivChase(
 
 	logger := slog.Default()
 
-	// Find the relevant NIV chase configuration given the current time
-	periodWithNiv := periodWithNivContainingTime(t, nivChasePeriods)
-	if periodWithNiv == nil {
-		// We are not configured to do any NIV chasing at this time
+	conf, _ := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
-	nivConfig := periodWithNiv.Niv
 
-	imbalancePrice, imbalanceVolume, gotPrediction := predictImbalance(t, nivConfig.Prediction, modoClient)
+	imbalancePrice, imbalanceVolume, gotPrediction := predictImbalance(t, conf.Niv.Prediction, modoClient)
 	if !gotPrediction {
 		// Check if we have default pricing configured that we can use in lieu of the predictions
-		defaultImbalancePrice, gotDefaultPrice := config.FirstTimedRate(t, nivConfig.DefaultPricing)
+		defaultImbalancePrice, gotDefaultPrice := config.FirstTimedRate(t, conf.Niv.DefaultPricing)
 		if gotDefaultPrice {
 			imbalancePrice = defaultImbalancePrice
 		} else {
@@ -58,10 +55,10 @@ func nivChase(
 	shiftedDischargePrice := dischargePrice
 	imbalanceDirectionStr := "unknown" // just for logging
 	if imbalanceVolume < 0 {
-		shift = -nivConfig.CurveShiftLong
+		shift = -conf.Niv.CurveShiftLong
 		imbalanceDirectionStr = "long"
 	} else if imbalanceVolume > 0 {
-		shift = nivConfig.CurveShiftShort
+		shift = conf.Niv.CurveShiftShort
 		imbalanceDirectionStr = "short"
 	} else {
 		// If we don't have an imbalance volume (or it's actually 0) then don't shift in either direction
@@ -70,8 +67,8 @@ func nivChase(
 	shiftedDischargePrice += shift
 
 	// Lookup the charge/discharge curves to determine the power level
-	chargeDistance := nivConfig.ChargeCurve.VerticalDistance(cartesian.Point{X: shiftedChargePrice, Y: soe})
-	dischargeDistance := nivConfig.DischargeCurve.VerticalDistance(cartesian.Point{X: shiftedDischargePrice, Y: soe})
+	chargeDistance := conf.Niv.ChargeCurve.VerticalDistance(cartesian.Point{X: shiftedChargePrice, Y: soe})
+	dischargeDistance := conf.Niv.DischargeCurve.VerticalDistance(cartesian.Point{X: shiftedDischargePrice, Y: soe})
 	energyDelta := 0.0
 
 	if chargeDistance > 0 {
@@ -146,7 +143,7 @@ func predictImbalance(t time.Time, nivPredictionConfig config.NivPredictionConfi
 	// We don't have Modo data for this SP, but we may be able to use the previous SP's imbalance data as a prediction
 	// for the first minutes of this SP.
 	if modoDataIsForPreviousSP {
-		// There is different prediction configuration depeneding on if the system was short or long in the previous SP.
+		// There is different prediction configuration depending on if the system was short or long in the previous SP.
 		directionalConfig := config.NivPredictionDirectionConfig{}
 		if modoImbalanceVolume > 0 {
 			directionalConfig = nivPredictionConfig.WhenShort // system was short

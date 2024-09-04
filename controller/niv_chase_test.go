@@ -40,7 +40,7 @@ func TestNivChase(test *testing.T) {
 
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: timeutils.Days{
 					Name:     timeutils.AllDaysName,
 					Location: london,

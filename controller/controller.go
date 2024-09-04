@@ -63,24 +63,6 @@ type Config struct {
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
 }
 
-// TODO: fix
-type Blah struct {
-	Period          timeutils.Period
-	ShortPrediction config.NivPredictionDirectionConfig
-}
-
-// PeriodWithSoe is similar to config.ClockTimePeriodWithSoe, except the Period is absolute, rather than a recurring clocktime
-type PeriodWithSoe struct {
-	Period timeutils.Period
-	Soe    float64
-}
-
-// PeriodWithNiv is similar to config.ClockTimePeriodWithNiv, except the Period is absolute, rather than a recurring clocktime
-type PeriodWithNiv struct {
-	Period timeutils.Period
-	Niv    config.NivConfig
-}
-
 // imbalancePricer is an interface onto any object that provides imbalance pricing and volumes
 type imbalancePricer interface {
 	ImbalancePrice() (float64, time.Time)  // ImbalancePrice returns the last cached imbalance price, and the settlement period time that it corresponds to
@@ -120,7 +102,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
-		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
+		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ImportAvoidanceWhenShort),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
@@ -329,29 +311,23 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 	}
 }
 
-// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
-func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
-	if value > maxPositive {
-		return maxPositive, true
-	} else if value < -maxNegative {
-		return -maxNegative, true
-	} else {
-		return value, false
-	}
-}
-
-// TODO: try to clean up all these different periodContainingTime functions?
-
 // importAvoidanceWhenShort returns control component for avoiding site imports, based on imbalance status
 func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenShortConfig, sitePower, lastTargetPower float64, modoClient imbalancePricer) controlComponent {
 
-	// TODO: fix
-	blah := blahContainingTime(t, configs)
-	if blah == nil {
+	conf, _ := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
 
-	_, imbalanceVolume, gotPrediction := predictImbalance(t, nivConfig.Prediction, modoClient)
+	_, imbalanceVolume, gotPrediction := predictImbalance(
+		t,
+		config.NivPredictionConfig{
+			WhenShort: conf.ShortPrediction,
+			// We are only interested in the case where the system is short, so don't allow predictions for long
+			WhenLong: config.NivPredictionDirectionConfig{AllowPrediction: false},
+		},
+		modoClient,
+	)
 	if !gotPrediction {
 		// We don't have any pricing data available, so do nothing
 		return controlComponent{isActive: false}
@@ -379,7 +355,7 @@ func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenS
 // importAvoidance returns control component for avoiding site imports.
 func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
+	_, importAvoidancePeriod := findDayedPeriodContainingTime(t, importAvoidancePeriods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
@@ -400,7 +376,7 @@ func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod
 // exportAvoidance returns the control component for avoiding site exports.
 func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	exportAvoidancePeriod := periodContainingTime(t, exportAvoidancePeriods)
+	_, exportAvoidancePeriod := findDayedPeriodContainingTime(t, exportAvoidancePeriods)
 	if exportAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
@@ -419,15 +395,15 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod
 }
 
 // chargeToSoe returns the control component for charging the battery to a minimum SoE.
-func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
+func chargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
-	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
-	if periodWithSoe == nil {
+	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
 
-	targetSoe := periodWithSoe.Soe
-	endOfCharge := periodWithSoe.Period.End
+	targetSoe := conf.Soe
+	endOfCharge := absPeriod.End
 
 	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
 	energyToCharge := (targetSoe - bessSoe) / chargeEfficiency
@@ -450,15 +426,15 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, be
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+func dischargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
-	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
-	if periodWithSoe == nil {
+	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
 
-	targetSoe := periodWithSoe.Soe
-	endOfDischarge := periodWithSoe.Period.End
+	targetSoe := conf.Soe
+	endOfDischarge := absPeriod.End
 
 	// discharge the battery to reach the target SoE at the end of the period. If the battery is already discharged to the target level, or below then do nothing.
 	energyToDischarge := (bessSoe - targetSoe) * dischargeEfficiency
@@ -480,62 +456,37 @@ func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithS
 	}
 }
 
-// TODO: clean up
-// blahContainingTime
-func blahContainingTime(t time.Time, configs []config.ImportAvoidanceWhenShortConfig) *Blah {
-	for _, config := range configs {
-		period, ok := config.Period.AbsolutePeriod(t)
-		if ok {
-			return &Blah{
-				Period:          period,
-				ShortPrediction: config.ShortPrediction,
-			}
-		}
-	}
-	return nil
+// PeriodicalConfigTypes is an interface onto configuration structures that are tied to a particular periods of time
+type PeriodicalConfigTypes interface {
+	config.ImportAvoidanceWhenShortConfig | config.DayedPeriodWithSoe | config.DayedPeriodWithNIV
+	GetDayedPeriod() timeutils.DayedPeriod
 }
 
-// periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodWithSoeContainingTime(t time.Time, dayedPeriodsWithSoe []config.DayedPeriodWithSoe) *PeriodWithSoe {
-	for _, dayedPeriodWithSoe := range dayedPeriodsWithSoe {
-		period, ok := dayedPeriodWithSoe.Period.AbsolutePeriod(t)
+// findPeriodicalConfigForTime searches the list of configs and returns the first one that is active at the time `t` (i.e.
+// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
+func findPeriodicalConfigForTime[T PeriodicalConfigTypes](t time.Time, configs []T) (*T, timeutils.Period) {
+
+	for _, conf := range configs {
+		dayedPeriod := conf.GetDayedPeriod()
+		absPeriod, ok := dayedPeriod.AbsolutePeriod(t)
 		if ok {
-			return &PeriodWithSoe{
-				Period: period,
-				Soe:    dayedPeriodWithSoe.Soe,
-			}
+			return &conf, absPeriod
 		}
 	}
-	return nil
+	return nil, timeutils.Period{}
 }
 
-// periodWithNivContainingTime returns the PeriodWithNiv that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodWithNivContainingTime(t time.Time, dayedPeriodsWithNiv []config.DayedPeriodWithNIV) *PeriodWithNiv {
-	for _, dayedPeriodWithNiv := range dayedPeriodsWithNiv {
-		period, ok := dayedPeriodWithNiv.Period.AbsolutePeriod(t)
-		if ok {
-			return &PeriodWithNiv{
-				Period: period,
-				Niv:    dayedPeriodWithNiv.Niv,
-			}
-		}
-	}
-	return nil
-}
-
-// periodContainingTime returns the first period that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) *timeutils.Period {
+// findDayedPeriodContainingTime searches the list of dayed periods and returns the first one that is active at the time `t` (i.e.
+// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
+func findDayedPeriodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) (*timeutils.DayedPeriod, *timeutils.Period) {
 
 	for _, dayedPeriod := range dayedPeriods {
 		period, ok := dayedPeriod.AbsolutePeriod(t)
 		if ok {
-			return &period
+			return &dayedPeriod, &period
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
@@ -545,5 +496,16 @@ func sendIfNonBlocking[V any](ch chan<- V, val V, messageTargetLogStr string) {
 	case ch <- val:
 	default:
 		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
+	}
+}
+
+// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
+func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
+	if value > maxPositive {
+		return maxPositive, true
+	} else if value < -maxNegative {
+		return -maxNegative, true
+	} else {
+		return value, false
 	}
 }
