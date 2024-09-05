@@ -107,6 +107,7 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ImportAvoidanceWhenShort),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
+		"dynamic_peak_discharge", fmt.Sprintf("%+v", c.config.DynamicPeakDischarges),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"rates_import", fmt.Sprintf("%+v", c.config.RatesImport),
 		"rates_export", fmt.Sprintf("%+v", c.config.RatesExport),
