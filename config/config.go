@@ -10,9 +10,21 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type DynamicPeakDischargeConfig struct {
+	DayedPeriod            timeutils.DayedPeriod        `yaml:"period"`
+	TargetSoe              float64                      `yaml:"targetSoe"`
+	TargetShortPeriods     bool                         `yaml:"targetShortPeriods"`
+	ShortPrediction        NivPredictionDirectionConfig `yaml:"shortPrediction"`
+	PrioritiseResidualLoad bool                         `yaml:"prioritiseResidualLoad"`
+}
+
+func (c DynamicPeakDischargeConfig) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
+}
+
 type ImportAvoidanceWhenShortConfig struct {
-	DayedPeriod     timeutils.DayedPeriod        `yaml:"period" yaml:"period"`
-	ShortPrediction NivPredictionDirectionConfig `yaml:"shortPrediction" yaml:"shortPrediction"`
+	DayedPeriod     timeutils.DayedPeriod        `yaml:"period"`
+	ShortPrediction NivPredictionDirectionConfig `yaml:"shortPrediction"`
 }
 
 func (c ImportAvoidanceWhenShortConfig) GetDayedPeriod() timeutils.DayedPeriod {
@@ -132,6 +144,7 @@ type ControlComponentsConfig struct {
 	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `yaml:"importAvoidanceWhenShort"`
 	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoe"`
 	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoe"`
+	PeakDischarge            []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
 	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChase"`
 }
 

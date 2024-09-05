@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/cepro/besscontroller/config"
@@ -29,10 +30,10 @@ type Controller struct {
 
 	config Config
 
-	sitePower timedMetric
+	sitePower timedMetric // +ve is microgrid import, -ve is microgrid export
 	bessSoe   timedMetric
 
-	lastBessTargetPower float64
+	lastBessTargetPower float64 // +ve is battery discharge, -ve is battery charge
 }
 
 type Config struct {
@@ -51,6 +52,7 @@ type Config struct {
 	ImportAvoidanceWhenShort []config.ImportAvoidanceWhenShortConfig // periods of time to activate 'import avoidance when short'
 	ChargeToSoePeriods       []config.DayedPeriodWithSoe             // the periods of time to charge the battery, and the level that the battery should be recharged to
 	DischargeToSoePeriods    []config.DayedPeriodWithSoe             // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	DynamicPeakDischarges    []config.DynamicPeakDischargeConfig     // the periods of time to discharge 'dynamically' into a peak
 	NivChasePeriods          []config.DayedPeriodWithNIV             // the periods of time to activate 'niv chasing', and the associated configuraiton
 
 	RatesImport []config.TimedRate // Any charges that apply to importing power from the grid
@@ -146,6 +148,7 @@ func (c *Controller) EmulatedSitePower() float64 {
 	return c.sitePower.value - c.lastBessTargetPower
 }
 
+// SitePower returns the metered power reading at the microgrid boundary (or an emulated value if appropriate)
 func (c *Controller) SitePower() float64 {
 	if c.config.BessIsEmulated {
 		return c.EmulatedSitePower()
@@ -168,6 +171,15 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.bessSoe.value,
 			1.0, // Discharge efficiency is assumed to be 100%
 		),
+		dynamicPeakDischarge(
+			t,
+			c.config.DynamicPeakDischarges,
+			c.bessSoe.value,
+			c.SitePower(),
+			c.lastBessTargetPower,
+			c.maxBessDischarge(),
+			c.config.ModoClient,
+		),
 		nivChase(
 			t,
 			c.config.NivChasePeriods,
@@ -183,7 +195,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
 		),
-		importAvoidance(
+		basicImportAvoidance(
 			t,
 			c.config.ImportAvoidancePeriods,
 			c.SitePower(),
@@ -318,6 +330,18 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 	}
 }
 
+// maxBessDischarge returns the maximum discharge rate of the BESS at this point in time.
+func (c *Controller) maxBessDischarge() float64 {
+	// Use a contrived controlComponent that requests infinite discharge power to get the actual maximum rate with the existing `calculateBessPower` method.
+	maxBessDischarge, _ := c.calculateBessPower(controlComponent{
+		"max_discharge_calculation",
+		true,
+		math.Inf(-1),
+		controlPointBess,
+	})
+	return maxBessDischarge
+}
+
 // importAvoidanceWhenShort returns control component for avoiding site imports, based on imbalance status
 func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenShortConfig, sitePower, lastTargetPower float64, modoClient imbalancePricer) controlComponent {
 
@@ -345,42 +369,37 @@ func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenS
 		return controlComponent{isActive: false}
 	}
 
-	importAvoidancePower := sitePower + lastTargetPower
-	if importAvoidancePower < 0 {
-		// We are exporting, so do nothing
-		return controlComponent{isActive: false}
-	}
-
-	return controlComponent{
-		name:         "import_avoidance_when_short",
-		isActive:     true,
-		targetPower:  0, // Target zero power at the site boundary
-		controlPoint: controlPointSite,
-	}
+	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance_when_short")
 }
 
-// importAvoidance returns control component for avoiding site imports.
-func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
+// basicImportAvoidance returns the control component for avoiding microgrid boundary imports.
+func basicImportAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	_, importAvoidancePeriod := findDayedPeriodContainingTime(t, importAvoidancePeriods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
 
+	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance")
+}
+
+// importAvoidanceHelper generates the control component for an import avoidance action.
+// Import avoidance is a strategy that is used by a few different control modes so this is a conveninence function for helping with that.
+func importAvoidanceHelper(sitePower, lastTargetPower float64, controlComponentName string) controlComponent {
 	importAvoidancePower := sitePower + lastTargetPower
 	if importAvoidancePower < 0 {
 		return controlComponent{isActive: false}
 	}
 
 	return controlComponent{
-		name:         "import_avoidance",
+		name:         controlComponentName,
 		isActive:     true,
 		targetPower:  0, // Target zero power at the site boundary
 		controlPoint: controlPointSite,
 	}
 }
 
-// exportAvoidance returns the control component for avoiding site exports.
+// exportAvoidance returns the control component for avoiding microgrid boundary exports.
 func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	_, exportAvoidancePeriod := findDayedPeriodContainingTime(t, exportAvoidancePeriods)
@@ -465,7 +484,7 @@ func dischargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, d
 
 // PeriodicalConfigTypes is an interface onto configuration structures that are tied to a particular periods of time
 type PeriodicalConfigTypes interface {
-	config.ImportAvoidanceWhenShortConfig | config.DayedPeriodWithSoe | config.DayedPeriodWithNIV
+	config.ImportAvoidanceWhenShortConfig | config.DayedPeriodWithSoe | config.DayedPeriodWithNIV | config.DynamicPeakDischargeConfig
 	GetDayedPeriod() timeutils.DayedPeriod
 }
 
