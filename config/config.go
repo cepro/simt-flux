@@ -1,139 +1,174 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/cepro/besscontroller/cartesian"
 	timeutils "github.com/cepro/besscontroller/time_utils"
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v2"
 )
 
+type DynamicPeakDischargeConfig struct {
+	DayedPeriod            timeutils.DayedPeriod        `yaml:"period"`
+	TargetSoe              float64                      `yaml:"targetSoe"`
+	TargetShortPeriods     bool                         `yaml:"targetShortPeriods"`
+	ShortPrediction        NivPredictionDirectionConfig `yaml:"shortPrediction"`
+	PrioritiseResidualLoad bool                         `yaml:"prioritiseResidualLoad"`
+}
+
+func (c DynamicPeakDischargeConfig) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
+}
+
+type ImportAvoidanceWhenShortConfig struct {
+	DayedPeriod     timeutils.DayedPeriod        `yaml:"period"`
+	ShortPrediction NivPredictionDirectionConfig `yaml:"shortPrediction"`
+}
+
+func (c ImportAvoidanceWhenShortConfig) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
+}
+
 type DayedPeriodWithSoe struct {
-	Period timeutils.DayedPeriod `json:"period"`
-	Soe    float64               `json:"soe"`
+	DayedPeriod timeutils.DayedPeriod `yaml:"period"`
+	Soe         float64               `yaml:"soe"`
+}
+
+func (c DayedPeriodWithSoe) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
 }
 
 type NivConfig struct {
-	ChargeCurve     cartesian.Curve     `json:"chargeCurve"`
-	DischargeCurve  cartesian.Curve     `json:"dischargeCurve"`
-	CurveShiftLong  float64             `json:"curveShiftLong"`
-	CurveShiftShort float64             `json:"curveShiftShort"`
-	DefaultPricing  []TimedRate         `json:"defaultPricing"`
-	Prediction      NivPredictionConfig `json:"pricePrediction"`
+	ChargeCurve     cartesian.Curve     `yaml:"chargeCurve"`
+	DischargeCurve  cartesian.Curve     `yaml:"dischargeCurve"`
+	CurveShiftLong  float64             `yaml:"curveShiftLong"`
+	CurveShiftShort float64             `yaml:"curveShiftShort"`
+	DefaultPricing  []TimedRate         `yaml:"defaultPricing"`
+	Prediction      NivPredictionConfig `yaml:"pricePrediction"`
 }
 
 type NivPredictionConfig struct {
-	WhenShort NivPredictionDirectionConfig `json:"whenShort"`
-	WhenLong  NivPredictionDirectionConfig `json:"whenLong"`
+	WhenShort NivPredictionDirectionConfig `yaml:"whenShort"`
+	WhenLong  NivPredictionDirectionConfig `yaml:"whenLong"`
 }
 
 // TODO: think about naming here 'prediction' is used for both up to date modo and previous modo
 // in the code, but in the config it's used only for previosu modo data
 type NivPredictionDirectionConfig struct {
-	AllowPrediction bool    `json:"allowPrediction"`
-	VolumeCutoff    float64 `json:"volumeCutoff"` // imbalance volume in kWh
-	TimeCutoffSecs  int     `json:"timeCutoffSecs"`
+	AllowPrediction bool    `yaml:"allowPrediction"`
+	VolumeCutoff    float64 `yaml:"volumeCutoff"` // imbalance volume in kWh
+	TimeCutoffSecs  int     `yaml:"timeCutoffSecs"`
 }
 
 type DayedPeriodWithNIV struct {
-	Period timeutils.DayedPeriod `json:"period"`
-	Niv    NivConfig             `json:"niv"`
+	DayedPeriod timeutils.DayedPeriod `yaml:"period"`
+	Niv         NivConfig             `yaml:"niv"`
+}
+
+func (c DayedPeriodWithNIV) GetDayedPeriod() timeutils.DayedPeriod {
+	return c.DayedPeriod
 }
 
 type DeviceConfig struct {
-	Host             string    `json:"host"`
-	ID               uuid.UUID `json:"id"`
-	PollIntervalSecs int       `json:"pollIntervalSecs"`
+	Host             string    `yaml:"host"`
+	ID               uuid.UUID `yaml:"id"`
+	PollIntervalSecs int       `yaml:"pollIntervalSecs"`
 }
 
 type MetersConfig struct {
-	Acuvim2 map[string]Acuvim2MeterConfig `json:"acuvim2"`
-	Mock    map[string]Acuvim2MeterConfig `json:"mock"`
+	Acuvim2 map[string]Acuvim2MeterConfig `yaml:"acuvim2"`
+	Mock    map[string]Acuvim2MeterConfig `yaml:"mock"`
 }
 
 type Acuvim2MeterConfig struct {
-	DeviceConfig
-	Pt1 float64 `json:"pt1"`
-	Pt2 float64 `json:"pt2"`
-	Ct1 float64 `json:"ct1"`
-	Ct2 float64 `json:"ct2"`
+	DeviceConfig `yaml:",inline"`
+	Pt1          float64 `yaml:"pt1"`
+	Pt2          float64 `yaml:"pt2"`
+	Ct1          float64 `yaml:"ct1"`
+	Ct2          float64 `yaml:"ct2"`
 }
 
 type MockMeterConfig struct {
-	DeviceConfig
+	DeviceConfig `yaml:",inline"`
 }
 
 type PowerPackConfig struct {
-	DeviceConfig
-	NameplatePower  float64               `json:"nameplatePower"`
-	NameplateEnergy float64               `json:"nameplateEnergy"`
-	TeslaOptions    PowerPackTeslaOptions `json:"teslaOptions"`
+	DeviceConfig    `yaml:",inline"`
+	NameplatePower  float64               `yaml:"nameplatePower"`
+	NameplateEnergy float64               `yaml:"nameplateEnergy"`
+	TeslaOptions    PowerPackTeslaOptions `yaml:"teslaOptions"`
 }
 
 // PowerPackTeslaOptions contains settings which are applied via Modbus onto the tesla hardware.
 // (maybe this struct could have a better name).
 type PowerPackTeslaOptions struct {
-	InverterRampRateUp   float64 `json:"inverterRampRateUp"`
-	InverterRampRateDown float64 `json:"inverterRampRateDown"`
-	AlwaysActive         bool    `json:"alwaysActive"`
+	InverterRampRateUp   float64 `yaml:"inverterRampRateUp"`
+	InverterRampRateDown float64 `yaml:"inverterRampRateDown"`
+	AlwaysActive         bool    `yaml:"alwaysActive"`
 }
 
 type MockBessConfig struct {
-	DeviceConfig
-	NameplatePower  float64 `json:"nameplatePower"`
-	NameplateEnergy float64 `json:"nameplateEnergy"`
+	DeviceConfig    `yaml:",inline"`
+	NameplatePower  float64 `yaml:"nameplatePower"`
+	NameplateEnergy float64 `yaml:"nameplateEnergy"`
 }
 
 type BessConfig struct {
-	PowerPack *PowerPackConfig `json:"powerPack"`
-	Mock      *MockBessConfig  `json:"mock"`
+	PowerPack *PowerPackConfig `yaml:"powerPack"`
+	Mock      *MockBessConfig  `yaml:"mock"`
 }
 
 type SupabaseConfig struct {
-	Url string `json:"url"`
+	Url string `yaml:"url"`
 	// key is specified via env var
-	Schema        string `json:"schema"`
-	AnonKeyEnvVar string `json:"anonKeyEnvVar"`
-	UserKeyEnvVar string `json:"userKeyEnvVar"`
+	Schema        string `yaml:"schema"`
+	AnonKeyEnvVar string `yaml:"anonKeyEnvVar"`
+	UserKeyEnvVar string `yaml:"userKeyEnvVar"`
 }
 
 type DataPlatformConfig struct {
-	UploadIntervalSecs int            `json:"uploadIntervalSecs"`
-	Supabase           SupabaseConfig `json:"supabase"`
+	UploadIntervalSecs int            `yaml:"uploadIntervalSecs"`
+	Supabase           SupabaseConfig `yaml:"supabase"`
 }
 
 type EmulationConfig struct {
-	BessIsEmulated    bool      `json:"bessIsEmulated"`
-	EmulatedSiteMeter uuid.UUID `json:"emulatedSiteMeter"`
+	BessIsEmulated    bool      `yaml:"bessIsEmulated"`
+	EmulatedSiteMeter uuid.UUID `yaml:"emulatedSiteMeter"`
+}
+
+type ControlComponentsConfig struct {
+	ImportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"importAvoidance"`
+	ExportAvoidancePeriods   []timeutils.DayedPeriod          `yaml:"exportAvoidance"`
+	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `yaml:"importAvoidanceWhenShort"`
+	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoe"`
+	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoe"`
+	PeakDischarge            []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
+	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChase"`
 }
 
 type ControllerConfig struct {
-	SiteMeterID             uuid.UUID               `json:"siteMeter"`
-	BessMeterID             uuid.UUID               `json:"bessMeter"`
-	Emulation               EmulationConfig         `json:"emulation"`
-	BessChargeEfficiency    float64                 `json:"bessChargeEfficiency"`
-	BessSoeMin              float64                 `json:"bessSoeMin"`
-	BessSoeMax              float64                 `json:"bessSoeMax"`
-	BessChargePowerLimit    float64                 `json:"bessChargePowerLimit"`
-	BessDischargePowerLimit float64                 `json:"bessDischargePowerLimit"`
-	SiteImportPowerLimit    float64                 `json:"siteImportPowerLimit"`
-	SiteExportPowerLimit    float64                 `json:"siteExportPowerLimit"`
-	ImportAvoidancePeriods  []timeutils.DayedPeriod `json:"importAvoidancePeriods"`
-	ExportAvoidancePeriods  []timeutils.DayedPeriod `json:"exportAvoidancePeriods"`
-	ChargeToSoePeriods      []DayedPeriodWithSoe    `json:"chargeToSoePeriods"`
-	DischargeToSoePeriods   []DayedPeriodWithSoe    `json:"dischargeToSoePeriods"`
-	NivChasePeriods         []DayedPeriodWithNIV    `json:"nivChasePeriods"`
-	RatesImport             []TimedRate             `json:"ratesImport"`
-	RatesExport             []TimedRate             `json:"ratesExport"`
+	SiteMeterID             uuid.UUID               `yaml:"siteMeter"`
+	BessMeterID             uuid.UUID               `yaml:"bessMeter"`
+	Emulation               EmulationConfig         `yaml:"emulation"`
+	BessChargeEfficiency    float64                 `yaml:"bessChargeEfficiency"`
+	BessSoeMin              float64                 `yaml:"bessSoeMin"`
+	BessSoeMax              float64                 `yaml:"bessSoeMax"`
+	BessChargePowerLimit    float64                 `yaml:"bessChargePowerLimit"`
+	BessDischargePowerLimit float64                 `yaml:"bessDischargePowerLimit"`
+	SiteImportPowerLimit    float64                 `yaml:"siteImportPowerLimit"`
+	SiteExportPowerLimit    float64                 `yaml:"siteExportPowerLimit"`
+	ControlComponents       ControlComponentsConfig `yaml:"controlComponents"`
+	RatesImport             []TimedRate             `yaml:"ratesImport"`
+	RatesExport             []TimedRate             `yaml:"ratesExport"`
 }
 
 type Config struct {
-	Meters        MetersConfig         `json:"meters"`
-	Bess          BessConfig           `json:"bess"`
-	DataPlatforms []DataPlatformConfig `json:"dataPlatforms"`
-	Controller    ControllerConfig     `json:"controller"`
+	Meters        MetersConfig         `yaml:"meters"`
+	Bess          BessConfig           `yaml:"bess"`
+	DataPlatforms []DataPlatformConfig `yaml:"dataPlatforms"`
+	Controller    ControllerConfig     `yaml:"controller"`
 }
 
 func Read(path string) (Config, error) {
@@ -143,7 +178,7 @@ func Read(path string) (Config, error) {
 	}
 
 	var config Config
-	err = json.Unmarshal(content, &config)
+	err = yaml.Unmarshal(content, &config)
 	if err != nil {
 		return Config{}, fmt.Errorf("unmarshal config: %w", err)
 	}

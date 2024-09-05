@@ -7,8 +7,8 @@ import (
 )
 
 type TimedRate struct {
-	Rate    float64                 `json:"rate"`
-	Periods []timeutils.DayedPeriod `json:"periods"`
+	Rate    float64                 `yaml:"rate"`
+	Periods []timeutils.DayedPeriod `yaml:"periods"`
 }
 
 // perKwhRate returns the applicable p/kWh rate and a boolean indicating if the rate applies to the given time or not.

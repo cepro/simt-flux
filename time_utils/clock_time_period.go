@@ -6,8 +6,8 @@ import (
 
 // ClockTimePeriod represents a period of time that is defined by local clock time, without any date information,  e.g. "4pm to 6pm".
 type ClockTimePeriod struct {
-	Start ClockTime `json:"start"`
-	End   ClockTime `json:"end"`
+	Start ClockTime `yaml:"start"`
+	End   ClockTime `yaml:"end"`
 }
 
 // AbsolutePeriod returns the equivilent `Period` instance for the given `ClockTimePeriod`, using `t` as the

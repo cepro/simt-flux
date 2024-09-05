@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"math"
 	"testing"
 	"time"
 
@@ -99,7 +98,7 @@ func TestController(test *testing.T) {
 	chargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 130,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
@@ -109,7 +108,7 @@ func TestController(test *testing.T) {
 		},
 		{
 			Soe: 190,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
@@ -121,7 +120,7 @@ func TestController(test *testing.T) {
 	dischargeToSoePeriods := []config.DayedPeriodWithSoe{
 		{
 			Soe: 70,
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
@@ -133,7 +132,7 @@ func TestController(test *testing.T) {
 
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
@@ -162,7 +161,7 @@ func TestController(test *testing.T) {
 		},
 	}
 
-	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].Period} // This is unrealistic but convenient for the test conciseness
+	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].DayedPeriod} // This is unrealistic but convenient for the test conciseness
 	ratesImport := []config.TimedRate{
 		{
 			Rate:    10,
@@ -373,20 +372,6 @@ func TestController(test *testing.T) {
 	}
 }
 
-type MockImbalancePricer struct {
-	price  float64
-	volume float64
-	time   time.Time
-}
-
-func (m *MockImbalancePricer) ImbalancePrice() (float64, time.Time) {
-	return m.price, m.time
-}
-
-func (m *MockImbalancePricer) ImbalanceVolume() (float64, time.Time) {
-	return m.volume, m.time
-}
-
 // microgridMock acts as a mock meter, BESS and consumer demand to enable testing of the controller.
 type microgridMock struct {
 	SiteMeterReadings chan<- telemetry.MeterReading // The controller under test can take site meter readings from this channel
@@ -423,19 +408,4 @@ func (m *microgridMock) WaitForBessCommand() error {
 		return fmt.Errorf("timed out")
 	}
 
-}
-
-// mustParseTime returns the time.Time associated with the given string or panics.
-func mustParseTime(str string) time.Time {
-	time, err := time.Parse(time.RFC3339, str)
-	if err != nil {
-		panic(err)
-	}
-	return time
-}
-
-// almostEqual compares two floats, allowing for the given tolerance
-func almostEqual(a, b, tolerance float64) bool {
-	diff := math.Abs(a - b)
-	return diff < tolerance
 }

@@ -40,7 +40,7 @@ func TestNivChase(test *testing.T) {
 
 	nivChasePeriods := []config.DayedPeriodWithNIV{
 		{
-			Period: timeutils.DayedPeriod{
+			DayedPeriod: timeutils.DayedPeriod{
 				Days: timeutils.Days{
 					Name:     timeutils.AllDaysName,
 					Location: london,
@@ -445,25 +445,6 @@ func TestPredictImbalance(test *testing.T) {
 		})
 	}
 
-}
-
-func componentsEquivalent(c1, c2 controlComponent) bool {
-	if c1.isActive != c2.isActive {
-		return false
-	}
-	if !c1.isActive {
-		return true
-	}
-	if c1.controlPoint != c2.controlPoint {
-		return false
-	}
-	if !almostEqual(c1.targetPower, c2.targetPower, 0.1) {
-		return false
-	}
-	if c1.name != c2.name {
-		return false
-	}
-	return true
 }
 
 func activeControlComponent(power float64) controlComponent {

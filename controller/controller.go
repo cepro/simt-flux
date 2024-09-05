@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/cepro/besscontroller/config"
@@ -16,20 +17,23 @@ import (
 // It supports the following modes:
 // Import Avoidance: discharges power into the microgrid if it detects an import from the national grid.
 // Export Avoidance: takes power from the microgrid if it detects an export onto the national grid.
-// Charge to min: If the SoE of the battery is below a minimum then it is charged up to that minimum.
+// Import Avoidance when short: discharges into the microgrid if it detects an import from the national grid AND the system is short (prices are likely high)
+// Charge to SoE: If the SoE of the battery is below a minimum then it is charged up to that minimum.
+// Discharge to SoE: If the SoE of the battery is above a maximum then it is charged up to that maximum.
+// Niv chasing: the imbalance price is used to influence charge/discharges
 //
 // Put new site meter and bess readings onto the `SiteMeterReadings` and `BessReadings` channels. Instruction commands for
-// the BESS will be output onto the `BessCommands` channel.
+// the BESS will be output onto the `BessCommands` channel (supplied via the Config).
 type Controller struct {
 	SiteMeterReadings chan telemetry.MeterReading
 	BessReadings      chan telemetry.BessReading
 
 	config Config
 
-	sitePower timedMetric
+	sitePower timedMetric // +ve is microgrid import, -ve is microgrid export
 	bessSoe   timedMetric
 
-	lastBessTargetPower float64
+	lastBessTargetPower float64 // +ve is battery discharge, -ve is battery charge
 }
 
 type Config struct {
@@ -42,31 +46,23 @@ type Config struct {
 	SiteImportPowerLimit    float64 // Max power that can be imported from the microgrid boundary
 	SiteExportPowerLimit    float64 // Max power that can be exported from the microgrid boundary
 
-	ImportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'import avoidance'
-	ExportAvoidancePeriods []timeutils.DayedPeriod     // the periods of time to activate 'export avoidance'
-	ChargeToSoePeriods     []config.DayedPeriodWithSoe // the periods of time to charge the battery, and the level that the battery should be recharged to
-	DischargeToSoePeriods  []config.DayedPeriodWithSoe // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	NivChasePeriods        []config.DayedPeriodWithNIV // the periods of time to activate 'niv chasing', and the associated configuraiton
-	RatesImport            []config.TimedRate          // Any charges that apply to importing power from the grid
-	RatesExport            []config.TimedRate          // Any charges that apply to exporting power from the grid
+	// Configuration of the different modes of operation:
+	ImportAvoidancePeriods   []timeutils.DayedPeriod                 // the periods of time to activate 'import avoidance'
+	ExportAvoidancePeriods   []timeutils.DayedPeriod                 // the periods of time to activate 'export avoidance'
+	ImportAvoidanceWhenShort []config.ImportAvoidanceWhenShortConfig // periods of time to activate 'import avoidance when short'
+	ChargeToSoePeriods       []config.DayedPeriodWithSoe             // the periods of time to charge the battery, and the level that the battery should be recharged to
+	DischargeToSoePeriods    []config.DayedPeriodWithSoe             // the periods of time to discharge the battery, and the level that the battery should be discharged to
+	DynamicPeakDischarges    []config.DynamicPeakDischargeConfig     // the periods of time to discharge 'dynamically' into a peak
+	NivChasePeriods          []config.DayedPeriodWithNIV             // the periods of time to activate 'niv chasing', and the associated configuraiton
+
+	RatesImport []config.TimedRate // Any charges that apply to importing power from the grid
+	RatesExport []config.TimedRate // Any charges that apply to exporting power from the grid
 
 	ModoClient imbalancePricer
 
 	MaxReadingAge time.Duration // the maximum age of telemetry data before it's considered too stale to operate on, and the controller is stopped until new readings are available
 
 	BessCommands chan<- telemetry.BessCommand // Channel that bess control commands will be sent to
-}
-
-// PeriodWithSoe is similar to config.ClockTimePeriodWithSoe, except the Period is absolute, rather than a recurring clocktime
-type PeriodWithSoe struct {
-	Period timeutils.Period
-	Soe    float64
-}
-
-// PeriodWithNiv is similar to config.ClockTimePeriodWithNiv, except the Period is absolute, rather than a recurring clocktime
-type PeriodWithNiv struct {
-	Period timeutils.Period
-	Niv    config.NivConfig
 }
 
 // imbalancePricer is an interface onto any object that provides imbalance pricing and volumes
@@ -78,11 +74,12 @@ type imbalancePricer interface {
 // controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc
 type controlComponent struct {
 	name         string       // Friendly name of this component for debug logging
-	isActive     bool         // Set True if this control component is activated, or false if it is not doing anything
+	isActive     bool         // Set True if this control component is activated, or False if it is not doing anything
 	targetPower  float64      // The power associated with this control component
-	controlPoint controlPoint // Where the power should be applied
+	controlPoint controlPoint // The point where the targetPower should be applied
 }
 
+// New creates a new Controller using the given Config
 func New(config Config) *Controller {
 	return &Controller{
 		SiteMeterReadings: make(chan telemetry.MeterReading, 1),
@@ -107,8 +104,10 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"bess_charge_efficiency", c.config.BessChargeEfficiency,
 		"import_avoidance_periods", fmt.Sprintf("%+v", c.config.ImportAvoidancePeriods),
 		"export_avoidance_periods", fmt.Sprintf("%+v", c.config.ExportAvoidancePeriods),
+		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ImportAvoidanceWhenShort),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
+		"dynamic_peak_discharge", fmt.Sprintf("%+v", c.config.DynamicPeakDischarges),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"rates_import", fmt.Sprintf("%+v", c.config.RatesImport),
 		"rates_export", fmt.Sprintf("%+v", c.config.RatesExport),
@@ -150,6 +149,7 @@ func (c *Controller) EmulatedSitePower() float64 {
 	return c.sitePower.value - c.lastBessTargetPower
 }
 
+// SitePower returns the metered power reading at the microgrid boundary (or an emulated value if appropriate)
 func (c *Controller) SitePower() float64 {
 	if c.config.BessIsEmulated {
 		return c.EmulatedSitePower()
@@ -172,6 +172,15 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.bessSoe.value,
 			1.0, // Discharge efficiency is assumed to be 100%
 		),
+		dynamicPeakDischarge(
+			t,
+			c.config.DynamicPeakDischarges,
+			c.bessSoe.value,
+			c.SitePower(),
+			c.lastBessTargetPower,
+			c.maxBessDischarge(),
+			c.config.ModoClient,
+		),
 		nivChase(
 			t,
 			c.config.NivChasePeriods,
@@ -187,7 +196,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
 		),
-		importAvoidance(
+		basicImportAvoidance(
 			t,
 			c.config.ImportAvoidancePeriods,
 			c.SitePower(),
@@ -198,6 +207,13 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.config.ExportAvoidancePeriods,
 			c.SitePower(),
 			c.lastBessTargetPower,
+		),
+		importAvoidanceWhenShort(
+			t,
+			c.config.ImportAvoidanceWhenShort,
+			c.SitePower(),
+			c.lastBessTargetPower,
+			c.config.ModoClient,
 		),
 	}
 
@@ -315,42 +331,79 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 	}
 }
 
-// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
-func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
-	if value > maxPositive {
-		return maxPositive, true
-	} else if value < -maxNegative {
-		return -maxNegative, true
-	} else {
-		return value, false
-	}
+// maxBessDischarge returns the maximum discharge rate of the BESS at this point in time.
+func (c *Controller) maxBessDischarge() float64 {
+	// Use a contrived controlComponent that requests infinite discharge power to get the actual maximum rate with the existing `calculateBessPower` method.
+	maxBessDischarge, _ := c.calculateBessPower(controlComponent{
+		"max_discharge_calculation",
+		true,
+		math.Inf(-1),
+		controlPointBess,
+	})
+	return maxBessDischarge
 }
 
-// importAvoidance returns control component for avoiding site imports.
-func importAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
+// importAvoidanceWhenShort returns control component for avoiding site imports, based on imbalance status
+func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenShortConfig, sitePower, lastTargetPower float64, modoClient imbalancePricer) controlComponent {
 
-	importAvoidancePeriod := periodContainingTime(t, importAvoidancePeriods)
+	conf, _ := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
+		return controlComponent{isActive: false}
+	}
+
+	_, imbalanceVolume, gotPrediction := predictImbalance(
+		t,
+		config.NivPredictionConfig{
+			WhenShort: conf.ShortPrediction,
+			// We are only interested in the case where the system is short, so don't allow predictions for long
+			WhenLong: config.NivPredictionDirectionConfig{AllowPrediction: false},
+		},
+		modoClient,
+	)
+	if !gotPrediction {
+		// We don't have any pricing data available, so do nothing
+		return controlComponent{isActive: false}
+	}
+
+	if imbalanceVolume <= 0 {
+		// We aren't short, so do nothing
+		return controlComponent{isActive: false}
+	}
+
+	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance_when_short")
+}
+
+// basicImportAvoidance returns the control component for avoiding microgrid boundary imports.
+func basicImportAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
+
+	_, importAvoidancePeriod := findDayedPeriodContainingTime(t, importAvoidancePeriods)
 	if importAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
 
+	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance")
+}
+
+// importAvoidanceHelper generates the control component for an import avoidance action.
+// Import avoidance is a strategy that is used by a few different control modes so this is a conveninence function for helping with that.
+func importAvoidanceHelper(sitePower, lastTargetPower float64, controlComponentName string) controlComponent {
 	importAvoidancePower := sitePower + lastTargetPower
 	if importAvoidancePower < 0 {
 		return controlComponent{isActive: false}
 	}
 
 	return controlComponent{
-		name:         "import_avoidance",
+		name:         controlComponentName,
 		isActive:     true,
 		targetPower:  0, // Target zero power at the site boundary
 		controlPoint: controlPointSite,
 	}
 }
 
-// exportAvoidance returns the control component for avoiding site exports.
+// exportAvoidance returns the control component for avoiding microgrid boundary exports.
 func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
-	exportAvoidancePeriod := periodContainingTime(t, exportAvoidancePeriods)
+	_, exportAvoidancePeriod := findDayedPeriodContainingTime(t, exportAvoidancePeriods)
 	if exportAvoidancePeriod == nil {
 		return controlComponent{isActive: false}
 	}
@@ -369,15 +422,15 @@ func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod
 }
 
 // chargeToSoe returns the control component for charging the battery to a minimum SoE.
-func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
+func chargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
 
-	periodWithSoe := periodWithSoeContainingTime(t, chargeToMinPeriods)
-	if periodWithSoe == nil {
+	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
 
-	targetSoe := periodWithSoe.Soe
-	endOfCharge := periodWithSoe.Period.End
+	targetSoe := conf.Soe
+	endOfCharge := absPeriod.End
 
 	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
 	energyToCharge := (targetSoe - bessSoe) / chargeEfficiency
@@ -400,15 +453,15 @@ func chargeToSoe(t time.Time, chargeToMinPeriods []config.DayedPeriodWithSoe, be
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
+func dischargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
 
-	periodWithSoe := periodWithSoeContainingTime(t, dischargeToSoePeriods)
-	if periodWithSoe == nil {
+	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
+	if conf == nil {
 		return controlComponent{isActive: false}
 	}
 
-	targetSoe := periodWithSoe.Soe
-	endOfDischarge := periodWithSoe.Period.End
+	targetSoe := conf.Soe
+	endOfDischarge := absPeriod.End
 
 	// discharge the battery to reach the target SoE at the end of the period. If the battery is already discharged to the target level, or below then do nothing.
 	energyToDischarge := (bessSoe - targetSoe) * dischargeEfficiency
@@ -430,47 +483,37 @@ func dischargeToSoe(t time.Time, dischargeToSoePeriods []config.DayedPeriodWithS
 	}
 }
 
-// periodWithSoeContainingTime returns the PeriodWithSoe that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodWithSoeContainingTime(t time.Time, dayedPeriodsWithSoe []config.DayedPeriodWithSoe) *PeriodWithSoe {
-	for _, dayedPeriodWithSoe := range dayedPeriodsWithSoe {
-		period, ok := dayedPeriodWithSoe.Period.AbsolutePeriod(t)
-		if ok {
-			return &PeriodWithSoe{
-				Period: period,
-				Soe:    dayedPeriodWithSoe.Soe,
-			}
-		}
-	}
-	return nil
+// PeriodicalConfigTypes is an interface onto configuration structures that are tied to a particular periods of time
+type PeriodicalConfigTypes interface {
+	config.ImportAvoidanceWhenShortConfig | config.DayedPeriodWithSoe | config.DayedPeriodWithNIV | config.DynamicPeakDischargeConfig
+	GetDayedPeriod() timeutils.DayedPeriod
 }
 
-// periodWithNivContainingTime returns the PeriodWithNiv that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodWithNivContainingTime(t time.Time, dayedPeriodsWithNiv []config.DayedPeriodWithNIV) *PeriodWithNiv {
-	for _, dayedPeriodWithNiv := range dayedPeriodsWithNiv {
-		period, ok := dayedPeriodWithNiv.Period.AbsolutePeriod(t)
+// findPeriodicalConfigForTime searches the list of configs and returns the first one that is active at the time `t` (i.e.
+// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
+func findPeriodicalConfigForTime[T PeriodicalConfigTypes](t time.Time, configs []T) (*T, timeutils.Period) {
+
+	for _, conf := range configs {
+		dayedPeriod := conf.GetDayedPeriod()
+		absPeriod, ok := dayedPeriod.AbsolutePeriod(t)
 		if ok {
-			return &PeriodWithNiv{
-				Period: period,
-				Niv:    dayedPeriodWithNiv.Niv,
-			}
+			return &conf, absPeriod
 		}
 	}
-	return nil
+	return nil, timeutils.Period{}
 }
 
-// periodContainingTime returns the first period that overlaps the given time if there is one, otherwise it returns nil.
-// If there is more than one overlapping period than the first is returned.
-func periodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) *timeutils.Period {
+// findDayedPeriodContainingTime searches the list of dayed periods and returns the first one that is active at the time `t` (i.e.
+// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
+func findDayedPeriodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) (*timeutils.DayedPeriod, *timeutils.Period) {
 
 	for _, dayedPeriod := range dayedPeriods {
 		period, ok := dayedPeriod.AbsolutePeriod(t)
 		if ok {
-			return &period
+			return &dayedPeriod, &period
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
@@ -480,5 +523,16 @@ func sendIfNonBlocking[V any](ch chan<- V, val V, messageTargetLogStr string) {
 	case ch <- val:
 	default:
 		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
+	}
+}
+
+// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
+func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
+	if value > maxPositive {
+		return maxPositive, true
+	} else if value < -maxNegative {
+		return -maxNegative, true
+	} else {
+		return value, false
 	}
 }

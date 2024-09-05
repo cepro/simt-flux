@@ -1,7 +1,6 @@
 package timeutils
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -46,13 +45,14 @@ func (d *Days) IsOnDay(t time.Time) bool {
 	}
 }
 
-// UnmarshalJSON defines how a JSON string is converted into a Days struct. A colon is used to delimit the days names from the timezone location
+// UnmarshalYAML defines how a string is converted into a Days struct. A colon is used to delimit the days names from the timezone location
 // for example, "weekdays:Europe/London".
-func (d *Days) UnmarshalJSON(data []byte) error {
+func (d *Days) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
+	err := unmarshal(&str)
+	if err != nil {
+		return fmt.Errorf("to string: %w", err)
 	}
 
 	elements := strings.Split(str, ":")
