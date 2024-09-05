@@ -83,36 +83,106 @@ controller:
   siteImportPowerLimit: 140
   siteExportPowerLimit: 230
   controlComponents:
-    importAvoidancePeriods:
-      - days: all:Europe/London
-        start: 00:00:00:Europe/London
-        end: 23:59:59:Europe/London
-    exportAvoidancePeriods:
-      - days: all:Europe/London
-        start: 00:00:00:Europe/London
-        end: 23:59:59:Europe/London
-    chargeToSoePeriods: []
-    dischargeToSoePeriods: []
-    nivChasePeriods:
-      # Allow discharging into exceptionally high system prices, but this must account for
-      # the high price of imports (~25p).
-      -
+    importAvoidanceWhenShort:
+      - shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 0
+          timeCutoffSecs: 1200  # 20mins
         period:
           days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
+    importAvoidance: []
+    exportAvoidance:
+      # Activate export avoidance at all times except weekday evening peaks
+      - days: weekdays:Europe/London
+        start: 00:00:00:Europe/London
+        end: 16:00:00:Europe/London
+      - days: weekdays:Europe/London
+        start: 19:00:00:Europe/London
+        end: 23:59:59:Europe/London
+      - days: weekends:Europe/London
+        start: 00:00:00:Europe/London
+        end: 23:59:59:Europe/London
+    chargeToSoePeriods: []
+    dischargeToSoePeriods: []
+    dynamicPeakDischarge:
+      - 
+        period:
+          days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+        targetSoe: 20
+        targetShortPeriods: true
+        shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 0
+          timeCutoffSecs: 1200  # 20mins
+        prioritiseResidualLoad: true
+    nivChase:
+      - period:
+          days: weekdays:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
         niv:
           chargeCurve:
-            points: []
+              points: [
+                { x: -999999, y: 370 },
+                # { x: 4, y: 370 },
+                { x: 6, y: 370 },
+                { x: 12, y: 0 }
+              ]
           dischargeCurve:
             points: [
-              {x: 40, y: 444},
-              {x: 40, y: 0},
-              {x: 999999999, y: 0}
+              # { x: 8, y: 370 },
+              # { x: 18, y: 370 },
+              { x: 25, y: 370 },
+              { x: 35, y: 0 },
+              { x: 999999, y: 0 }
+            ]
+          curveShiftLong: 2
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
+      - period:
+          days: weekends:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+        niv:
+          chargeCurve:
+            points: [
+              { x: -999999, y: 370 },
+              { x: -2, y: 370 },
+              { x: 6, y: 50 },
+              { x: 12, y: 0 }
+            ]
+          dischargeCurve:
+            points: [
+              { x: 8, y: 370 },
+              { x: 14, y: 50 },
+              { x: 35, y: 0 },
+              { x: 999999, y: 0 }
             ]
           curveShiftLong: 0
           curveShiftShort: 0
           defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
 
   ratesImport:
     - # Bryt supplier import
