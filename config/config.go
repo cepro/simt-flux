@@ -144,7 +144,7 @@ type ControlComponentsConfig struct {
 	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `yaml:"importAvoidanceWhenShort"`
 	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoe"`
 	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoe"`
-	PeakDischarge            []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
+	DynamicPeakDischarge     []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
 	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChase"`
 }
 

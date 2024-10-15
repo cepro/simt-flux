@@ -55,7 +55,7 @@ func TestDynamicPeakDischarge(test *testing.T) {
 	maxDischargeComponent := controlComponent{
 		name:         "dynamic_peak_discharge",
 		isActive:     true,
-		targetPower:  math.Inf(-1),
+		targetPower:  math.Inf(1),
 		controlPoint: controlPointBess,
 	}
 	importAvoidanceComponent := controlComponent{

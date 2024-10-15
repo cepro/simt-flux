@@ -179,6 +179,7 @@ func main() {
 		ImportAvoidanceWhenShort: config.Controller.ControlComponents.ImportAvoidanceWhenShort,
 		ChargeToSoePeriods:       config.Controller.ControlComponents.ChargeToSoePeriods,
 		DischargeToSoePeriods:    config.Controller.ControlComponents.DischargeToSoePeriods,
+		DynamicPeakDischarges:    config.Controller.ControlComponents.DynamicPeakDischarge,
 		NivChasePeriods:          config.Controller.ControlComponents.NivChasePeriods,
 		RatesImport:              config.Controller.RatesImport,
 		RatesExport:              config.Controller.RatesExport,

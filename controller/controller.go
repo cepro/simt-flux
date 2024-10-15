@@ -337,7 +337,7 @@ func (c *Controller) maxBessDischarge() float64 {
 	maxBessDischarge, _ := c.calculateBessPower(controlComponent{
 		"max_discharge_calculation",
 		true,
-		math.Inf(-1),
+		math.Inf(+1),
 		controlPointBess,
 	})
 	return maxBessDischarge

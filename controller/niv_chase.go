@@ -165,7 +165,7 @@ func predictImbalance(t time.Time, nivPredictionConfig config.NivPredictionConfi
 		if math.Abs(modoImbalanceVolume) < directionalConfig.VolumeCutoff {
 			// If the previous imbalance volume was too small then don't allow a prediction to be made as the system
 			// is more likely to flip between long and short states when then the imbalance magnitude is small
-			logger.Info("Imbalance volume to small to use previous SP imbalance data")
+			logger.Info("Imbalance volume too small to use previous SP imbalance data")
 			return 0.0, 0.0, false
 		}
 
