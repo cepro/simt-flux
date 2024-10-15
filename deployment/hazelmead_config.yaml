@@ -97,7 +97,7 @@ controller:
       # Activate export avoidance at all times except weekday evening peaks
       - days: weekdays:Europe/London
         start: 00:00:00:Europe/London
-        end: 16:00:00:Europe/London
+        end: 17:00:00:Europe/London
       - days: weekdays:Europe/London
         start: 19:00:00:Europe/London
         end: 23:59:59:Europe/London
