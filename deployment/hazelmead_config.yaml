@@ -76,7 +76,7 @@ controller:
     bessIsEmulated: false
     emulatedSiteMeter: null
   bessChargeEfficiency: 0.85
-  bessSoeMin: 30
+  bessSoeMin: 40
   bessSoeMax: 1280
   bessChargePowerLimit: 565
   bessDischargePowerLimit: 565
