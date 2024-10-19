@@ -160,11 +160,12 @@ controller:
         niv:
           chargeCurve:
             points: [
-              { x: -999999, y: 1280 },
-              { x: -2, y: 1280 },
-              { x: 6, y: 400 },
-              { x: 12, y: 0 }
-            ]
+                { x: -999999, y: 1280 },
+                { x: 4, y: 1280 },
+                { x: 6, y: 1000 },
+                { x: 10, y: 400 },
+                { x: 15, y: 0 }
+              ]
           dischargeCurve:
             points: [
               { x: 8, y: 1280 },
@@ -172,7 +173,7 @@ controller:
               { x: 35, y: 100 },
               { x: 999999, y: 0 }
             ]
-          curveShiftLong: 0
+          curveShiftLong: 3
           curveShiftShort: 0
           defaultPricing: []
           pricePrediction:

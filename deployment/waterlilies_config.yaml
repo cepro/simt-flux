@@ -159,20 +159,22 @@ controller:
           end: 23:59:59:Europe/London
         niv:
           chargeCurve:
-            points: [
-              { x: -999999, y: 370 },
-              { x: -2, y: 370 },
-              { x: 6, y: 50 },
-              { x: 12, y: 0 }
-            ]
+              points: [
+                { x: -999999, y: 370 },
+                # { x: 4, y: 370 },
+                { x: 6, y: 370 },
+                { x: 10, y: 100 },
+                { x: 15, y: 0 }
+              ]
           dischargeCurve:
             points: [
-              { x: 8, y: 370 },
-              { x: 14, y: 50 },
+              # { x: 8, y: 370 },
+              # { x: 18, y: 370 },
+              { x: 25, y: 370 },
               { x: 35, y: 0 },
               { x: 999999, y: 0 }
             ]
-          curveShiftLong: 0
+          curveShiftLong: 3
           curveShiftShort: 0
           defaultPricing: []
           pricePrediction:
@@ -187,7 +189,7 @@ controller:
 
   ratesImport:
     - # Bryt supplier import
-      rate: 2.28
+      rate: 1
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
