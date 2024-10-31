@@ -112,13 +112,28 @@ controller:
           days: weekdays:Europe/London
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
-        targetSoe: 30
+        targetSoe: 40
         targetShortPeriods: true
         shortPrediction:
           allowPrediction: true
           volumeCutoff: 0
           timeCutoffSecs: 1200  # 20mins
         prioritiseResidualLoad: true
+    dynamicPeakApproach:
+      - 
+        peakPeriod:
+          days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+        toSoe: 1050
+        assumedChargePower: 200
+        forceChargeDurationFactor: 1
+        encourageChargeDurationFactor: 2
+        chargeCushionMins: 20
+        longPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900
     nivChase:
       - period:
           days: weekdays:Europe/London
