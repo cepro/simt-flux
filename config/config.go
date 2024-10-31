@@ -18,6 +18,16 @@ type DynamicPeakDischargeConfig struct {
 	PrioritiseResidualLoad bool                         `yaml:"prioritiseResidualLoad"`
 }
 
+type DynamicPeakApproachConfig struct {
+	PeakPeriod                    timeutils.DayedPeriod        `yaml:"peakPeriod"`
+	ToSoe                         float64                      `yaml:"toSoe"`
+	AssumedChargePower            float64                      `yaml:"assumedChargePower"`
+	ForceChargeDurationFactor     float64                      `yaml:"forceChargeDurationFactor"`
+	EncourageChargeDurationFactor float64                      `yaml:"encourageChargeDurationFactor"`
+	ChargeCushionMins             float64                      `yaml:"chargeCushionMins"`
+	LongPrediction                NivPredictionDirectionConfig `yaml:"longPrediction"`
+}
+
 func (c DynamicPeakDischargeConfig) GetDayedPeriod() timeutils.DayedPeriod {
 	return c.DayedPeriod
 }
@@ -144,7 +154,8 @@ type ControlComponentsConfig struct {
 	ImportAvoidanceWhenShort []ImportAvoidanceWhenShortConfig `yaml:"importAvoidanceWhenShort"`
 	ChargeToSoePeriods       []DayedPeriodWithSoe             `yaml:"chargeToSoe"`
 	DischargeToSoePeriods    []DayedPeriodWithSoe             `yaml:"dischargeToSoe"`
-	DynamicPeakDischarge     []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
+	DynamicPeakDischarges    []DynamicPeakDischargeConfig     `yaml:"dynamicPeakDischarge"`
+	DynamicPeakAproaches     []DynamicPeakApproachConfig      `yaml:"dynamicPeakApproach"`
 	NivChasePeriods          []DayedPeriodWithNIV             `yaml:"nivChase"`
 }
 

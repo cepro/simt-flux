@@ -52,7 +52,8 @@ type Config struct {
 	ImportAvoidanceWhenShort []config.ImportAvoidanceWhenShortConfig // periods of time to activate 'import avoidance when short'
 	ChargeToSoePeriods       []config.DayedPeriodWithSoe             // the periods of time to charge the battery, and the level that the battery should be recharged to
 	DischargeToSoePeriods    []config.DayedPeriodWithSoe             // the periods of time to discharge the battery, and the level that the battery should be discharged to
-	DynamicPeakDischarges    []config.DynamicPeakDischargeConfig     // the periods of time to discharge 'dynamically' into a peak
+	DynamicPeakDischarges    []config.DynamicPeakDischargeConfig     // the periods of time to approach and discharge 'dynamically' into a peak
+	DynamicPeakApproaches    []config.DynamicPeakApproachConfig      // the periods of time to approach and discharge 'dynamically' into a peak
 	NivChasePeriods          []config.DayedPeriodWithNIV             // the periods of time to activate 'niv chasing', and the associated configuraiton
 
 	RatesImport []config.TimedRate // Any charges that apply to importing power from the grid
@@ -107,7 +108,8 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		"import_avoidance_periods_when_short", fmt.Sprintf("%+v", c.config.ImportAvoidanceWhenShort),
 		"charge_to_soe_periods", fmt.Sprintf("%+v", c.config.ChargeToSoePeriods),
 		"discharge_to_soe_periods", fmt.Sprintf("%+v", c.config.DischargeToSoePeriods),
-		"dynamic_peak_discharge", fmt.Sprintf("%+v", c.config.DynamicPeakDischarges),
+		"dynamic_peak_discharges", fmt.Sprintf("%+v", c.config.DynamicPeakDischarges),
+		"dynamic_peak_approaches", fmt.Sprintf("%+v", c.config.DynamicPeakApproaches),
 		"niv_chase_periods", fmt.Sprintf("%+v", c.config.NivChasePeriods),
 		"rates_import", fmt.Sprintf("%+v", c.config.RatesImport),
 		"rates_export", fmt.Sprintf("%+v", c.config.RatesExport),
@@ -195,6 +197,13 @@ func (c *Controller) runControlLoop(t time.Time) {
 			c.config.ChargeToSoePeriods,
 			c.bessSoe.value,
 			c.config.BessChargeEfficiency,
+		),
+		dynamicPeakApproach(
+			t,
+			c.config.DynamicPeakApproaches,
+			c.bessSoe.value,
+			c.config.BessChargeEfficiency,
+			c.config.ModoClient,
 		),
 		basicImportAvoidance(
 			t,

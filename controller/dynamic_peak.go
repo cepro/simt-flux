@@ -4,7 +4,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
+	timeutils "github.com/cepro/besscontroller/time_utils"
 	"golang.org/x/exp/slog"
 )
 
@@ -13,10 +15,12 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 
 	logger := slog.Default()
 
+	// First find any dynamic peak conigurations that are "in the peak" at the moment
 	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
 	if conf == nil {
 		return controlComponent{isActive: false}
 	}
+
 	peakEnd := absPeriod.End
 
 	controlComponentName := "dynamic_peak_discharge"
@@ -105,5 +109,109 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 	} else {
 		logger.Info("Dynamic peak doing import avoidance due to short system and less energy than reserve", "available_energy", availableEnergy, "reserve_energy", reserveEnergy)
 		return importAvoidanceHelper(sitePower, lastTargetPower, controlComponentName)
+	}
+}
+
+// dynamicPeakApproach returns the control component associated with approaching a peak
+func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig, bessSoe, chargeEfficiency float64, modoClient imbalancePricer) controlComponent {
+
+	controlComponentName := "dynamic_peak_approach"
+
+	for _, conf := range configs {
+
+		if !conf.PeakPeriod.Days.IsOnDay(t) {
+			// This won't work if the approach curve crosses over a midnight boundary
+			continue
+		}
+
+		peakPeriod := conf.PeakPeriod.ClockTimePeriod.AbsolutePeriodOnDate(t.Year(), t.Month(), t.Day())
+
+		referencePoint := datetimePoint(t, bessSoe)
+		hoursLeftOfSP := float64(timeutils.DurationLeftOfSP(t)) / float64(time.Hour)
+
+		// First check if there is a requirement to "encourage charge" if the system is long
+		_, imbalanceVolume, gotPrediction := predictImbalance(
+			t,
+			config.NivPredictionConfig{
+				// We are only really interested in predicting a long scenario, so don't allow predictions for short
+				WhenShort: config.NivPredictionDirectionConfig{AllowPrediction: false},
+				WhenLong:  conf.LongPrediction,
+			},
+			modoClient,
+		)
+		if gotPrediction && imbalanceVolume < 0 {
+			// system is long
+			encourageCurve := approachCurve(
+				peakPeriod,
+				conf.ToSoe,
+				chargeEfficiency,
+				conf.AssumedChargePower,
+				conf.EncourageChargeDurationFactor,
+				time.Duration(float64(time.Minute)*conf.ChargeCushionMins),
+			)
+			encourageEnergy := encourageCurve.VerticalDistance(referencePoint)
+			encouragePower := (encourageEnergy / hoursLeftOfSP) / chargeEfficiency
+			if !math.IsNaN(encouragePower) && encouragePower > 0 {
+				return controlComponent{
+					name:         controlComponentName,
+					isActive:     true,
+					targetPower:  -encouragePower,
+					controlPoint: controlPointBess,
+				}
+			}
+		}
+
+		// There wasn't a requirement to "encourage charge", but we may need to "force charge"
+		forceCurve := approachCurve(
+			peakPeriod,
+			conf.ToSoe,
+			chargeEfficiency,
+			conf.AssumedChargePower,
+			conf.ForceChargeDurationFactor,
+			time.Duration(float64(time.Minute)*conf.ChargeCushionMins),
+		)
+		forceEnergy := forceCurve.VerticalDistance(referencePoint)
+		forcePower := (forceEnergy / hoursLeftOfSP) / chargeEfficiency
+
+		if !math.IsNaN(forcePower) && forcePower > 0 {
+			return controlComponent{
+				name:         controlComponentName,
+				isActive:     true,
+				targetPower:  -forcePower,
+				controlPoint: controlPointBess,
+			}
+		}
+	}
+
+	return controlComponent{isActive: false}
+}
+
+// approachCurve returns a curve representing the boundary of the peak approach
+func approachCurve(peakPeriod timeutils.Period, toSoe, chargeEfficiency, assumedChargePower, chargeDurationFactor float64, chargeCushion time.Duration) cartesian.Curve {
+
+	// how long is the approach
+	approachHours := ((toSoe / assumedChargePower) / chargeEfficiency) * chargeDurationFactor
+	approachDuration := time.Duration(float64(time.Hour) * approachHours)
+
+	approachCurve := cartesian.Curve{
+		Points: []cartesian.Point{
+			datetimePoint(peakPeriod.Start.Add(-approachDuration-chargeCushion), 0),
+			datetimePoint(peakPeriod.Start.Add(-chargeCushion), toSoe),
+			datetimePoint(peakPeriod.End, toSoe),
+		},
+	}
+
+	return approachCurve
+}
+
+func datetimePoint(t time.Time, y float64) cartesian.Point {
+	// Returns a Point object that encodes a time of day.
+	// This uses a reference datetime to convert a time into a float number of seconds, so may not work over midnight
+	// boundaries.
+	referenceTime := time.Date(2000, 1, 1, 0, 0, 0, 0, t.Location())
+	duration := t.Sub(referenceTime) / time.Second // integer truncation of number of seconds isn't significant for our use cases
+	return cartesian.Point{
+		X: float64(duration),
+		Y: y,
 	}
 }

@@ -52,6 +52,16 @@ func (p *ClockTimePeriod) AbsolutePeriod(t time.Time) (Period, bool) {
 	return Period{Start: startDateTime, End: endDateTime}, true
 }
 
+// AbsolutePeriodOnDate returns the equivilent `Period` instance for the given `ClockTimePeriod` that occurs on the given date
+func (p *ClockTimePeriod) AbsolutePeriodOnDate(year int, month time.Month, day int) Period {
+	start := time.Date(year, month, day, p.Start.Hour, p.Start.Minute, p.Start.Second, 0, p.Start.Location)
+	end := time.Date(year, month, day, p.End.Hour, p.End.Minute, p.End.Second, 0, p.End.Location)
+	return Period{
+		Start: start,
+		End:   end,
+	}
+}
+
 // Contains returns true if the given t is contained in the ClockTimePeriod
 func (p *ClockTimePeriod) Contains(t time.Time) bool {
 	_, contains := p.AbsolutePeriod(t)
