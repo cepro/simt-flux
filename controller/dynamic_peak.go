@@ -141,9 +141,16 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 		)
 		if gotPrediction && imbalanceVolume < 0 {
 			// system is long
+
+			// use the 'encourage to soe' value if specified, but fall back to the 'to soe' value if it's not present
+			toSoe := conf.EncourageToSoe
+			if toSoe == 0.0 {
+				toSoe = conf.ToSoe
+			}
+
 			encourageCurve := approachCurve(
 				peakPeriod,
-				conf.ToSoe,
+				toSoe,
 				chargeEfficiency,
 				conf.AssumedChargePower,
 				conf.EncourageChargeDurationFactor,

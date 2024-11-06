@@ -21,6 +21,7 @@ type DynamicPeakDischargeConfig struct {
 type DynamicPeakApproachConfig struct {
 	PeakPeriod                    timeutils.DayedPeriod        `yaml:"peakPeriod"`
 	ToSoe                         float64                      `yaml:"toSoe"`
+	EncourageToSoe                float64                      `yaml:"encourageToSoe"`
 	AssumedChargePower            float64                      `yaml:"assumedChargePower"`
 	ForceChargeDurationFactor     float64                      `yaml:"forceChargeDurationFactor"`
 	EncourageChargeDurationFactor float64                      `yaml:"encourageChargeDurationFactor"`
