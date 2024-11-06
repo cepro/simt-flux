@@ -126,10 +126,11 @@ controller:
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
         toSoe: 1050
+        encourageToSoe: 1280
         assumedChargePower: 200
         forceChargeDurationFactor: 1
         encourageChargeDurationFactor: 2
-        chargeCushionMins: 20
+        chargeCushionMins: 90
         longPrediction:
           allowPrediction: true
           volumeCutoff: 150000
