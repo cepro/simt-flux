@@ -77,7 +77,7 @@ controller:
     emulatedSiteMeter: null
   bessChargeEfficiency: 0.85
   bessSoeMin: 20
-  bessSoeMax: 444
+  bessSoeMax: 366
   bessChargePowerLimit: 222
   bessDischargePowerLimit: 222
   siteImportPowerLimit: 140
@@ -93,7 +93,7 @@ controller:
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
     importAvoidance: []
-    exportAvoidance:
+    exportAvoidance:    
       # Activate export avoidance at all times except weekday evening peaks
       - days: weekdays:Europe/London
         start: 00:00:00:Europe/London
@@ -119,6 +119,21 @@ controller:
           volumeCutoff: 0
           timeCutoffSecs: 1200  # 20mins
         prioritiseResidualLoad: true
+    dynamicPeakApproach:
+      - 
+        peakPeriod:
+          days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+        toSoe: 366
+        assumedChargePower: 120
+        forceChargeDurationFactor: 1.25
+        encourageChargeDurationFactor: 2.5
+        chargeCushionMins: 90
+        longPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900
     nivChase:
       - period:
           days: weekdays:Europe/London
@@ -127,21 +142,20 @@ controller:
         niv:
           chargeCurve:
               points: [
-                { x: -999999, y: 370 },
-                # { x: 4, y: 370 },
-                { x: 6, y: 370 },
-                { x: 10, y: 100 },
-                { x: 15, y: 0 }
+                { "x": -999999, "y": 366 },
+                { "x": 4, "y": 366 },
+                { "x": 6, "y": 350 },
+                { "x": 12, "y": 0 }
               ]
           dischargeCurve:
             points: [
-              # { x: 8, y: 370 },
-              # { x: 18, y: 370 },
-              { x: 25, y: 370 },
-              { x: 35, y: 0 },
-              { x: 999999, y: 0 }
+              { "x": 8, "y": 366 },
+              { "x": 18, "y": 366 },
+              { "x": 25, "y": 350 },
+              { "x": 35, "y": 0 },
+              { "x": 9999999, "y": 0 }
             ]
-          curveShiftLong: 4
+          curveShiftLong: 6
           curveShiftShort: 2
           defaultPricing: []
           pricePrediction:
@@ -160,21 +174,19 @@ controller:
         niv:
           chargeCurve:
               points: [
-                { x: -999999, y: 370 },
-                # { x: 4, y: 370 },
-                { x: 6, y: 370 },
-                { x: 10, y: 100 },
-                { x: 15, y: 0 }
+                { "x": -999999, "y": 366 },
+                { "x": -2, "y": 366 },
+                { "x": 6, "y": 65 },
+                { "x": 12, "y": 0 }
               ]
           dischargeCurve:
             points: [
-              # { x: 8, y: 370 },
-              # { x: 18, y: 370 },
-              { x: 25, y: 370 },
-              { x: 35, y: 0 },
-              { x: 999999, y: 0 }
+              { "x": 8, "y": 366 },
+              { "x": 14, "y": 65 },
+              { "x": 35, "y": 30 },
+              { "x": 999999, "y": 0 }
             ]
-          curveShiftLong: 3
+          curveShiftLong: 0
           curveShiftShort: 0
           defaultPricing: []
           pricePrediction:
@@ -188,26 +200,26 @@ controller:
               timeCutoffSecs: 900
 
   ratesImport:
-    - # Bryt supplier import
+    - # Unify supplier import
       rate: 1
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
     - # Final consumption levies
-      rate: 6
+      rate: 1.8  # This accounts for BSUoS at 1.29p/kWh and assumes a NCSP of 0.9 for the remaining fees for 0.5p/kWh
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
     - # DUoS red import
-      rate: 11.385
+      rate: 10.983
       periods:
         - days: weekdays:Europe/London
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
     - # DUoS amber import
-      rate: 0.444
+      rate: 0.499
       periods:
         - days: weekdays:Europe/London
           start: 07:30:00:Europe/London
@@ -219,7 +231,7 @@ controller:
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
     - # DUoS green import
-      rate: 0.026
+      rate: 0.034
       periods:
         - days: weekdays:Europe/London
           start: 00:00:00:Europe/London
@@ -235,13 +247,13 @@ controller:
           end: 23:59:59:Europe/London
   ratesExport:
     - # DUoS red export
-      rate: -10.054
+      rate: -10.4
       periods:
         - days: weekdays:Europe/London
           start: 17:00:00:Europe/London
           end: 19:00:00:Europe/London
     - # DUoS amber export
-      rate: -0.435
+      rate: -0.52
       periods:
         - days: weekdays:Europe/London
           start: 07:30:00:Europe/London
@@ -253,7 +265,7 @@ controller:
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
     - # DUoS green export
-      rate: -0.027
+      rate: -0.037
       periods:
         - days: weekdays:Europe/London
           start: 00:00:00:Europe/London

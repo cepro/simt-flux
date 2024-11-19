@@ -11,10 +11,6 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-const (
-	thirtyMins = time.Minute * 30
-)
-
 // nivChase returns the control component for NIV chasing, using the Modo imbalance price calculation.
 func nivChase(
 	t time.Time,
@@ -77,8 +73,7 @@ func nivChase(
 		energyDelta = -dischargeDistance
 	}
 
-	currentSP := timeutils.FloorHH(t)
-	timeLeftOfCurrentSP := thirtyMins - t.Sub(currentSP)
+	timeLeftOfCurrentSP := timeutils.DurationLeftOfSP(t)
 	targetPower := energyDelta / timeLeftOfCurrentSP.Hours()
 
 	logger.Info(
@@ -111,12 +106,12 @@ func predictImbalance(t time.Time, nivPredictionConfig config.NivPredictionConfi
 	logger := slog.Default()
 
 	currentSP := timeutils.FloorHH(t)
-	previousSP := currentSP.Add(-thirtyMins)
+	previousSP := currentSP.Add(-timeutils.ThirtyMins)
 	timeIntoCurrentSP := t.Sub(currentSP)
-	timeLeftOfCurrentSP := thirtyMins - timeIntoCurrentSP
+	timeLeftOfCurrentSP := timeutils.ThirtyMins - timeIntoCurrentSP
 
 	// Sanity check
-	if timeLeftOfCurrentSP > thirtyMins || timeLeftOfCurrentSP < 0 {
+	if timeLeftOfCurrentSP > timeutils.ThirtyMins || timeLeftOfCurrentSP < 0 {
 		panic(fmt.Sprintf("Time left of SP is invalid: %v", timeLeftOfCurrentSP))
 	}
 

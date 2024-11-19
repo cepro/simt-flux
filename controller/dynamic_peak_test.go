@@ -172,3 +172,126 @@ func TestDynamicPeakDischarge(test *testing.T) {
 	}
 
 }
+
+func TestDynamicPeakApproach(test *testing.T) {
+
+	london, err := time.LoadLocation("Europe/London")
+	if err != nil {
+		test.Fatalf("Could not load location: %v", err)
+	}
+
+	configs := []config.DynamicPeakApproachConfig{
+		{
+			PeakPeriod: timeutils.DayedPeriod{
+				Days: timeutils.Days{
+					Name:     timeutils.AllDaysName,
+					Location: london,
+				},
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 19, Minute: 0, Second: 0, Location: london},
+				},
+			},
+			ToSoe:                         1000,
+			AssumedChargePower:            500, // Time to charge from 0 -> 1000kWh = 2hrs
+			ForceChargeDurationFactor:     1.0, // Forcing starts at: 5pm - 30mins - 1 * 2hrs = 2:30pm
+			EncourageChargeDurationFactor: 2.0, // Encouraging starts at: 5pm - 30mins - 2 * 2hrs = 12:30pm
+			ChargeCushionMins:             30,
+			LongPrediction: config.NivPredictionDirectionConfig{
+				AllowPrediction: true,
+				VolumeCutoff:    0,
+				TimeCutoffSecs:  1200, // 20 mins
+			},
+		},
+	}
+
+	type subTest struct {
+		name                     string
+		t                        time.Time
+		bessSoe                  float64
+		imbalanceVolume          float64
+		expectedControlComponent controlComponent
+	}
+
+	inactiveComponent := controlComponent{isActive: false}
+
+	subTests := []subTest{
+		{
+			name:                     "Outside of peak approach: nothing happens",
+			t:                        mustParseTime("2024-09-05T09:25:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          -100,
+			expectedControlComponent: inactiveComponent,
+		},
+		{
+			name:                     "Within 'encourage zone' but short: nothing happens",
+			t:                        mustParseTime("2024-09-05T13:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          100,
+			expectedControlComponent: inactiveComponent,
+		},
+		{
+			name:                     "Within 'encourage zone' and long: charge 1",
+			t:                        mustParseTime("2024-09-05T12:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          -100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -125.0, controlPoint: controlPointBess},
+		},
+		{
+			name:                     "Within 'encourage zone' and long: charge 2",
+			t:                        mustParseTime("2024-09-05T13:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          -100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -875.0, controlPoint: controlPointBess},
+		},
+		{
+			name:                     "Within 'force zone' and short: charge to force curve",
+			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -250.0, controlPoint: controlPointBess},
+		},
+		{
+			name:                     "Within 'force zone' and short: charge to force curve 2",
+			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
+			bessSoe:                  10.0,
+			imbalanceVolume:          100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -220.0, controlPoint: controlPointBess},
+		},
+		{
+			name:                     "Within 'force zone' and long: charge to encourage curve",
+			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          -100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -1625.0, controlPoint: controlPointBess},
+		},
+		{
+			name:                     "Within 'encourage zone' and short: charge",
+			t:                        mustParseTime("2024-09-05T12:40:00+01:00"),
+			bessSoe:                  0.0,
+			imbalanceVolume:          -100,
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -125.0, controlPoint: controlPointBess},
+		},
+	}
+	for _, subTest := range subTests {
+		test.Run(subTest.name, func(t *testing.T) {
+
+			component := dynamicPeakApproach(
+				subTest.t,
+				configs,
+				subTest.bessSoe,
+				1.0,
+				&MockImbalancePricer{
+					price:  0.0,
+					volume: subTest.imbalanceVolume,
+					time:   timeutils.FloorHH(subTest.t),
+				},
+			)
+
+			if !componentsEquivalent(component, subTest.expectedControlComponent) {
+				t.Errorf("got %v, expected %v", component, subTest.expectedControlComponent)
+			}
+		})
+	}
+
+}
