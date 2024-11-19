@@ -1,0 +1,221 @@
+meters:
+  acuvim2:
+    "Distribution Board 1":
+      id: 175eb4a0-5c4f-4506-a50e-0b30012c73fe
+      host: 192.168.8.111:502
+      pollIntervalSecs: 2
+      pt1: 400
+      pt2: 400
+      ct1: 600
+      ct2: 5
+    "Battery inverter":
+      id: 7835db8f-17e3-4ad9-aba6-40cb6c857d9e
+      host: 192.168.8.113:502
+      pollIntervalSecs: 2
+      pt1: 400
+      pt2: 400
+      ct1: 600
+      ct2: 5
+    "Site":
+      id: 92990f75-1919-4168-ac76-bfb40ced6974
+      host: 192.168.8.114:502
+      pollIntervalSecs: 2
+      pt1: 400
+      pt2: 400
+      ct1: 400
+      ct2: 5
+
+bess:
+  powerPack:
+    host: 192.168.1.3:502
+    id: 4ac11167-1b23-4151-bbca-f24ef16b7fca
+    pollIntervalSecs: 2
+    nameplatePower: 100  # TODO: confirm
+    nameplateEnergy: 170  # TODO: confirm
+    teslaOptions:
+      inverterRampRateUp: 50
+      inverterRampRateDown: 50
+      alwaysActive: false
+
+dataPlatforms:
+  - # QA supabase
+    uploadIntervalSecs: 60
+    supabase:
+      url: https://rkzgrxssutcwrauaazjz.supabase.co
+      schema: flows
+      anonKeyEnvVar: SUPABASE_ANON_KEY_QA
+      userKeyEnvVar: SUPABASE_USER_KEY_QA
+  - # Prod supabase
+    uploadIntervalSecs: 60
+    supabase:
+      url: https://pqlwxerasppsyleweruk.supabase.co
+      schema: flows
+      anonKeyEnvVar: SUPABASE_ANON_KEY_PROD
+      userKeyEnvVar: SUPABASE_USER_KEY_PROD
+
+controller:
+  siteMeter: 92990f75-1919-4168-ac76-bfb40ced6974
+  bessMeter: 00000000-0000-0000-0000-000000000000
+  emulation:
+    bessIsEmulated: false
+    emulatedSiteMeter: null
+  bessChargeEfficiency: 0.85
+  bessSoeMin: 20  # See how this works in practice and adjust
+  bessSoeMax: 170
+  bessChargePowerLimit: 100
+  bessDischargePowerLimit: 100
+  siteImportPowerLimit: 100  # TODO: check this
+  siteExportPowerLimit: 100
+  controlComponents:
+    importAvoidanceWhenShort: []  # there should be no domestic load (just tiny drain from on-site equipment)
+    importAvoidance: []
+    exportAvoidance: [] # there is no PV generation
+    chargeToSoe: []
+    dischargeToSoe: []
+    dynamicPeakDischarge: []
+    dynamicPeakApproach: []
+    nivChase:
+      - period:
+          days: weekdays:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+        niv:
+          chargeCurve:
+            points: [
+              { "x": -99999, "y": 170 },
+              { "x": 4, "y": 170 },
+              { "x": 6, "y": 150 },
+              { "x": 12, "y": 0 }
+            ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 170 },
+              { "x": 18, "y": 150 },
+              { "x": 25, "y": 150 },
+              { "x": 35, "y": 0 },
+              { "x": 99999, "y": 0 }
+            ]
+          curveShiftLong: 2
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
+      - period:
+          days: weekends:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+        niv:
+          chargeCurve:
+            points: [
+              { "x": -99999, "y": 170 },
+              { "x": -2, "y": 170 },
+              { "x": 6, "y": 60 },
+              { "x": 12, "y": 0 }
+              ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 170 },
+              { "x": 14, "y": 70 },
+              { "x": 35, "y": 50 },
+              { "x": 99999, "y": 0 }
+            ]
+          curveShiftLong: 0
+          curveShiftShort: 0
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
+
+  ratesImport:
+    - # Unify supplier import
+      rate: 1
+      periods:
+        - days: all:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+    - # Final consumption levies
+      rate: 1.29  # This accounts for BSUoS at 1.29p/kWh and assumes we pay no other FCL
+      periods:
+        - days: all:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+    - # DUoS red import
+      rate: 10.983
+      periods:
+        - days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+    - # DUoS amber import
+      rate: 0.499
+      periods:
+        - days: weekdays:Europe/London
+          start: 07:30:00:Europe/London
+          end: 17:00:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 19:00:00:Europe/London
+          end: 21:30:00:Europe/London
+        - days: weekends:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+    - # DUoS green import
+      rate: 0.034
+      periods:
+        - days: weekdays:Europe/London
+          start: 00:00:00:Europe/London
+          end: 07:30:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 21:30:00:Europe/London
+          end: 23:59:59:Europe/London
+        - days: weekends:Europe/London
+          start: 00:00:00:Europe/London
+          end: 16:30:00:Europe/London
+        - days: weekends:Europe/London
+          start: 19:30:00:Europe/London
+          end: 23:59:59:Europe/London
+  ratesExport:
+    - # DUoS red export
+      rate: -10.4
+      periods:
+        - days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+    - # DUoS amber export
+      rate: -0.52
+      periods:
+        - days: weekdays:Europe/London
+          start: 07:30:00:Europe/London
+          end: 17:00:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 19:00:00:Europe/London
+          end: 21:30:00:Europe/London
+        - days: weekends:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+    - # DUoS green export
+      rate: -0.037
+      periods:
+        - days: weekdays:Europe/London
+          start: 00:00:00:Europe/London
+          end: 07:30:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 21:30:00:Europe/London
+          end: 23:59:59:Europe/London
+        - days: weekends:Europe/London
+          start: 00:00:00:Europe/London
+          end: 16:30:00:Europe/London
+        - days: weekends:Europe/London
+          start: 19:30:00:Europe/London
+          end: 23:59:59:Europe/London
