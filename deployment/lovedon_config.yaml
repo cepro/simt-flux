@@ -1,6 +1,6 @@
 meters:
   acuvim2:
-    "Distribution Board 1":
+    "Distribution Board 1":  # There are no CTs in this meter
       id: 175eb4a0-5c4f-4506-a50e-0b30012c73fe
       host: 192.168.8.111:502
       pollIntervalSecs: 2
@@ -16,7 +16,7 @@ meters:
       pt2: 400
       ct1: 600
       ct2: 5
-    "Site":
+    "Site":  # There are no CTs in this meter
       id: 92990f75-1919-4168-ac76-bfb40ced6974
       host: 192.168.8.114:502
       pollIntervalSecs: 2
@@ -54,8 +54,10 @@ dataPlatforms:
       userKeyEnvVar: SUPABASE_USER_KEY_PROD
 
 controller:
-  siteMeter: 92990f75-1919-4168-ac76-bfb40ced6974
-  bessMeter: 00000000-0000-0000-0000-000000000000
+  # We are using the battery meter as a proxy for the site meter because the site meter doesn't work (it doesn't have CTs installed), the
+  # on-site load is very small (just auxillary drain from on-site equipment), so this should be a good approximation
+  siteMeter: 7835db8f-17e3-4ad9-aba6-40cb6c857d9e
+  bessMeter: 7835db8f-17e3-4ad9-aba6-40cb6c857d9e
   emulation:
     bessIsEmulated: false
     emulatedSiteMeter: null
@@ -72,8 +74,35 @@ controller:
     exportAvoidance: [] # there is no PV generation
     chargeToSoe: []
     dischargeToSoe: []
-    dynamicPeakDischarge: []
-    dynamicPeakApproach: []
+    dynamicPeakDischarge:
+      - 
+        period:
+          days: weekdays:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+        targetSoe: 20
+        targetShortPeriods: true
+        shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 0
+          timeCutoffSecs: 1200  # 20mins
+        prioritiseResidualLoad: false  # there should be practically 0 load
+    dynamicPeakApproach:
+      - 
+        peakPeriod:
+          days: weekdays:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+        toSoe: 170
+        encourageToSoe: 170
+        assumedChargePower: 100
+        forceChargeDurationFactor: 1.25
+        encourageChargeDurationFactor: 3.5
+        chargeCushionMins: 60
+        longPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900
     nivChase:
       - period:
           days: weekdays:Europe/London
@@ -95,8 +124,8 @@ controller:
               { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 2
-          curveShiftShort: 2
+          curveShiftLong: 0
+          curveShiftShort: 0
           defaultPricing: []
           pricePrediction:
             whenShort:
@@ -140,82 +169,82 @@ controller:
               timeCutoffSecs: 900
 
   ratesImport:
-    - # Unify supplier import
-      rate: 1
+    - # Bryt supplier import - this is a guess
+      rate: 2.5
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
     - # Final consumption levies
-      rate: 1.29  # This accounts for BSUoS at 1.29p/kWh and assumes we pay no other FCL
+      rate: 4.0  # This is a guess
       periods:
         - days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
     - # DUoS red import
-      rate: 10.983
+      rate: 6.809
       periods:
         - days: weekdays:Europe/London
-          start: 17:00:00:Europe/London
-          end: 19:00:00:Europe/London
-    - # DUoS amber import
-      rate: 0.499
-      periods:
-        - days: weekdays:Europe/London
-          start: 07:30:00:Europe/London
-          end: 17:00:00:Europe/London
-        - days: weekdays:Europe/London
-          start: 19:00:00:Europe/London
-          end: 21:30:00:Europe/London
-        - days: weekends:Europe/London
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
+    - # DUoS amber import
+      rate: 0.745
+      periods:
+        - days: weekdays:Europe/London
+          start: 07:00:00:Europe/London
+          end: 16:30:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 19:30:00:Europe/London
+          end: 22:00:00:Europe/London
+        - days: weekends:Europe/London
+          start: 09:30:00:Europe/London
+          end: 21:30:00:Europe/London
     - # DUoS green import
-      rate: 0.034
+      rate: 0.035
       periods:
         - days: weekdays:Europe/London
           start: 00:00:00:Europe/London
-          end: 07:30:00:Europe/London
+          end: 07:00:00:Europe/London
         - days: weekdays:Europe/London
-          start: 21:30:00:Europe/London
+          start: 22:00:00:Europe/London
           end: 23:59:59:Europe/London
         - days: weekends:Europe/London
           start: 00:00:00:Europe/London
-          end: 16:30:00:Europe/London
+          end: 09:30:00:Europe/London
         - days: weekends:Europe/London
-          start: 19:30:00:Europe/London
+          start: 21:30:00:Europe/London
           end: 23:59:59:Europe/London
   ratesExport:
-    - # DUoS red export
-      rate: -10.4
+    - # DUoS red import
+      rate: 6.467
       periods:
         - days: weekdays:Europe/London
-          start: 17:00:00:Europe/London
-          end: 19:00:00:Europe/London
-    - # DUoS amber export
-      rate: -0.52
-      periods:
-        - days: weekdays:Europe/London
-          start: 07:30:00:Europe/London
-          end: 17:00:00:Europe/London
-        - days: weekdays:Europe/London
-          start: 19:00:00:Europe/London
-          end: 21:30:00:Europe/London
-        - days: weekends:Europe/London
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
-    - # DUoS green export
-      rate: -0.037
+    - # DUoS amber import
+      rate: 0.822
+      periods:
+        - days: weekdays:Europe/London
+          start: 07:00:00:Europe/London
+          end: 16:30:00:Europe/London
+        - days: weekdays:Europe/London
+          start: 19:30:00:Europe/London
+          end: 22:00:00:Europe/London
+        - days: weekends:Europe/London
+          start: 09:30:00:Europe/London
+          end: 21:30:00:Europe/London
+    - # DUoS green import
+      rate: 0.040
       periods:
         - days: weekdays:Europe/London
           start: 00:00:00:Europe/London
-          end: 07:30:00:Europe/London
+          end: 07:00:00:Europe/London
         - days: weekdays:Europe/London
-          start: 21:30:00:Europe/London
+          start: 22:00:00:Europe/London
           end: 23:59:59:Europe/London
         - days: weekends:Europe/London
           start: 00:00:00:Europe/London
-          end: 16:30:00:Europe/London
+          end: 09:30:00:Europe/London
         - days: weekends:Europe/London
-          start: 19:30:00:Europe/London
+          start: 21:30:00:Europe/London
           end: 23:59:59:Europe/London
