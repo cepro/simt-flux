@@ -93,7 +93,7 @@ controller:
           days: weekdays:Europe/London
           start: 16:30:00:Europe/London
           end: 19:30:00:Europe/London
-        toSoe: 170
+        toSoe: 0
         encourageToSoe: 170
         assumedChargePower: 100
         forceChargeDurationFactor: 1.25
