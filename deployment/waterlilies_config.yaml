@@ -86,8 +86,8 @@ controller:
     importAvoidanceWhenShort:
       - shortPrediction:
           allowPrediction: true
-          volumeCutoff: 0
-          timeCutoffSecs: 1200  # 20mins
+          volumeCutoff: 150000
+          timeCutoffSecs: 900  # 15mins
         period:
           days: all:Europe/London
           start: 00:00:00:Europe/London
