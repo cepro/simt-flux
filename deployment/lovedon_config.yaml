@@ -87,22 +87,22 @@ controller:
           volumeCutoff: 0
           timeCutoffSecs: 1200  # 20mins
         prioritiseResidualLoad: false  # there should be practically 0 load
-    dynamicPeakApproach: []
-      # - 
-      #   peakPeriod:
-      #     days: weekdays:Europe/London
-      #     start: 16:30:00:Europe/London
-      #     end: 19:30:00:Europe/London
-      #   toSoe: 0
-      #   encourageToSoe: 170
-      #   assumedChargePower: 100
-      #   forceChargeDurationFactor: 1.25
-      #   encourageChargeDurationFactor: 3.5
-      #   chargeCushionMins: 60
-      #   longPrediction:
-      #     allowPrediction: true
-      #     volumeCutoff: 150000
-      #     timeCutoffSecs: 900
+    dynamicPeakApproach:
+      - 
+        peakPeriod:
+          days: weekdays:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+        toSoe: 170
+        encourageToSoe: 170
+        assumedChargePower: 100
+        forceChargeDurationFactor: 1.25
+        encourageChargeDurationFactor: 3.5
+        chargeCushionMins: 60
+        longPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900
     nivChase:
       - period:
           days: weekdays:Europe/London
@@ -124,8 +124,8 @@ controller:
               { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 0
-          curveShiftShort: 0
+          curveShiftLong: 4
+          curveShiftShort: 4
           defaultPricing: []
           pricePrediction:
             whenShort:
