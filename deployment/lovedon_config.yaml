@@ -92,7 +92,7 @@ controller:
         peakPeriod:
           days: weekdays:Europe/London
           start: 16:30:00:Europe/London
-          end: 19:30:00:Europe/London
+          end: 16:31:00:Europe/London
         toSoe: 170
         encourageToSoe: 170
         assumedChargePower: 100
