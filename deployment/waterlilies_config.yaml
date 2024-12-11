@@ -92,7 +92,11 @@ controller:
       #     days: all:Europe/London
       #     start: 00:00:00:Europe/London
       #     end: 23:59:59:Europe/London
-    importAvoidance: []
+    importAvoidance:
+      # Activate import avoidance during weekday evening peaks
+      - days: weekdays:Europe/London
+        start: 17:00:00:Europe/London
+        end: 19:00:00:Europe/London
     exportAvoidance: []
       # # Activate export avoidance at all times except weekday evening peaks
       # - days: weekdays:Europe/London
@@ -119,54 +123,56 @@ controller:
       #     volumeCutoff: 0
       #     timeCutoffSecs: 1200  # 20mins
       #   prioritiseResidualLoad: true
-    dynamicPeakApproach: []
-      # - 
-      #   peakPeriod:
-      #     days: weekdays:Europe/London
-      #     start: 17:00:00:Europe/London
-      #     end: 19:00:00:Europe/London
-      #   toSoe: 366
-      #   assumedChargePower: 120
-      #   forceChargeDurationFactor: 1.25
-      #   encourageChargeDurationFactor: 2.5
-      #   chargeCushionMins: 90
-      #   longPrediction:
-      #     allowPrediction: true
-      #     volumeCutoff: 150000
-      #     timeCutoffSecs: 900
-    nivChase: []
-      # - period:
-      #     days: weekdays:Europe/London
-      #     start: 00:00:00:Europe/London
-      #     end: 23:59:59:Europe/London
-      #   niv:
-      #     chargeCurve:
-      #         points: [
-      #           { "x": -999999, "y": 366 },
-      #           { "x": 4, "y": 366 },
-      #           { "x": 6, "y": 350 },
-      #           { "x": 12, "y": 0 }
-      #         ]
-      #     dischargeCurve:
-      #       points: [
-      #         { "x": 8, "y": 366 },
-      #         { "x": 18, "y": 366 },
-      #         { "x": 25, "y": 350 },
-      #         { "x": 35, "y": 0 },
-      #         { "x": 9999999, "y": 0 }
-      #       ]
-      #     curveShiftLong: 6
-      #     curveShiftShort: 2
-      #     defaultPricing: []
-      #     pricePrediction:
-      #       whenShort:
-      #         allowPrediction: true
-      #         volumeCutoff: 250000
-      #         timeCutoffSecs: 900
-      #       whenLong:
-      #         allowPrediction: true
-      #         volumeCutoff: 150000
-      #         timeCutoffSecs: 900
+    dynamicPeakApproach:
+      # Make sure the battery has enough charge for import avoidance over the evening peak
+      - 
+        peakPeriod:
+          days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 17:00:01:Europe/London
+        toSoe: 0
+        encourageToSoe: 300
+        assumedChargePower: 100
+        forceChargeDurationFactor: 1.25
+        encourageChargeDurationFactor: 2.5
+        chargeCushionMins: 150
+        longPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900
+    nivChase:
+      - period:
+          days: weekdays:Europe/London
+          start: 06:00:00:Europe/London
+          end: 17:00:00:Europe/London
+        niv:
+          chargeCurve:
+              points: [
+                { "x": -999999, "y": 366 },
+                { "x": 4, "y": 366 },
+                { "x": 6, "y": 350 },
+                { "x": 12, "y": 0 }
+              ]
+          dischargeCurve:
+            points: [
+              { "x": 25, "y": 366 },
+              { "x": 35, "y": 200 },
+              { "x": 55, "y": 100 },
+              { "x": 100, "y": 0 },
+              { "x": 9999999, "y": 0 }
+            ]
+          curveShiftLong: 6
+          curveShiftShort: 0
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
       # - period:
       #     days: weekends:Europe/London
       #     start: 00:00:00:Europe/London
