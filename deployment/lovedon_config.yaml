@@ -74,24 +74,88 @@ controller:
     exportAvoidance: [] # there is no PV generation
     chargeToSoe: []
     dischargeToSoe: []
-    dynamicPeakDischarge:
-      - 
-        period:
-          days: weekdays:Europe/London
-          start: 16:30:00:Europe/London
-          end: 19:30:00:Europe/London
-        targetSoe: 20
-        targetShortPeriods: true
-        shortPrediction:
-          allowPrediction: true
-          volumeCutoff: 0
-          timeCutoffSecs: 1200  # 20mins
-        prioritiseResidualLoad: false  # there should be practically 0 load
+    dynamicPeakDischarge: []
+      # - 
+      #   period:
+      #     days: weekdays:Europe/London
+      #     start: 16:30:00:Europe/London
+      #     end: 19:30:00:Europe/London
+      #   targetSoe: 20
+      #   targetShortPeriods: true
+      #   shortPrediction:
+      #     allowPrediction: true
+      #     volumeCutoff: 0
+      #     timeCutoffSecs: 1200  # 20mins
+      #   prioritiseResidualLoad: false  # there should be practically 0 load
     dynamicPeakApproach: []
     nivChase:
       - period:
           days: weekdays:Europe/London
           start: 00:00:00:Europe/London
+          end: 17:00:00:Europe/London
+        niv:
+          chargeCurve:
+            points: [
+              { "x": -99999, "y": 170 },
+              { "x": 4, "y": 170 },
+              { "x": 6, "y": 150 },
+              { "x": 15, "y": 0 }
+            ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 170 },
+              { "x": 18, "y": 150 },
+              { "x": 26, "y": 150 },
+              { "x": 35, "y": 0 },
+              { "x": 99999, "y": 0 }
+            ]
+          curveShiftLong: 2
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
+      - period:
+          days: weekdays:Europe/London
+          start: 17:00:00:Europe/London
+          end: 19:00:00:Europe/London
+        niv:
+          chargeCurve:  # Don't charge during weekday peaks times
+            points: [
+              { "x": -99999, "y": 170 },
+              { "x": -99999, "y": 170 },
+              { "x": -99999, "y": 150 },
+              { "x": -99999, "y": 0 }
+            ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 170 },
+              { "x": 18, "y": 150 },
+              { "x": 26, "y": 150 },
+              { "x": 35, "y": 0 },
+              { "x": 99999, "y": 0 }
+            ]
+          curveShiftLong: 2
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
+      - period:
+          days: weekdays:Europe/London
+          start: 19:00:00:Europe/London
           end: 23:59:59:Europe/London
         niv:
           chargeCurve:
@@ -99,18 +163,18 @@ controller:
               { "x": -99999, "y": 170 },
               { "x": 4, "y": 170 },
               { "x": 6, "y": 150 },
-              { "x": 12, "y": 0 }
+              { "x": 15, "y": 0 }
             ]
           dischargeCurve:
             points: [
               { "x": 8, "y": 170 },
               { "x": 18, "y": 150 },
-              { "x": 25, "y": 150 },
+              { "x": 26, "y": 150 },
               { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 0
-          curveShiftShort: 0
+          curveShiftLong: 2
+          curveShiftShort: 2
           defaultPricing: []
           pricePrediction:
             whenShort:
@@ -127,21 +191,23 @@ controller:
           end: 23:59:59:Europe/London
         niv:
           chargeCurve:
+            chargeCurve:
             points: [
               { "x": -99999, "y": 170 },
-              { "x": -2, "y": 170 },
-              { "x": 6, "y": 60 },
-              { "x": 12, "y": 0 }
-              ]
+              { "x": 4, "y": 170 },
+              { "x": 6, "y": 150 },
+              { "x": 15, "y": 0 }
+            ]
           dischargeCurve:
             points: [
               { "x": 8, "y": 170 },
-              { "x": 14, "y": 70 },
-              { "x": 35, "y": 50 },
+              { "x": 18, "y": 150 },
+              { "x": 26, "y": 150 },
+              { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 0
-          curveShiftShort: 0
+          curveShiftLong: 2
+          curveShiftShort: 2
           defaultPricing: []
           pricePrediction:
             whenShort:
