@@ -79,19 +79,19 @@ controller:
   bessSoeMin: 20
   bessSoeMax: 366
   bessChargePowerLimit: 222
-  bessDischargePowerLimit: 222
+  bessDischargePowerLimit: 100
   siteImportPowerLimit: 140
   siteExportPowerLimit: 230
   controlComponents:
-    importAvoidanceWhenShort: []
-      # - shortPrediction:
-      #     allowPrediction: true
-      #     volumeCutoff: 150000
-      #     timeCutoffSecs: 900  # 15mins
-      #   period:
-      #     days: all:Europe/London
-      #     start: 00:00:00:Europe/London
-      #     end: 23:59:59:Europe/London
+    importAvoidanceWhenShort:
+      - shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 150000
+          timeCutoffSecs: 900  # 15mins
+        period:
+          days: weekends:Europe/London
+          start: 07:00:00:Europe/London
+          end: 19:00:00:Europe/London
     importAvoidance:
       # Activate import avoidance during weekday evening peaks
       - days: weekdays:Europe/London
@@ -143,7 +143,7 @@ controller:
     nivChase:
       - period:
           days: weekdays:Europe/London
-          start: 06:00:00:Europe/London
+          start: 05:30:00:Europe/London
           end: 17:00:00:Europe/London
         niv:
           chargeCurve:
@@ -151,7 +151,7 @@ controller:
                 { "x": -999999, "y": 366 },
                 { "x": 4, "y": 366 },
                 { "x": 6, "y": 350 },
-                { "x": 12, "y": 0 }
+                { "x": 16, "y": 0 }
               ]
           dischargeCurve:
             points: [
@@ -161,7 +161,7 @@ controller:
               { "x": 100, "y": 0 },
               { "x": 9999999, "y": 0 }
             ]
-          curveShiftLong: 6
+          curveShiftLong: 4
           curveShiftShort: 0
           defaultPricing: []
           pricePrediction:
@@ -173,37 +173,37 @@ controller:
               allowPrediction: true
               volumeCutoff: 150000
               timeCutoffSecs: 900
-      # - period:
-      #     days: weekends:Europe/London
-      #     start: 00:00:00:Europe/London
-      #     end: 23:59:59:Europe/London
-      #   niv:
-      #     chargeCurve:
-      #         points: [
-      #           { "x": -999999, "y": 366 },
-      #           { "x": -2, "y": 366 },
-      #           { "x": 6, "y": 65 },
-      #           { "x": 12, "y": 0 }
-      #         ]
-      #     dischargeCurve:
-      #       points: [
-      #         { "x": 8, "y": 366 },
-      #         { "x": 14, "y": 65 },
-      #         { "x": 35, "y": 30 },
-      #         { "x": 999999, "y": 0 }
-      #       ]
-      #     curveShiftLong: 0
-      #     curveShiftShort: 0
-      #     defaultPricing: []
-      #     pricePrediction:
-      #       whenShort:
-      #         allowPrediction: true
-      #         volumeCutoff: 250000
-      #         timeCutoffSecs: 900
-      #       whenLong:
-      #         allowPrediction: true
-      #         volumeCutoff: 150000
-      #         timeCutoffSecs: 900
+      - period:
+          days: weekends:Europe/London
+          start: 07:00:00:Europe/London
+          end: 19:00:00:Europe/London
+        niv:
+          chargeCurve:
+              points: [
+                { "x": -999999, "y": 366 },
+                { "x": -2, "y": 366 },
+                { "x": 6, "y": 65 },
+                { "x": 16, "y": 0 }
+              ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 366 },
+              { "x": 14, "y": 65 },
+              { "x": 55, "y": 30 },
+              { "x": 999999, "y": 0 }
+            ]
+          curveShiftLong: 2
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction:
+            whenShort:
+              allowPrediction: true
+              volumeCutoff: 250000
+              timeCutoffSecs: 900
+            whenLong:
+              allowPrediction: true
+              volumeCutoff: 150000
+              timeCutoffSecs: 900
 
   ratesImport:
     - # Unify supplier import

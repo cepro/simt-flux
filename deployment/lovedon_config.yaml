@@ -74,19 +74,19 @@ controller:
     exportAvoidance: [] # there is no PV generation
     chargeToSoe: []
     dischargeToSoe: []
-    dynamicPeakDischarge: []
-      # - 
-      #   period:
-      #     days: weekdays:Europe/London
-      #     start: 16:30:00:Europe/London
-      #     end: 19:30:00:Europe/London
-      #   targetSoe: 20
-      #   targetShortPeriods: true
-      #   shortPrediction:
-      #     allowPrediction: true
-      #     volumeCutoff: 0
-      #     timeCutoffSecs: 1200  # 20mins
-      #   prioritiseResidualLoad: false  # there should be practically 0 load
+    dynamicPeakDischarge:
+      - 
+        period:
+          days: weekdays:Europe/London
+          start: 16:30:00:Europe/London
+          end: 19:30:00:Europe/London
+        targetSoe: 75
+        targetShortPeriods: true
+        shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 0
+          timeCutoffSecs: 1200  # 20mins
+        prioritiseResidualLoad: false  # there should be practically 0 load
     dynamicPeakApproach: []
     nivChase:
       - period:

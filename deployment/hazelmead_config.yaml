@@ -156,7 +156,7 @@ controller:
               { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 4
+          curveShiftLong: 6
           curveShiftShort: 2
           defaultPricing: []
           pricePrediction:
