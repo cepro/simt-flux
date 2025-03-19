@@ -76,7 +76,7 @@ controller:
     bessIsEmulated: false
     emulatedSiteMeter: null
   bessChargeEfficiency: 0.85
-  bessSoeMin: 20
+  bessSoeMin: 0
   bessSoeMax: 366
   bessChargePowerLimit: 222
   bessDischargePowerLimit: 100
@@ -131,11 +131,11 @@ controller:
           start: 17:00:00:Europe/London
           end: 17:00:01:Europe/London
         toSoe: 0
-        encourageToSoe: 300
+        encourageToSoe: 360
         assumedChargePower: 100
         forceChargeDurationFactor: 1.25
         encourageChargeDurationFactor: 2.5
-        chargeCushionMins: 150
+        chargeCushionMins: 240
         longPrediction:
           allowPrediction: true
           volumeCutoff: 150000
