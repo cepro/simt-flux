@@ -64,8 +64,8 @@ controller:
   bessChargeEfficiency: 0.85
   bessSoeMin: 20  # See how this works in practice and adjust
   bessSoeMax: 170
-  bessChargePowerLimit: 100
-  bessDischargePowerLimit: 100
+  bessChargePowerLimit: 0
+  bessDischargePowerLimit: 0
   siteImportPowerLimit: 100  # TODO: check this
   siteExportPowerLimit: 100
   controlComponents:
