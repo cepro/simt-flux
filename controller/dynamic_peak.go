@@ -116,6 +116,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig, bessSoe, chargeEfficiency float64, modoClient imbalancePricer) controlComponent {
 
 	controlComponentName := "dynamic_peak_approach"
+	logger := slog.Default()
 
 	for _, conf := range configs {
 
@@ -158,6 +159,15 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 			)
 			encourageEnergy := encourageCurve.VerticalDistance(referencePoint)
 			encouragePower := (encourageEnergy / hoursLeftOfSP) / chargeEfficiency
+
+			logger.Info(
+				"Dynamic approach debug",
+				"encourage_energy", encourageEnergy,
+				"encourage_power", encouragePower,
+				"peak_start", peakPeriod.Start,
+				"to_soe", toSoe,
+			)
+
 			if !math.IsNaN(encouragePower) && encouragePower > 0 {
 				return controlComponent{
 					name:         controlComponentName,
