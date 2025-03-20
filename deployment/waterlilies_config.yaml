@@ -97,17 +97,14 @@ controller:
       - days: weekdays:Europe/London
         start: 17:00:00:Europe/London
         end: 19:00:00:Europe/London
-    exportAvoidance: []
-      # # Activate export avoidance at all times except weekday evening peaks
-      # - days: weekdays:Europe/London
-      #   start: 00:00:00:Europe/London
-      #   end: 17:00:00:Europe/London
-      # - days: weekdays:Europe/London
-      #   start: 19:00:00:Europe/London
-      #   end: 23:59:59:Europe/London
-      # - days: weekends:Europe/London
-      #   start: 00:00:00:Europe/London
-      #   end: 23:59:59:Europe/London
+    exportAvoidance:
+      # Activate export avoidance when we can be noisy
+      - days: weekdays:Europe/London
+        start: 07:00:00:Europe/London
+        end: 17:00:00:Europe/London
+      - days: weekends:Europe/London
+        start: 07:00:00:Europe/London
+        end: 19:00:00:Europe/London
     chargeToSoePeriods: []
     dischargeToSoePeriods: []
     dynamicPeakDischarge: []
