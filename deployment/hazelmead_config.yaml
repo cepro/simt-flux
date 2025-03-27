@@ -81,7 +81,7 @@ controller:
   bessChargePowerLimit: 565
   bessDischargePowerLimit: 565
   siteImportPowerLimit: 220
-  siteExportPowerLimit: 475
+  siteExportPowerLimit: 490
   controlComponents:
     importAvoidanceWhenShort:
       - shortPrediction:
