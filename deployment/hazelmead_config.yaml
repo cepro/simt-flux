@@ -92,10 +92,7 @@ controller:
           days: all:Europe/London
           start: 00:00:00:Europe/London
           end: 23:59:59:Europe/London
-    importAvoidance:
-      - days: all:Europe/London
-        start: 00:00:00:Europe/London
-        end: 23:59:59:Europe/London
+    importAvoidance: []
     exportAvoidance:
       # Activate export avoidance at all times except weekday evening peaks
       - days: weekdays:Europe/London
