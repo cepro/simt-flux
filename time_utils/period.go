@@ -13,4 +13,8 @@ type Period struct {
 // See the documentation on the Time type for the pitfalls of using == with Time values; most code should use Equal instead.
 func (p Period) Equal(p2 Period) bool {
 	return p.Start.Equal(p2.End) && p.End.Equal(p2.End)
+
+// Contains returns true if `t` is within the Period, inclusive of `Start` but exclusive of `End`.
+func (p Period) Contains(t time.Time) bool {
+	return (p.Start.Before(t) && p.End.After(t)) || p.Start.Equal(t)
 }

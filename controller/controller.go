@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/cepro/besscontroller/axle"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
@@ -22,16 +23,20 @@ import (
 // Discharge to SoE: If the SoE of the battery is above a maximum then it is charged up to that maximum.
 // Niv chasing: the imbalance price is used to influence charge/discharges
 //
-// Put new site meter and bess readings onto the `SiteMeterReadings` and `BessReadings` channels. Instruction commands for
-// the BESS will be output onto the `BessCommands` channel (supplied via the Config).
+// Put new site meter and bess readings onto the `SiteMeterReadings` and `BessReadings` channels; put new schedules from Axle onto the `AxleSchedules`
+// channel.
+// Instruction commands for the BESS will be output onto the `BessCommands` channel (supplied via the Config).
 type Controller struct {
 	SiteMeterReadings chan telemetry.MeterReading
 	BessReadings      chan telemetry.BessReading
+	AxleSchedules     chan axle.Schedule
 
 	config Config
 
 	sitePower timedMetric // +ve is microgrid import, -ve is microgrid export
 	bessSoe   timedMetric
+
+	axleSchedule axle.Schedule
 
 	lastBessTargetPower float64 // +ve is battery discharge, -ve is battery charge
 }
@@ -85,6 +90,7 @@ func New(config Config) *Controller {
 	return &Controller{
 		SiteMeterReadings: make(chan telemetry.MeterReading, 1),
 		BessReadings:      make(chan telemetry.BessReading, 1),
+		AxleSchedules:     make(chan axle.Schedule, 1),
 		config:            config,
 	}
 }
@@ -120,6 +126,20 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 		select {
 		case <-ctx.Done():
 			return
+
+		case reading := <-c.SiteMeterReadings:
+			if reading.PowerTotalActive == nil {
+				slog.Error("No active power available in site meter reading")
+				continue
+			}
+			c.sitePower.set(*reading.PowerTotalActive)
+
+		case reading := <-c.BessReadings:
+			c.bessSoe.set(reading.Soe)
+
+		case schedule := <-c.AxleSchedules:
+			c.axleSchedule = schedule
+
 		case t := <-tickerChan:
 			if c.sitePower.isOlderThan(c.config.MaxReadingAge) {
 				slog.Error("Site power reading is too old to use, skipping this control loop.", "data_updated_at", c.sitePower.updatedAt, "data_max_age", c.config.MaxReadingAge)
@@ -131,14 +151,6 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 			}
 
 			c.runControlLoop(t)
-		case reading := <-c.SiteMeterReadings:
-			if reading.PowerTotalActive == nil {
-				slog.Error("No active power available in site meter reading")
-				continue
-			}
-			c.sitePower.set(*reading.PowerTotalActive)
-		case reading := <-c.BessReadings:
-			c.bessSoe.set(reading.Soe)
 		}
 	}
 }
@@ -167,7 +179,12 @@ func (c *Controller) runControlLoop(t time.Time) {
 	ratesExport := config.SumTimedRates(t, c.config.RatesExport)
 
 	// Calculate the different control components from the different modes of operation, listed in priority order
+	// TODO: we need some concept of "do at least this" so that Axle can be over-ridden and the spike issue resolved
 	components := []controlComponent{
+		axleSchedule(
+			t,
+			c.axleSchedule,
+		),
 		dischargeToSoe(
 			t,
 			c.config.DischargeToSoePeriods,

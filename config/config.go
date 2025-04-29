@@ -176,10 +176,19 @@ type ControllerConfig struct {
 	RatesExport             []TimedRate             `yaml:"ratesExport"`
 }
 
+type AxleConfig struct {
+	Host                        string `yaml:"host"`
+	UsernameEnvVar              string `yaml:"usernameEnvVar"`
+	PasswordEnvVar              string `yaml:"passwordEnvVar"`
+	TelemetryUploadIntervalSecs int    `yaml:"telemetryUploadIntervalSecs"`
+	SchedulePollIntervalSecs    int    `yaml:"schedulePollIntervalSecs"`
+}
+
 type Config struct {
 	Meters        MetersConfig         `yaml:"meters"`
 	Bess          BessConfig           `yaml:"bess"`
 	DataPlatforms []DataPlatformConfig `yaml:"dataPlatforms"`
+	Axle          *AxleConfig          `yaml:"axle,omitempty"`
 	Controller    ControllerConfig     `yaml:"controller"`
 }
 
