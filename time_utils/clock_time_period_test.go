@@ -101,7 +101,7 @@ func TestClockTimeAbsolutePeriod(t *testing.T) {
 			if ok != subTest.expectedOK {
 				t.Errorf("OK boolean got %t, expected %t", ok, subTest.expectedOK)
 			}
-			if ok && period.Equal(subTest.expectedPeriod) {
+			if ok && !period.Equal(subTest.expectedPeriod) {
 				t.Errorf("Period got %v, expected %v", period, subTest.expectedPeriod)
 			}
 		})
