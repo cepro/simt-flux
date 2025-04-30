@@ -2,11 +2,11 @@ package axle
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
 	"github.com/cepro/besscontroller/telemetry"
-	timeutils "github.com/cepro/besscontroller/time_utils"
 	"github.com/google/uuid"
 )
 
@@ -100,18 +100,12 @@ func (a *Axle) processSchedule() {
 
 	now := time.Now()
 
+	scheduleItems := make([]ScheduleItem, 1)
+	json.Unmarshal([]byte(hardCodedResponse), &scheduleItems)
+
 	schedule := Schedule{
 		ReceivedTime: now,
-		Actions: []ScheduleAction{
-			{
-				Period: timeutils.Period{
-					Start: timeutils.FloorHH(now),
-					End:   timeutils.FloorHH(now).Add(time.Minute * 30),
-				},
-				ActionType:     "discharge_max",
-				AllowDeviation: false,
-			},
-		},
+		Items:        scheduleItems,
 	} // TODO: query for new schedule from Axle API
 
 	if !a.latestSchedule.Equal(schedule, false) {
@@ -119,7 +113,185 @@ func (a *Axle) processSchedule() {
 		a.latestSchedule = schedule
 		a.schedules <- schedule
 	} else {
-		a.logger.Info("Pulled schedule from Axle, but it hasn't changed", "schedule", a.latestSchedule)
+		a.logger.Info("Pulled schedule from Axle, but it hasn't changed")
 	}
 
 }
+
+var hardCodedResponse = `
+[
+	{
+        "start_timestamp": "2025-04-29T20:00:00+01:00",
+        "end_timestamp": "2025-04-29T20:05:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+	{
+        "start_timestamp": "2025-04-29T20:05:00+01:00",
+        "end_timestamp": "2025-04-29T20:10:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-04-30T00:00:00+01:00",
+        "end_timestamp": "2025-04-30T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-01T00:00:00+01:00",
+        "end_timestamp": "2025-05-01T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-02T00:00:00+01:00",
+        "end_timestamp": "2025-05-02T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-03T00:00:00+01:00",
+        "end_timestamp": "2025-05-03T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-04T00:00:00+01:00",
+        "end_timestamp": "2025-05-04T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-05T00:00:00+01:00",
+        "end_timestamp": "2025-05-05T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-06T00:00:00+01:00",
+        "end_timestamp": "2025-05-06T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-07T00:00:00+01:00",
+        "end_timestamp": "2025-05-07T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-08T00:00:00+01:00",
+        "end_timestamp": "2025-05-08T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-09T00:00:00+01:00",
+        "end_timestamp": "2025-05-09T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-10T00:00:00+01:00",
+        "end_timestamp": "2025-05-10T03:00:00+01:00",
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-11T00:00:00+01:00",
+        "end_timestamp": "2025-05-11T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-12T00:00:00+01:00",
+        "end_timestamp": "2025-05-12T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-13T00:00:00+01:00",
+        "end_timestamp": "2025-05-13T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-14T00:00:00+01:00",
+        "end_timestamp": "2025-05-14T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-15T00:00:00+01:00",
+        "end_timestamp": "2025-05-15T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-16T00:00:00+01:00",
+        "end_timestamp": "2025-05-16T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-17T00:00:00+01:00",
+        "end_timestamp": "2025-05-17T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-18T00:00:00+01:00",
+        "end_timestamp": "2025-05-18T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-19T00:00:00+01:00",
+        "end_timestamp": "2025-05-19T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-20T00:00:00+01:00",
+        "end_timestamp": "2025-05-20T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-21T00:00:00+01:00",
+        "end_timestamp": "2025-05-21T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-22T00:00:00+01:00",
+        "end_timestamp": "2025-05-22T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-23T00:00:00+01:00",
+        "end_timestamp": "2025-05-23T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-24T00:00:00+01:00",
+        "end_timestamp": "2025-05-24T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-25T00:00:00+01:00",
+        "end_timestamp": "2025-05-25T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-26T00:00:00+01:00",
+        "end_timestamp": "2025-05-26T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    }
+]`

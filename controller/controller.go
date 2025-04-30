@@ -77,14 +77,6 @@ type imbalancePricer interface {
 	ImbalanceVolume() (float64, time.Time) // ImbalanceVolume returns the last cached imbalance volume, and the settlement period time that it corresponds to
 }
 
-// controlComponent represents the output of some control mode - e.g. export avoidance or NIV chasing etc
-type controlComponent struct {
-	name         string       // Friendly name of this component for debug logging
-	isActive     bool         // Set True if this control component is activated, or False if it is not doing anything
-	targetPower  float64      // The power associated with this control component
-	controlPoint controlPoint // The point where the targetPower should be applied
-}
-
 // New creates a new Controller using the given Config
 func New(config Config) *Controller {
 	return &Controller{
@@ -178,12 +170,13 @@ func (c *Controller) runControlLoop(t time.Time) {
 	ratesImport := config.SumTimedRates(t, c.config.RatesImport)
 	ratesExport := config.SumTimedRates(t, c.config.RatesExport)
 
-	// Calculate the different control components from the different modes of operation, listed in priority order
-	// TODO: we need some concept of "do at least this" so that Axle can be over-ridden and the spike issue resolved
+	// Calculate the different control components that all the different modes of operation want to do now. These are listed inpriority order.
 	components := []controlComponent{
 		axleSchedule(
 			t,
 			c.axleSchedule,
+			c.SitePower(),
+			c.lastBessTargetPower,
 		),
 		dischargeToSoe(
 			t,
@@ -243,55 +236,104 @@ func (c *Controller) runControlLoop(t time.Time) {
 		),
 	}
 
-	// Select the highest priority component that is active, or default to a zero-power "idle" component
-	component := controlComponent{
-		name:         "idle",
-		isActive:     true,
-		targetPower:  0,
-		controlPoint: controlPointBess,
-	}
-	for i := range components {
-		if components[i].isActive {
-			component = components[i]
-			break
-		}
-	}
-
-	bessTargetPower, limits := c.calculateBessPower(component)
+	action := c.prioritiseControlComponents(components)
 
 	slog.Info(
 		"Controlling BESS",
 		"site_power", c.sitePower.value,
 		"bess_soe", c.bessSoe.value,
-		"control_component", component.name,
-		"control_component_power", component.targetPower,
-		"control_component_point", component.controlPoint,
-		"site_power_limits_active", limits.sitePower,
-		"bess_power_limits_active", limits.bessPower,
-		"bess_soe_limits_active", limits.bessSoe,
+		"control_components_active", action.activeComponentNames,
+		"control_components_point", action.controlPointNames,
+		"constraint_site_power_active", action.constraints.sitePower,
+		"constraint_bess_power_active", action.constraints.bessPower,
+		"constraint_bess_soe_active", action.constraints.bessSoe,
 		"rates_import", ratesImport,
 		"rates_export", ratesExport,
 		"bess_last_target_power", c.lastBessTargetPower,
-		"bess_target_power", bessTargetPower,
+		"bess_target_power", action.bessTargetPower,
 	)
 
 	command := telemetry.BessCommand{
-		TargetPower: bessTargetPower,
+		TargetPower: action.bessTargetPower,
 	}
 	sendIfNonBlocking(c.config.BessCommands, command, "PowerPack commands")
-	c.lastBessTargetPower = bessTargetPower
+	c.lastBessTargetPower = action.bessTargetPower
 }
 
-// activeLimits provides debug information on which limits were used in the calculation of the BESS power level.
-type activeLimits struct {
-	bessPower bool
-	sitePower bool
-	bessSoe   bool
+// prioritisedAction just helps organise the return values of `prioritiseControlComponents`
+type prioritisedAction struct {
+	bessTargetPower      float64           // the power that the bess should deliver
+	constraints          activeConstraints // any constraints that were used when calculating the `bessTargetPower` (useful for logging)
+	activeComponentNames string            // comma-separated names of any components that were used to calculate the `bessTargetPower` (useful for logging)
+	controlPointNames    string            // comma-separated names of any control points that were used to calculate the `bessTargetPower` (useful for logging)
+}
+
+// prioritiseControlComponents runs through all the given components and decides the appropriate action to take.
+// Some components are 'greedy' and don't allow any lower-priority components to do anything, whereas others will allow lower-priority
+// components to go further 'in the same direction' if they want.
+func (c *Controller) prioritiseControlComponents(components []controlComponent) prioritisedAction {
+	// Select the highest priority component that is active, or default to a zero-power "idle" component
+
+	action := prioritisedAction{}
+	previousComponentStatus := componentStatusInactive
+	// previousGreediestComponentStatus := componentStatusInactive
+
+	for i := range components {
+
+		if previousComponentStatus == componentStatusActiveGreedy {
+			break // the last component was 'greedy' so no further (lower-priority) components can change what we will do
+		}
+
+		if components[i].status == componentStatusInactive {
+			continue // this component is inactive, but the next one might be active
+		}
+
+		componentBessTargetPower, componentConstraints := c.calculateBessPower(components[i])
+
+		if previousComponentStatus == componentStatusInactive {
+			// this is the first active control component we have found, so just use it as-is:
+			action.bessTargetPower = componentBessTargetPower
+			action.constraints = componentConstraints
+			action.activeComponentNames = components[i].name
+			action.controlPointNames = string(components[i].controlPoint)
+
+			previousComponentStatus = components[i].status
+			continue // there may be more active components that can influence what we do
+		}
+
+		// We have already seen a higher-prority control component, but the higher-prority one may allow this lower-priority one to charge/discharge *more* than it specified
+		allowedDueToMoreCharge := (previousComponentStatus == componentStatusActiveAllowMoreCharge) && (componentBessTargetPower < action.bessTargetPower)
+		allowedDueToMoreDischarge := (previousComponentStatus == componentStatusActiveAllowMoreDischarge) && (componentBessTargetPower > action.bessTargetPower)
+
+		if allowedDueToMoreCharge || allowedDueToMoreDischarge {
+			// This control component is allowed to act (despite it being lower-priority than a previous one)
+			action.bessTargetPower = componentBessTargetPower
+
+			// Keep a record of the name and active constraints from any higher-priority components (for debugging)
+			action.constraints = action.constraints.add(componentConstraints)
+			action.activeComponentNames = fmt.Sprintf("%s,%s", action.activeComponentNames, components[i].name)
+			action.controlPointNames = fmt.Sprintf("%s,%s", action.controlPointNames, string(components[i].controlPoint))
+
+			previousComponentStatus = components[i].status
+		}
+	}
+
+	if previousComponentStatus == componentStatusInactive {
+		// no control components were active, return an 'idle'
+		return prioritisedAction{
+			bessTargetPower:      0.0,
+			constraints:          activeConstraints{},
+			activeComponentNames: "idle",
+			controlPointNames:    string(controlPointBess),
+		}
+	} else {
+		return action
+	}
 }
 
 // calculateBessPower returns the power level that should be sent to the BESS, given the control component. Limits are applied to keep the SoE, BESS power, and
 // site power within bounds. Details of which limits were activated in the calculation are returned.
-func (c *Controller) calculateBessPower(component controlComponent) (float64, activeLimits) {
+func (c *Controller) calculateBessPower(component controlComponent) (float64, activeConstraints) {
 
 	var bessPowerLimitsActive1 bool
 	var bessPowerLimitsActive2 bool
@@ -350,7 +392,7 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 		bessSoeLimitActive = true
 	}
 
-	return bessTargetPower, activeLimits{
+	return bessTargetPower, activeConstraints{
 		bessPower: bessPowerLimitsActive1 || bessPowerLimitsActive2,
 		sitePower: sitePowerLimitsActive,
 		bessSoe:   bessSoeLimitActive,
@@ -361,204 +403,10 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 func (c *Controller) maxBessDischarge() float64 {
 	// Use a contrived controlComponent that requests infinite discharge power to get the actual maximum rate with the existing `calculateBessPower` method.
 	maxBessDischarge, _ := c.calculateBessPower(controlComponent{
-		"max_discharge_calculation",
-		true,
-		math.Inf(+1),
-		controlPointBess,
+		name:         "max_discharge_calculation",
+		status:       componentStatusActiveGreedy,
+		targetPower:  math.Inf(+1),
+		controlPoint: controlPointBess,
 	})
 	return maxBessDischarge
-}
-
-// importAvoidanceWhenShort returns control component for avoiding site imports, based on imbalance status
-func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenShortConfig, sitePower, lastTargetPower float64, modoClient imbalancePricer) controlComponent {
-
-	conf, _ := findPeriodicalConfigForTime(t, configs)
-	if conf == nil {
-		return controlComponent{isActive: false}
-	}
-
-	_, imbalanceVolume, gotPrediction := predictImbalance(
-		t,
-		config.NivPredictionConfig{
-			WhenShort: conf.ShortPrediction,
-			// We are only interested in the case where the system is short, so don't allow predictions for long
-			WhenLong: config.NivPredictionDirectionConfig{AllowPrediction: false},
-		},
-		modoClient,
-	)
-	if !gotPrediction {
-		// We don't have any pricing data available, so do nothing
-		return controlComponent{isActive: false}
-	}
-
-	if imbalanceVolume <= 0 {
-		// We aren't short, so do nothing
-		return controlComponent{isActive: false}
-	}
-
-	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance_when_short")
-}
-
-// basicImportAvoidance returns the control component for avoiding microgrid boundary imports.
-func basicImportAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
-
-	_, importAvoidancePeriod := findDayedPeriodContainingTime(t, importAvoidancePeriods)
-	if importAvoidancePeriod == nil {
-		return controlComponent{isActive: false}
-	}
-
-	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance")
-}
-
-// importAvoidanceHelper generates the control component for an import avoidance action.
-// Import avoidance is a strategy that is used by a few different control modes so this is a conveninence function for helping with that.
-func importAvoidanceHelper(sitePower, lastTargetPower float64, controlComponentName string) controlComponent {
-	importAvoidancePower := sitePower + lastTargetPower
-	if importAvoidancePower < 0 {
-		return controlComponent{isActive: false}
-	}
-
-	return controlComponent{
-		name:         controlComponentName,
-		isActive:     true,
-		targetPower:  0, // Target zero power at the site boundary
-		controlPoint: controlPointSite,
-	}
-}
-
-// exportAvoidance returns the control component for avoiding microgrid boundary exports.
-func exportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
-
-	_, exportAvoidancePeriod := findDayedPeriodContainingTime(t, exportAvoidancePeriods)
-	if exportAvoidancePeriod == nil {
-		return controlComponent{isActive: false}
-	}
-
-	exportAvoidancePower := sitePower + lastTargetPower
-	if exportAvoidancePower > 0 {
-		return controlComponent{isActive: false}
-	}
-
-	return controlComponent{
-		name:         "export_avoidance",
-		isActive:     true,
-		targetPower:  0, // Target zero power at the site boundary
-		controlPoint: controlPointSite,
-	}
-}
-
-// chargeToSoe returns the control component for charging the battery to a minimum SoE.
-func chargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, chargeEfficiency float64) controlComponent {
-
-	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
-	if conf == nil {
-		return controlComponent{isActive: false}
-	}
-
-	targetSoe := conf.Soe
-	endOfCharge := absPeriod.End
-
-	// charge the battery to reach the minimum target SoE at the end of the period. If the battery is already charged to the minimum level then do nothing.
-	energyToCharge := (targetSoe - bessSoe) / chargeEfficiency
-	if energyToCharge <= 0 {
-		return controlComponent{isActive: false}
-	}
-
-	durationToRecharge := endOfCharge.Sub(t)
-	chargePower := -energyToCharge / durationToRecharge.Hours()
-	if chargePower >= 0 {
-		return controlComponent{isActive: false}
-	}
-
-	return controlComponent{
-		name:         "charge_to_soe",
-		isActive:     true,
-		targetPower:  chargePower,
-		controlPoint: controlPointBess,
-	}
-}
-
-// dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
-func dischargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, dischargeEfficiency float64) controlComponent {
-
-	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
-	if conf == nil {
-		return controlComponent{isActive: false}
-	}
-
-	targetSoe := conf.Soe
-	endOfDischarge := absPeriod.End
-
-	// discharge the battery to reach the target SoE at the end of the period. If the battery is already discharged to the target level, or below then do nothing.
-	energyToDischarge := (bessSoe - targetSoe) * dischargeEfficiency
-	if energyToDischarge <= 0 {
-		return controlComponent{isActive: false}
-	}
-
-	durationToDischarge := endOfDischarge.Sub(t)
-	dichargePower := energyToDischarge / durationToDischarge.Hours()
-	if dichargePower <= 0 {
-		return controlComponent{isActive: false}
-	}
-
-	return controlComponent{
-		name:         "discharge_to_soe",
-		isActive:     true,
-		targetPower:  dichargePower,
-		controlPoint: controlPointBess,
-	}
-}
-
-// PeriodicalConfigTypes is an interface onto configuration structures that are tied to a particular periods of time
-type PeriodicalConfigTypes interface {
-	config.ImportAvoidanceWhenShortConfig | config.DayedPeriodWithSoe | config.DayedPeriodWithNIV | config.DynamicPeakDischargeConfig
-	GetDayedPeriod() timeutils.DayedPeriod
-}
-
-// findPeriodicalConfigForTime searches the list of configs and returns the first one that is active at the time `t` (i.e.
-// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
-func findPeriodicalConfigForTime[T PeriodicalConfigTypes](t time.Time, configs []T) (*T, timeutils.Period) {
-
-	for _, conf := range configs {
-		dayedPeriod := conf.GetDayedPeriod()
-		absPeriod, ok := dayedPeriod.AbsolutePeriod(t)
-		if ok {
-			return &conf, absPeriod
-		}
-	}
-	return nil, timeutils.Period{}
-}
-
-// findDayedPeriodContainingTime searches the list of dayed periods and returns the first one that is active at the time `t` (i.e.
-// the first one whose period contains `t`), or nil if none was found. It also returns the associated absolute period.
-func findDayedPeriodContainingTime(t time.Time, dayedPeriods []timeutils.DayedPeriod) (*timeutils.DayedPeriod, *timeutils.Period) {
-
-	for _, dayedPeriod := range dayedPeriods {
-		period, ok := dayedPeriod.AbsolutePeriod(t)
-		if ok {
-			return &dayedPeriod, &period
-		}
-	}
-	return nil, nil
-}
-
-// sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation
-// is non-blocking, otherwise it logs a warning message and returns.
-func sendIfNonBlocking[V any](ch chan<- V, val V, messageTargetLogStr string) {
-	select {
-	case ch <- val:
-	default:
-		slog.Warn("Dropped message", "message_target", messageTargetLogStr)
-	}
-}
-
-// limitValue returns the value capped between `maxPositive` and `maxNegative`, alongside a boolean indicating if limits needed to be applied
-func limitValue(value, maxPositive, maxNegative float64) (float64, bool) {
-	if value > maxPositive {
-		return maxPositive, true
-	} else if value < -maxNegative {
-		return -maxNegative, true
-	} else {
-		return value, false
-	}
 }

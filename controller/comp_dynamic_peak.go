@@ -18,7 +18,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 	// First find any dynamic peak conigurations that are "in the peak" at the moment
 	conf, absPeriod := findPeriodicalConfigForTime(t, configs)
 	if conf == nil {
-		return controlComponent{isActive: false}
+		return INACTIVE_CONTROL_COMPONENT
 	}
 
 	peakEnd := absPeriod.End
@@ -27,7 +27,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 
 	maxDischargeComponent := controlComponent{
 		name:         controlComponentName,
-		isActive:     true,
+		status:       componentStatusActiveGreedy,
 		targetPower:  math.Inf(1), // discharge as fast possible - this will be capped by the various downstream checks
 		controlPoint: controlPointBess,
 	}
@@ -36,7 +36,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 	availableEnergy := bessSoe - conf.TargetSoe
 	if availableEnergy <= 0 {
 		logger.Info("Dynamic peak doesn't have enough energy", "available_energy", availableEnergy)
-		return controlComponent{isActive: false}
+		return INACTIVE_CONTROL_COMPONENT
 	}
 
 	// assumedDurationToEmpty is an approximation because we may be limited by grid constraints which depend on the load and solar levels
@@ -68,12 +68,12 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 		if conf.PrioritiseResidualLoad {
 			// Even though the system is long, discharge to avoid microgrid imports (if any)
 			logger.Info("Dynamic peak doing import avoidance to wait for short system", "got_prediction", gotPrediction, "imbalance_volume", imbalanceVolume, "latest_time_before_max_discharge", latestTimeBeforeMaxDischarge)
-			return importAvoidanceHelper(sitePower, lastTargetPower, controlComponentName)
+			return importAvoidanceHelper(sitePower, lastTargetPower, controlComponentName, false)
 		}
 		// If we are not 'prioritising loads' then hold off on the discharge completely until the last minute,
 		// or until the system is short.
 		logger.Info("Dynamic peak doing nothing to wait for short system", "got_prediction", gotPrediction, "imbalance_volume", imbalanceVolume)
-		return controlComponent{isActive: false}
+		return INACTIVE_CONTROL_COMPONENT
 	}
 
 	// System is short
@@ -108,7 +108,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 		return maxDischargeComponent
 	} else {
 		logger.Info("Dynamic peak doing import avoidance due to short system and less energy than reserve", "available_energy", availableEnergy, "reserve_energy", reserveEnergy)
-		return importAvoidanceHelper(sitePower, lastTargetPower, controlComponentName)
+		return importAvoidanceHelper(sitePower, lastTargetPower, controlComponentName, false)
 	}
 }
 
@@ -171,7 +171,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 			if !math.IsNaN(encouragePower) && encouragePower > 0 {
 				return controlComponent{
 					name:         controlComponentName,
-					isActive:     true,
+					status:       componentStatusActiveAllowMoreCharge,
 					targetPower:  -encouragePower,
 					controlPoint: controlPointBess,
 				}
@@ -193,14 +193,14 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 		if !math.IsNaN(forcePower) && forcePower > 0 {
 			return controlComponent{
 				name:         controlComponentName,
-				isActive:     true,
+				status:       componentStatusActiveAllowMoreCharge,
 				targetPower:  -forcePower,
 				controlPoint: controlPointBess,
 			}
 		}
 	}
 
-	return controlComponent{isActive: false}
+	return INACTIVE_CONTROL_COMPONENT
 }
 
 // approachCurve returns a curve representing the boundary of the peak approach

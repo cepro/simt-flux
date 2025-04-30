@@ -86,7 +86,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          0.0,
-			expectedControlComponent: controlComponent{},
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Imbalance price is attractive for charge - charge rate is set by curve following",
@@ -98,7 +98,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           0.0,
 			imbalanceVolume:          0.0,
-			expectedControlComponent: activeControlComponent(-70.59),
+			expectedControlComponent: testActiveNivControlComponent(-70.59),
 		},
 		{
 			name:                     "Imbalance price is attractive for discharge - discharge rate is set by curve following",
@@ -110,7 +110,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           35.0,
 			imbalanceVolume:          0.0,
-			expectedControlComponent: activeControlComponent(30.0),
+			expectedControlComponent: testActiveNivControlComponent(30.0),
 		},
 		{
 			name:                     "Imbalance price is between the charge and discharge curves - but long rate shift triggers charge",
@@ -122,7 +122,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          25.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: activeControlComponent(-70.59),
+			expectedControlComponent: testActiveNivControlComponent(-70.59),
 		},
 		{
 			name:                     "Imbalance price is between the charge and discharge curves - but short rate shift triggers discharge",
@@ -134,7 +134,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          25.0,
 			imbalancePrice:           25.0,
 			imbalanceVolume:          +100,
-			expectedControlComponent: activeControlComponent(+300.0),
+			expectedControlComponent: testActiveNivControlComponent(+300.0),
 		},
 		{
 			name:                     "Imbalance price is attractive for charge - charge rate is set by curve following",
@@ -146,7 +146,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           0.0,
 			imbalanceVolume:          0.0,
-			expectedControlComponent: activeControlComponent(-70.59),
+			expectedControlComponent: testActiveNivControlComponent(-70.59),
 		},
 		{
 			name:                     "Imbalance price is attractive for discharge - discharge rate is set by curve following",
@@ -158,7 +158,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          0.0,
 			imbalancePrice:           35.0,
 			imbalanceVolume:          0.0,
-			expectedControlComponent: activeControlComponent(30.0),
+			expectedControlComponent: testActiveNivControlComponent(30.0),
 		},
 		{
 			name:                     "Imbalance price is attractive for discharge - discharge rate is set by curve following, excentuated by short rate shift",
@@ -170,7 +170,7 @@ func TestNivChase(test *testing.T) {
 			curveShiftShort:          5,
 			imbalancePrice:           35.0,
 			imbalanceVolume:          50,
-			expectedControlComponent: activeControlComponent(300.0),
+			expectedControlComponent: testActiveNivControlComponent(300.0),
 		},
 		{
 			name:                     "Imbalance price is between the charge and discharge curves - but DUoS charges fees trigger export",
@@ -184,7 +184,7 @@ func TestNivChase(test *testing.T) {
 			imbalanceVolume:          0.0,
 			ratesImport:              5,
 			ratesExport:              -5,
-			expectedControlComponent: activeControlComponent(60),
+			expectedControlComponent: testActiveNivControlComponent(60),
 		},
 		{
 			name:                     "Test Waterlilies discharge curve - don't discharge as prices are moderatley high",
@@ -198,7 +198,7 @@ func TestNivChase(test *testing.T) {
 			imbalanceVolume:          500.0,
 			ratesImport:              10,
 			ratesExport:              -10,
-			expectedControlComponent: controlComponent{},
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Test Waterlilies discharge curve - discharge when prices are very high",
@@ -212,7 +212,7 @@ func TestNivChase(test *testing.T) {
 			imbalanceVolume:          500.0,
 			ratesImport:              10,
 			ratesExport:              -10,
-			expectedControlComponent: activeControlComponent(600),
+			expectedControlComponent: testActiveNivControlComponent(600),
 		},
 		{
 			name:                     "Test blank curves - don't charge even if prices are very negative",
@@ -226,7 +226,7 @@ func TestNivChase(test *testing.T) {
 			imbalanceVolume:          0,
 			ratesImport:              10,
 			ratesExport:              -10,
-			expectedControlComponent: controlComponent{},
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Test blank curves - don't discharge even if prices are very high",
@@ -240,7 +240,7 @@ func TestNivChase(test *testing.T) {
 			imbalanceVolume:          0,
 			ratesImport:              10,
 			ratesExport:              -10,
-			expectedControlComponent: controlComponent{},
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 	}
 	for _, subTest := range subTests {
@@ -447,10 +447,15 @@ func TestPredictImbalance(test *testing.T) {
 
 }
 
-func activeControlComponent(power float64) controlComponent {
+func testActiveNivControlComponent(power float64) controlComponent {
+
+	status := componentStatusActiveAllowMoreCharge
+	if power > 0 {
+		status = componentStatusActiveAllowMoreDischarge
+	}
 	return controlComponent{
 		name:         "niv_chase",
-		isActive:     true,
+		status:       status,
 		targetPower:  power,
 		controlPoint: controlPointBess,
 	}

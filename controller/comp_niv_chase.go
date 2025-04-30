@@ -26,7 +26,7 @@ func nivChase(
 
 	conf, _ := findPeriodicalConfigForTime(t, configs)
 	if conf == nil {
-		return controlComponent{isActive: false}
+		return INACTIVE_CONTROL_COMPONENT
 	}
 
 	imbalancePrice, imbalanceVolume, gotPrediction := predictImbalance(t, conf.Niv.Prediction, modoClient)
@@ -37,7 +37,7 @@ func nivChase(
 			imbalancePrice = defaultImbalancePrice
 		} else {
 			// We don't have any pricing data available, so do nothing
-			return controlComponent{isActive: false}
+			return INACTIVE_CONTROL_COMPONENT
 		}
 	}
 
@@ -91,11 +91,23 @@ func nivChase(
 	)
 
 	// Battery power constraints are applied upstream...
-	return controlComponent{
-		name:         "niv_chase",
-		isActive:     (targetPower > 0) || (targetPower < 0),
-		targetPower:  targetPower,
-		controlPoint: controlPointBess,
+
+	if targetPower > 0 {
+		return controlComponent{
+			name:         "niv_chase",
+			status:       componentStatusActiveAllowMoreDischarge,
+			targetPower:  targetPower,
+			controlPoint: controlPointBess,
+		}
+	} else if targetPower < 0 {
+		return controlComponent{
+			name:         "niv_chase",
+			status:       componentStatusActiveAllowMoreCharge,
+			targetPower:  targetPower,
+			controlPoint: controlPointBess,
+		}
+	} else {
+		return INACTIVE_CONTROL_COMPONENT
 	}
 }
 
