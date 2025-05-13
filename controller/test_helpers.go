@@ -41,12 +41,12 @@ func mustParseTime(str string) time.Time {
 	return time
 }
 
-// componentsEquivalent returns true if c1 and c2 are equivalent
+// componentsEquivalent returns true if c1 and c2 are equivalent. If the components are inactive then they are deemed equivalent whether or not other fields match.
 func componentsEquivalent(c1, c2 controlComponent) bool {
-	if c1.isActive != c2.isActive {
+	if c1.status != c2.status {
 		return false
 	}
-	if !c1.isActive {
+	if c1.status == componentStatusInactive {
 		return true
 	}
 	if c1.controlPoint != c2.controlPoint {

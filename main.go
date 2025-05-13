@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
+	"github.com/cepro/besscontroller/axle"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
@@ -161,7 +162,7 @@ func main() {
 	}
 
 	// Create modo client
-	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages"
+	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages" when it first runs up
 	modoClient := modo.New(http.Client{Timeout: time.Second * 10})
 	go modoClient.Run(ctx, time.Second*30)
 
@@ -190,7 +191,18 @@ func main() {
 	})
 	go ctrl.Run(ctx, time.NewTicker(CONTROL_LOOP_PERIOD).C)
 
-	// the meter and bess readings are sent to both the controller and the data platform
+	// Create the Axle API if it's configured
+	var axleAPI *axle.Axle
+	if config.Axle != nil {
+		axleAPI = axle.New(ctrl.AxleSchedules, config.Axle.Host, config.Controller.SiteMeterID, config.Controller.BessMeterID)
+		go axleAPI.Run(
+			ctx,
+			time.Second*time.Duration(config.Axle.TelemetryUploadIntervalSecs),
+			time.Second*time.Duration(config.Axle.SchedulePollIntervalSecs),
+		)
+	}
+
+	// fan out the meter and bess readings to various modules: the controller, the data platform, and Axle API
 	go func() {
 		for {
 			select {
@@ -201,28 +213,23 @@ func main() {
 
 					sendIfNonBlocking(ctrl.SiteMeterReadings, meterReading, "Controller site meter readings")
 
-					// If the bess is emulated then for every 'real' site meter reading we generate a new emulated meter reading, which shows what the site power would be
-					// if the bess was really delivering power
 					if config.Controller.Emulation.BessIsEmulated {
-						emulatedPower := ctrl.EmulatedSitePower()
-						emulatedReading := telemetry.MeterReading{
-							ReadingMeta: telemetry.ReadingMeta{
-								ID:       uuid.New(),
-								DeviceID: config.Controller.Emulation.EmulatedSiteMeter,
-								Time:     meterReading.Time,
-							},
-							PowerTotalActive: &emulatedPower,
-						}
-						sendIfNonBlocking(meterReadings, emulatedReading, "Emulated meter reading")
+						sendIfNonBlocking(meterReadings, emulateSiteMeterReading(config.Controller.Emulation.EmulatedSiteMeter, ctrl, meterReading), "Emulated meter reading")
 					}
 				}
 				for _, dataPlatform := range dataPlatforms {
 					sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, fmt.Sprintf("Dataplatform meter readings (%s)", dataPlatform.BufferRepositoryFilename()))
 				}
+				if axleAPI != nil {
+					sendIfNonBlocking(axleAPI.MeterReadings, meterReading, "Axle meter readings")
+				}
 			case bessReading := <-bess.Telemetry():
 				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
 				for _, dataPlatform := range dataPlatforms {
 					sendIfNonBlocking(dataPlatform.BessReadings, bessReading, fmt.Sprintf("Dataplatform bess readings (%s)", dataPlatform.BufferRepositoryFilename()))
+				}
+				if axleAPI != nil {
+					sendIfNonBlocking(axleAPI.BessReadings, bessReading, "Axle bess readings")
 				}
 			}
 		}
@@ -239,6 +246,20 @@ func main() {
 
 	slog.Info("Exiting")
 	os.Exit(0)
+}
+
+// emulateSiteMeter generates a new emulated meter reading for every 'real' site meter reading. The emulated reading shows what the site power would be
+// if the bess was really delivering power.
+func emulateSiteMeterReading(emulatedSiteMeter uuid.UUID, ctrl *controller.Controller, meterReading telemetry.MeterReading) telemetry.MeterReading {
+	emulatedPower := ctrl.EmulatedSitePower()
+	return telemetry.MeterReading{
+		ReadingMeta: telemetry.ReadingMeta{
+			ID:       uuid.New(),
+			DeviceID: emulatedSiteMeter,
+			Time:     meterReading.Time,
+		},
+		PowerTotalActive: &emulatedPower,
+	}
 }
 
 // sendIfNonBlocking attempts to send the given value onto the given channel, but will only do so if the operation

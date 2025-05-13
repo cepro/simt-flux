@@ -8,9 +8,14 @@ type Period struct {
 	End   time.Time
 }
 
-// Equal returns true if the two period instances contain the start and end times.
+// Equal returns true if the two period instances contain the same start and end times.
 // These may be in different timezones but must be at the same instant in time.
 // See the documentation on the Time type for the pitfalls of using == with Time values; most code should use Equal instead.
 func (p Period) Equal(p2 Period) bool {
-	return p.Start.Equal(p2.End) && p.End.Equal(p2.End)
+	return p.Start.Equal(p2.Start) && p.End.Equal(p2.End)
+}
+
+// Contains returns true if `t` is within the Period, inclusive of `Start` but exclusive of `End`.
+func (p Period) Contains(t time.Time) bool {
+	return (p.Start.Before(t) && p.End.After(t)) || p.Start.Equal(t)
 }

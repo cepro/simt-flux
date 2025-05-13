@@ -69,6 +69,13 @@ dataPlatforms:
       anonKeyEnvVar: SUPABASE_ANON_KEY_PROD
       userKeyEnvVar: SUPABASE_USER_KEY_PROD
 
+axle:
+  host: "www.placeholder.energy"  # TODO
+  usernameEnvVar: AXLE_USERNAME
+  passwordEnvVar: AXLE_PASSWORD
+  telemetryUploadIntervalSecs: 60
+  schedulePollIntervalSecs: 60
+
 controller:
   siteMeter: 9fe7c7fa-f0f7-4998-b9bc-330adab2ec4c
   bessMeter: 8333c68b-d5e0-4caf-94f7-0e97c78b913a
@@ -106,6 +113,12 @@ controller:
         end: 23:59:59:Europe/London
     chargeToSoe: []
     dischargeToSoe: []
+      # To build a baseline we need to make sure there is enough headroom in the SoE before midnight for a 00:00 - 03:00 charge
+      # - period:
+      #     days: all:Europe/London
+      #     start: 22:00:00:Europe/London
+      #     end: 23:59:59:Europe/London
+      #   soe: 1040 
     dynamicPeakDischarge:
       - 
         period:

@@ -51,16 +51,15 @@ func TestDynamicPeakDischarge(test *testing.T) {
 		expectedControlComponent controlComponent
 	}
 
-	inactiveComponent := controlComponent{isActive: false}
 	maxDischargeComponent := controlComponent{
 		name:         "dynamic_peak_discharge",
-		isActive:     true,
+		status:       componentStatusActiveGreedy,
 		targetPower:  math.Inf(1),
 		controlPoint: controlPointBess,
 	}
 	importAvoidanceComponent := controlComponent{
 		name:         "dynamic_peak_discharge",
-		isActive:     true,
+		status:       componentStatusActiveGreedy,
 		targetPower:  0,
 		controlPoint: controlPointSite,
 	}
@@ -75,7 +74,7 @@ func TestDynamicPeakDischarge(test *testing.T) {
 			maxBessDischarge:         100,
 			imbalanceVolume:          0.0,
 			prioritiseResidualLoad:   false,
-			expectedControlComponent: inactiveComponent,
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Surplus energy: discharge at max rate",
@@ -97,7 +96,7 @@ func TestDynamicPeakDischarge(test *testing.T) {
 			maxBessDischarge:         400,
 			imbalanceVolume:          -10,
 			prioritiseResidualLoad:   false,
-			expectedControlComponent: inactiveComponent,
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Scarce energy, long system, prioritise resid. load: discharge to match load",
@@ -213,64 +212,62 @@ func TestDynamicPeakApproach(test *testing.T) {
 		expectedControlComponent controlComponent
 	}
 
-	inactiveComponent := controlComponent{isActive: false}
-
 	subTests := []subTest{
 		{
 			name:                     "Outside of peak approach: nothing happens",
 			t:                        mustParseTime("2024-09-05T09:25:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: inactiveComponent,
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Within 'encourage zone' but short: nothing happens",
 			t:                        mustParseTime("2024-09-05T13:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          100,
-			expectedControlComponent: inactiveComponent,
+			expectedControlComponent: INACTIVE_CONTROL_COMPONENT,
 		},
 		{
 			name:                     "Within 'encourage zone' and long: charge 1",
 			t:                        mustParseTime("2024-09-05T12:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -125.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -125.0, controlPoint: controlPointBess},
 		},
 		{
 			name:                     "Within 'encourage zone' and long: charge 2",
 			t:                        mustParseTime("2024-09-05T13:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -875.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -875.0, controlPoint: controlPointBess},
 		},
 		{
 			name:                     "Within 'force zone' and short: charge to force curve",
 			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -250.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -250.0, controlPoint: controlPointBess},
 		},
 		{
 			name:                     "Within 'force zone' and short: charge to force curve 2",
 			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
 			bessSoe:                  10.0,
 			imbalanceVolume:          100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -220.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -220.0, controlPoint: controlPointBess},
 		},
 		{
 			name:                     "Within 'force zone' and long: charge to encourage curve",
 			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -1625.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -1625.0, controlPoint: controlPointBess},
 		},
 		{
 			name:                     "Within 'encourage zone' and short: charge",
 			t:                        mustParseTime("2024-09-05T12:40:00+01:00"),
 			bessSoe:                  0.0,
 			imbalanceVolume:          -100,
-			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", isActive: true, targetPower: -125.0, controlPoint: controlPointBess},
+			expectedControlComponent: controlComponent{name: "dynamic_peak_approach", status: componentStatusActiveAllowMoreCharge, targetPower: -125.0, controlPoint: controlPointBess},
 		},
 	}
 	for _, subTest := range subTests {
