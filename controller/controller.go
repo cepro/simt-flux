@@ -361,7 +361,7 @@ func (c *Controller) calculateBessPower(component controlComponent) (float64, ac
 		component.targetPower, sitePowerLimitsActive = limitValue(component.targetPower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
 
 	} else {
-		panic(fmt.Sprintf("Unknown control point: %v", component.controlPoint))
+		panic(fmt.Sprintf("Unknown control point: %v for component: '%+v'", component.controlPoint, component))
 	}
 
 	bessTargetPower := 0.0
