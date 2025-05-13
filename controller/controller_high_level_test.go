@@ -309,11 +309,11 @@ func TestController(test *testing.T) {
 		{time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
 		{time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
 
-		// Skip to a time when both 'export avoidance' and 'charge to min' are active - the controller should prioritise 'charge to min'
+		// Skip to a time when both 'export avoidance' and 'charge to soe' are active - the controller should use the 'charge to min' value as a minimum but allow 'export avoidance' to specify a larger charge
 		{time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
 		{time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
-		{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -100},
 
 		// Ensure that the maximum bess soe is honored (import and export avoidance are active for these test points)
 		{time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50},
