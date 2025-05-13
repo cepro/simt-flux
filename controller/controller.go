@@ -284,7 +284,7 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 			break // the last component was 'greedy' so no further (lower-priority) components can change what we will do
 		}
 
-		if components[i].status == componentStatusInactive {
+		if components[i].status == componentStatusInactive || components[i].status == componentStatus("") {
 			continue // this component is inactive, but the next one might be active
 		}
 

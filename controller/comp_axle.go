@@ -12,7 +12,7 @@ import (
 func axleSchedule(t time.Time, schedule axle.Schedule, sitePower, lastTargetPower float64) controlComponent {
 	scheduleItem := schedule.FirstItemAt(t)
 	if scheduleItem == nil {
-		return controlComponent{}
+		return INACTIVE_CONTROL_COMPONENT
 	}
 
 	if scheduleItem.Action == "charge_max" {
@@ -47,5 +47,5 @@ func axleSchedule(t time.Time, schedule axle.Schedule, sitePower, lastTargetPowe
 	// TODO: the avoid_import and avoid_export have been a bit tricky to do properly because they need to signal to later components that they can't import/export,
 
 	slog.Error("Unknown action type from Axle", "action_type", scheduleItem.Action)
-	return controlComponent{}
+	return INACTIVE_CONTROL_COMPONENT
 }
