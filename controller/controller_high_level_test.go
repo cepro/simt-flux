@@ -242,112 +242,112 @@ func TestController(test *testing.T) {
 	}
 	// TODO: this array of test points covers many test scenarios, it would be better if this was refactored so that each scenario was kept more separate somehow
 	testpoints := []testpoint{
-		// // Start off with zero consumer demand, expecting zero power from the battery
-		// {time: mustParseTime("2023-09-12T09:00:00+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:01+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:02+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:03+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
+		// Start off with zero consumer demand, expecting zero power from the battery
+		{time: mustParseTime("2023-09-12T09:00:00+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:01+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:02+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:03+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
 
-		// // A period of increasing demand whilst we are in 'import avoidance' - the controller should use the battery to match the demand - which should reduce site import
-		// {time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
-		// {time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
-		// {time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
-		// {time: mustParseTime("2023-09-12T09:00:07+01:00"), bessSoe: 145, consumerDemand: 100, expectedBessTargetPower: 100},
+		// A period of increasing demand whilst we are in 'import avoidance' - the controller should use the battery to match the demand - which should reduce site import
+		{time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
+		{time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
+		{time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
+		{time: mustParseTime("2023-09-12T09:00:07+01:00"), bessSoe: 145, consumerDemand: 100, expectedBessTargetPower: 100},
 
-		// // A period where the demand exceeds the batteries power capability whilst we are in 'import avoidance' - the controller should stick to the maximum power of the battery
-		// {time: mustParseTime("2023-09-12T09:00:08+01:00"), bessSoe: 143, consumerDemand: 110, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T09:00:09+01:00"), bessSoe: 141, consumerDemand: 120, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T09:00:10+01:00"), bessSoe: 139, consumerDemand: 106, expectedBessTargetPower: 105},
+		// A period where the demand exceeds the batteries power capability whilst we are in 'import avoidance' - the controller should stick to the maximum power of the battery
+		{time: mustParseTime("2023-09-12T09:00:08+01:00"), bessSoe: 143, consumerDemand: 110, expectedBessTargetPower: 105},
+		{time: mustParseTime("2023-09-12T09:00:09+01:00"), bessSoe: 141, consumerDemand: 120, expectedBessTargetPower: 105},
+		{time: mustParseTime("2023-09-12T09:00:10+01:00"), bessSoe: 139, consumerDemand: 106, expectedBessTargetPower: 105},
 
-		// // A period of decreasing demand whilst we are in 'import avoidance' - the controller should back off to match the demand
-		// {time: mustParseTime("2023-09-12T09:00:11+01:00"), bessSoe: 144, consumerDemand: 50, expectedBessTargetPower: 50},
-		// {time: mustParseTime("2023-09-12T09:00:12+01:00"), bessSoe: 142, consumerDemand: 25, expectedBessTargetPower: 25},
+		// A period of decreasing demand whilst we are in 'import avoidance' - the controller should back off to match the demand
+		{time: mustParseTime("2023-09-12T09:00:11+01:00"), bessSoe: 144, consumerDemand: 50, expectedBessTargetPower: 50},
+		{time: mustParseTime("2023-09-12T09:00:12+01:00"), bessSoe: 142, consumerDemand: 25, expectedBessTargetPower: 25},
 
-		// // Another period of zero demand whilst we are in 'import avoidance'
-		// {time: mustParseTime("2023-09-12T09:00:13+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:14+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:15+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+		// Another period of zero demand whilst we are in 'import avoidance'
+		{time: mustParseTime("2023-09-12T09:00:13+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:14+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:15+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
 
-		// // A period of solar surplus whilst we are in 'import avoidance' - the controller should allow this to be exported
-		// {time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
+		// A period of solar surplus whilst we are in 'import avoidance' - the controller should allow this to be exported
+		{time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
 
-		// // Skup to a time when we are in 'import avoidance' but it's at the weekend so it shouldn't apply
-		// {time: mustParseTime("2023-09-09T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 0},
+		// Skup to a time when we are in 'import avoidance' but it's at the weekend so it shouldn't apply
+		{time: mustParseTime("2023-09-09T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 0},
 
-		// // Currently a discontinuity in time is not an issue for the controller...
+		// Currently a discontinuity in time is not an issue for the controller...
 
-		// // Skip to a time where we are outside of any configured acivity, the controller should do nothing
-		// {time: mustParseTime("2023-09-12T10:00:16+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:17+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:18+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:19+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
+		// Skip to a time where we are outside of any configured acivity, the controller should do nothing
+		{time: mustParseTime("2023-09-12T10:00:16+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:17+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:18+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T10:00:19+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
 
-		// // Skip to a time wher we are in 'export avoidance' - the controller should prevent export
-		// {time: mustParseTime("2023-09-12T11:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T11:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T11:00:02+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: -10},
-		// {time: mustParseTime("2023-09-12T11:00:03+01:00"), bessSoe: 101, consumerDemand: -50, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
-		// {time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
+		// Skip to a time wher we are in 'export avoidance' - the controller should prevent export
+		{time: mustParseTime("2023-09-12T11:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T11:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T11:00:02+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: -10},
+		{time: mustParseTime("2023-09-12T11:00:03+01:00"), bessSoe: 101, consumerDemand: -50, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
+		{time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
 
-		// // Skip to a time wher we are in 'charge to soe' - the controller should charge to reach the target soe
-		// {time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+		// Skip to a time wher we are in 'charge to soe' - the controller should charge to reach the target soe
+		{time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
 
-		// // Skip to a time wher we are in 'discharge to soe' - the controller should discharge to reach the target soe
-		// {time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
-		// {time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+		// Skip to a time wher we are in 'discharge to soe' - the controller should discharge to reach the target soe
+		{time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+		{time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
+		{time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
 
-		// // Skup to a time when we are in 'discharge to soe' but it's at the weekend so it shouldn't apply
-		// {time: mustParseTime("2023-09-10T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+		// Skup to a time when we are in 'discharge to soe' but it's at the weekend so it shouldn't apply
+		{time: mustParseTime("2023-09-10T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
 
-		// // Skip to a time when both 'export avoidance' and 'import avoidance' are active
-		// {time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
-		// {time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
+		// Skip to a time when both 'export avoidance' and 'import avoidance' are active
+		{time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
+		{time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
 
-		// // Skip to a time when both 'export avoidance' and 'charge to min' are active - the controller should prioritise 'charge to min'
-		// {time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
+		// Skip to a time when both 'export avoidance' and 'charge to min' are active - the controller should prioritise 'charge to min'
+		{time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
+		{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
 
-		// // Ensure that the maximum bess soe is honored (import and export avoidance are active for these test points)
-		// {time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T21:00:01+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:00:02+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:00:03+01:00"), bessSoe: 181, consumerDemand: -50, expectedBessTargetPower: 0},
-		// // Ensure that the minimum bess soe is honored (import and export avoidance are active for these test points)
-		// {time: mustParseTime("2023-09-12T21:30:00+01:00"), bessSoe: 21, consumerDemand: 10, expectedBessTargetPower: 10},
-		// {time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
+		// Ensure that the maximum bess soe is honored (import and export avoidance are active for these test points)
+		{time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T21:00:01+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:00:02+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:00:03+01:00"), bessSoe: 181, consumerDemand: -50, expectedBessTargetPower: 0},
+		// Ensure that the minimum bess soe is honored (import and export avoidance are active for these test points)
+		{time: mustParseTime("2023-09-12T21:30:00+01:00"), bessSoe: 21, consumerDemand: 10, expectedBessTargetPower: 10},
+		{time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
+		{time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
 
-		// // Test NIV chasing...
+		// Test NIV chasing...
 
-		// // Imbalance price is very attractive for charge - DUoS charges plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
+		// Imbalance price is very attractive for charge - DUoS charges plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
 
-		// // Imbalance price is very attractive for discharge - DUoS charges plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
+		// Imbalance price is very attractive for discharge - DUoS charges plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
 
-		// // Imbalance price is attractive for discharge - DUoS charges plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 105}, // here we are limited by the discharge power limits of the BESS
+		// Imbalance price is attractive for discharge - DUoS charges plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 105}, // here we are limited by the discharge power limits of the BESS
 
-		// // Imbalance price is attractive for charge - DUoS charges plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -60},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -30, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -80},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -60, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100}, // here we are limited by the charge power limits of the BESS
+		// Imbalance price is attractive for charge - DUoS charges plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -60},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -30, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -80},
+		{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -60, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100}, // here we are limited by the charge power limits of the BESS
 
 		// Test that the controller follows the "Axle Schedule" and does a "charge_max", which has priorty over all the other control components
 		{time: mustParseTime("2023-09-13T09:00:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50}, // limit is from the site import constraint
