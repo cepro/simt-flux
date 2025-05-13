@@ -110,11 +110,12 @@ func (a *Axle) processSchedule() {
 
 	if !a.latestSchedule.Equal(schedule, false) {
 		a.logger.Info("Pulled new schedule from Axle", "schedule", schedule)
-		a.latestSchedule = schedule
-		a.schedules <- schedule
 	} else {
 		a.logger.Info("Pulled schedule from Axle, but it hasn't changed")
 	}
+	// No harm in sending the schedule even if it hasn't changed - if the reciever wants to check to for changes they can
+	a.latestSchedule = schedule
+	a.schedules <- schedule
 
 }
 
