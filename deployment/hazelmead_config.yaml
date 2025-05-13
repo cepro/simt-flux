@@ -157,19 +157,20 @@ controller:
           chargeCurve:
             points: [
               { "x": -99999, "y": 1800 },
-              { "x": 4, "y": 1800 },
-              { "x": 6, "y": 1000 },
+              { "x": -2, "y": 1800 },
+              { "x": 2, "y": 1100 },
+              { "x": 6, "y": 1100 },
               { "x": 12, "y": 0 }
             ]
           dischargeCurve:
             points: [
               { "x": 8, "y": 1800 },
-              { "x": 18, "y": 1000 },
-              { "x": 25, "y": 1000 },
+              { "x": 18, "y": 1100 },
+              { "x": 25, "y": 1100 },
               { "x": 35, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 6
+          curveShiftLong: 4
           curveShiftShort: 2
           defaultPricing: []
           pricePrediction:
