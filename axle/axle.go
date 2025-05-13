@@ -121,60 +121,6 @@ func (a *Axle) processSchedule() {
 
 var hardCodedResponse = `
 [
-	{
-        "start_timestamp": "2025-04-29T20:00:00+01:00",
-        "end_timestamp": "2025-04-29T20:05:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-	{
-        "start_timestamp": "2025-04-29T20:05:00+01:00",
-        "end_timestamp": "2025-04-29T20:10:00+01:00",
-        "action": "avoid_import",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-04-30T00:00:00+01:00",
-        "end_timestamp": "2025-04-30T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-01T00:00:00+01:00",
-        "end_timestamp": "2025-05-01T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-02T00:00:00+01:00",
-        "end_timestamp": "2025-05-02T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-03T00:00:00+01:00",
-        "end_timestamp": "2025-05-03T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-04T00:00:00+01:00",
-        "end_timestamp": "2025-05-04T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-05T00:00:00+01:00",
-        "end_timestamp": "2025-05-05T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
-    {
-        "start_timestamp": "2025-05-06T00:00:00+01:00",
-        "end_timestamp": "2025-05-06T03:00:00+01:00",
-        "action": "charge_max",
-        "allow_deviation": false
-    },
     {
         "start_timestamp": "2025-05-07T00:00:00+01:00",
         "end_timestamp": "2025-05-07T03:00:00+01:00",
@@ -182,10 +128,22 @@ var hardCodedResponse = `
         "allow_deviation": false
     },
     {
+        "start_timestamp": "2025-05-07T17:00:00+01:00",
+        "end_timestamp": "2025-05-07T19:00:00+01:00",
+        "action": "avoid_export",
+        "allow_deviation": false
+    },
+    {
         "start_timestamp": "2025-05-08T00:00:00+01:00",
         "end_timestamp": "2025-05-08T03:00:00+01:00",
-        "action": "avoid_import",
-        "allow_deviation": true
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-08T17:00:00+01:00",
+        "end_timestamp": "2025-05-08T19:00:00+01:00",
+        "action": "avoid_export",
+        "allow_deviation": false
     },
     {
         "start_timestamp": "2025-05-09T00:00:00+01:00",
@@ -200,10 +158,22 @@ var hardCodedResponse = `
         "allow_deviation": false
     },
     {
+        "start_timestamp": "2025-05-10T17:00:00+01:00",
+        "end_timestamp": "2025-05-10T19:00:00+01:00",
+        "action": "avoid_export",
+        "allow_deviation": false
+    },
+    {
         "start_timestamp": "2025-05-11T00:00:00+01:00",
         "end_timestamp": "2025-05-11T03:00:00+01:00",
-        "action": "avoid_import",
-        "allow_deviation": true
+        "action": "charge_max",
+        "allow_deviation": false
+    },
+    {
+        "start_timestamp": "2025-05-11T17:00:00+01:00",
+        "end_timestamp": "2025-05-11T19:00:00+01:00",
+        "action": "avoid_export",
+        "allow_deviation": false
     },
     {
         "start_timestamp": "2025-05-12T00:00:00+01:00",
@@ -292,6 +262,54 @@ var hardCodedResponse = `
     {
         "start_timestamp": "2025-05-26T00:00:00+01:00",
         "end_timestamp": "2025-05-26T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-27T00:00:00+01:00",
+        "end_timestamp": "2025-05-27T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-28T00:00:00+01:00",
+        "end_timestamp": "2025-05-28T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-29T00:00:00+01:00",
+        "end_timestamp": "2025-05-29T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-30T00:00:00+01:00",
+        "end_timestamp": "2025-05-30T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-05-31T00:00:00+01:00",
+        "end_timestamp": "2025-05-31T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-06-01T00:00:00+01:00",
+        "end_timestamp": "2025-06-01T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-06-02T00:00:00+01:00",
+        "end_timestamp": "2025-06-02T03:00:00+01:00",
+        "action": "avoid_import",
+        "allow_deviation": true
+    },
+    {
+        "start_timestamp": "2025-06-03T00:00:00+01:00",
+        "end_timestamp": "2025-06-03T03:00:00+01:00",
         "action": "avoid_import",
         "allow_deviation": true
     }
