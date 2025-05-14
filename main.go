@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	CONTROL_LOOP_PERIOD = time.Second * 5
+	CONTROL_LOOP_PERIOD = time.Second * 4
 )
 
 type Bess interface {
