@@ -483,6 +483,12 @@ func TestController(test *testing.T) {
 					Action:         "avoid_export",
 					AllowDeviation: false,
 				},
+				{
+					Start:          mustParseTime("2023-09-13T13:00:00+01:00"),
+					End:            mustParseTime("2023-09-13T13:30:00+01:00"),
+					Action:         "avoid_import",
+					AllowDeviation: false,
+				},
 			},
 		}
 		chargeToSoePeriods := []config.DayedPeriodWithSoe{
@@ -492,14 +498,45 @@ func TestController(test *testing.T) {
 					Days: alldays,
 					ClockTimePeriod: timeutils.ClockTimePeriod{
 						Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
-						End:   timeutils.ClockTime{Hour: 11, Minute: 05, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 11, Minute: 30, Second: 0, Location: london},
 					},
+				},
+			},
+		}
+		nivChasePeriods := []config.DayedPeriodWithNIV{
+			{
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+					},
+				},
+				Niv: config.NivConfig{
+					ChargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: -9999, Y: 180},
+							{X: 0, Y: 180},
+							{X: 20, Y: 0},
+						},
+					},
+					DischargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: 30, Y: 180},
+							{X: 40, Y: 0},
+							{X: 9999, Y: 0},
+						},
+					},
+					CurveShiftLong:  0,
+					CurveShiftShort: 0,
+					DefaultPricing:  []config.TimedRate{},
 				},
 			},
 		}
 
 		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
 		config.ChargeToSoePeriods = chargeToSoePeriods
+		config.NivChasePeriods = nivChasePeriods
 
 		ctrl := New(config)
 		go ctrl.Run(ctx, ctrlTickerChan)
@@ -540,12 +577,18 @@ func TestController(test *testing.T) {
 			{time: mustParseTime("2023-09-13T11:03:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // we would like to discharge to match the consumer demand, but there is no SoE left
 
 			// Test the avoid_export command
-			// {time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
+			{time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
 			{time: mustParseTime("2023-09-13T12:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as imports are okay
 			{time: mustParseTime("2023-09-13T12:03:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -10}, // charge to avoid export
 
 			// Outside of configured times - do nothing
 			{time: mustParseTime("2023-09-13T12:07:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},
+
+			// Test the avoid_import schedule in combination with NIV chasing to check that we can export if prices are good
+			{time: mustParseTime("2023-09-13T13:00:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: 0, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 10},    // discharge to prevent imports for the consumerDemand
+			{time: mustParseTime("2023-09-13T13:20:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: 999, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 105}, // discharge above the neccesary 10kW in order to capitalise on NIV chasing opportunity
+			{time: mustParseTime("2023-09-13T13:25:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: -999, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 10}, // even though the NIV chase opportunity is great for charging we can't because of the axle schedule to avoid imports
+
 		}
 
 		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)

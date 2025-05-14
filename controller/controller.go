@@ -287,6 +287,8 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 			continue // nothing to do with this component, move onto the next one
 		}
 
+		// slog.Info("Processing control component", "name", component.name, "target_power", strForPointerToFloat64(component.targetPower), "min_target_power", strForPointerToFloat64(component.minTargetPower), "max_target_power", strForPointerToFloat64(component.minTargetPower))
+
 		// If this component specifies a target power then update the `power` if it's within any existing bounds
 		if component.targetPower != nil {
 			if ((minPower == nil) || (*component.targetPower >= *minPower)) &&
