@@ -344,12 +344,12 @@ controller:
           volumeCutoff: 150000
           timeCutoffSecs: 900
     nivChase:
-      - period:
-          days: weekdays:Europe/London
-          start: 00:00:00:Europe/London
-          end: 23:59:59:Europe/London
+      - period:  # Between 00:00 and 03:00 we should be more inclined to discharge as we are flexed by Axle
+            days: weekdays:Europe/London
+            start: 00:00:00:Europe/London
+            end: 03:00:00:Europe/London
         niv:
-          chargeCurve:
+          chargeCurve: &weekdayChargeCurve  # this won't be used as charging is not permitted by the Axle schedule
             points: [
               { "x": -99999, "y": 1800 },
               { "x": -2, "y": 1800 },
@@ -357,18 +357,17 @@ controller:
               { "x": 6, "y": 1100 },
               { "x": 12, "y": 0 }
             ]
-          dischargeCurve:
-            points: [
-              { "x": 8, "y": 1800 },
-              { "x": 18, "y": 1100 },
-              { "x": 25, "y": 1100 },
-              { "x": 35, "y": 0 },
+          dischargeCurve: &weekdayDischargeCurve
+            points: [  # Discharge pretty much whenever the system is short in this period - this may need tweaking
+              { "x": 10, "y": 1800 },
+              { "x": 10, "y": 1100 },
+              { "x": 18, "y": 0 },
               { "x": 99999, "y": 0 }
             ]
-          curveShiftLong: 4
-          curveShiftShort: 2
+          curveShiftLong: 99  # Don't discharge when we're long (this won't activate charging as the Axle schedule prevents charging)
+          curveShiftShort: 6
           defaultPricing: []
-          pricePrediction:
+          pricePrediction: &pricePrediction
             whenShort:
               allowPrediction: true
               volumeCutoff: 250000
@@ -377,6 +376,17 @@ controller:
               allowPrediction: true
               volumeCutoff: 150000
               timeCutoffSecs: 900
+      - period:
+          days: weekdays:Europe/London
+          start: 03:00:00:Europe/London
+          end: 23:59:59:Europe/London
+        niv:
+          chargeCurve: *weekdayChargeCurve
+          dischargeCurve: *weekdayDischargeCurve
+          curveShiftLong: 4
+          curveShiftShort: 2
+          defaultPricing: []
+          pricePrediction: *pricePrediction
       - period:
           days: weekends:Europe/London
           start: 00:00:00:Europe/London
@@ -399,15 +409,7 @@ controller:
           curveShiftLong: 0
           curveShiftShort: 0
           defaultPricing: []
-          pricePrediction:
-            whenShort:
-              allowPrediction: true
-              volumeCutoff: 250000
-              timeCutoffSecs: 900
-            whenLong:
-              allowPrediction: true
-              volumeCutoff: 150000
-              timeCutoffSecs: 900
+          pricePrediction: *pricePrediction
 
   ratesImport:
     - # Unify supplier import
