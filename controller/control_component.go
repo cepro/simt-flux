@@ -31,7 +31,7 @@ func strForPointerToFloat64(p *float64) string {
 }
 
 // chargingControlComponentThatAllowsMoreCharge returns a control component which charges at the given power level (which must be negative to indicate a charge), and
-// also allows any lower-priority components that wish to charge even faster to do so.
+// also allows any lower-priority components that wish to charge even faster to do so. It doesn't allow lower-priority components to charge at a slower rate or discharge.
 func chargingControlComponentThatAllowsMoreCharge(name string, power float64) controlComponent {
 
 	if power > 0 {
@@ -47,7 +47,7 @@ func chargingControlComponentThatAllowsMoreCharge(name string, power float64) co
 }
 
 // dischargingControlComponentThatAllowsMoreCharge returns a control component which charges at the given power level (which must be positive to indicate a discharge), and
-// also allows any lower-priority components that wish to discharge even faster to do so.
+// also allows any lower-priority components that wish to discharge even faster to do so. It doesn't allow lower-priority components to discharge at a slower rate or charge.
 func dischargingControlComponentThatAllowsMoreDischarge(name string, power float64) controlComponent {
 
 	if power < 0 {

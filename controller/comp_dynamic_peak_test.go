@@ -64,9 +64,8 @@ func TestDynamicPeakDischarge(test *testing.T) {
 		maxTargetPower: nil,
 	}
 	importAvoidanceComponent := controlComponent{
-		name: "dynamic_peak_discharge",
-		// TODO: actual vals
-		targetPower:    pointerToFloat64(10),
+		name:           "dynamic_peak_discharge",
+		targetPower:    pointerToFloat64(10), // these values are defined by the `sitePower` in the sub test (currently always 10kW)
 		minTargetPower: pointerToFloat64(10),
 		maxTargetPower: pointerToFloat64(10),
 	}
