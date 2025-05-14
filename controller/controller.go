@@ -267,7 +267,7 @@ type prioritisedAction struct {
 }
 
 // prioritiseControlComponents runs through all the given components and decides the appropriate action to take.
-// Some components are don't allow any lower-priority components to change anything, whereas others will allow lower-priority
+// Some components don't allow any lower-priority components to change anything, whereas others will allow lower-priority
 // components to adjust the power level - this is controlled by min and max power limits on each component.
 func (c *Controller) prioritiseControlComponents(components []controlComponent) prioritisedAction {
 
@@ -277,16 +277,14 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 	var minPower *float64
 	var maxPower *float64
 
-	activeComponentNames := ""
+	activeComponentNames := "" // Keep track of the names of any active components for debug logging
 
 	for _, component := range components {
-
-		fmt.Printf("Processing component: %s\n", component.str())
 
 		if component.isActive() {
 			activeComponentNames = fmt.Sprintf("%s,%s", activeComponentNames, component.name)
 		} else {
-			continue
+			continue // nothing to do with this component, move onto the next one
 		}
 
 		// If this component specifies a target power then update the `power` if it's within any existing bounds
@@ -350,8 +348,6 @@ func (c *Controller) constrainedBessPower(rawTargetPower float64) (float64, acti
 	// Apply the physical power limits of the BESS inverter
 	constrainedTargetPower, bessPowerLimitsActive1 := limitValue(rawTargetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
 
-	fmt.Printf("constrained power %f to %f with limits %f/%f\n", rawTargetPower, constrainedTargetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
-
 	// The target power defines the power level at the BESS inverter, but we must ensure that we don't exceed the site connection limits.
 	bessPowerDiff := constrainedTargetPower - c.lastBessTargetPower
 	expectedSitePower := c.SitePower() - bessPowerDiff // Site power: positive is import, negative is export. Battery power: positive is discharge, negative is charge.
@@ -362,7 +358,7 @@ func (c *Controller) constrainedBessPower(rawTargetPower float64) (float64, acti
 		sitePowerLimitsActive = true
 	} else if expectedSitePower < -c.config.SiteExportPowerLimit {
 		// We would be exeeding the export limit - so instead set the target power so that it hits the export limit
-		err := -c.config.SiteExportPowerLimit - c.SitePower() // TODO: check this negative
+		err := -c.config.SiteExportPowerLimit - c.SitePower()
 		constrainedTargetPower = c.lastBessTargetPower - err
 		sitePowerLimitsActive = true
 	}
@@ -380,83 +376,12 @@ func (c *Controller) constrainedBessPower(rawTargetPower float64) (float64, acti
 		bessSoeLimitActive = true
 	}
 
-	fmt.Printf("returning bessPower %f\n", constrainedTargetPower)
-
 	return constrainedTargetPower, activeConstraints{
 		bessPower: bessPowerLimitsActive1,
 		sitePower: sitePowerLimitsActive,
 		bessSoe:   bessSoeLimitActive,
 	}
 }
-
-// // calculateBessPower returns the power level that should be sent to the BESS, given the target power at the given control point.
-// // Limits are applied to keep the SoE, BESS power, and site power within bounds. Details of which limits were activated in the
-// // calculation are returned.
-// func (c *Controller) calculateBessPower(targetPower float64, point controlPoint) (float64, activeConstraints) {
-
-// 	var bessPowerLimitsActive1 bool
-// 	var bessPowerLimitsActive2 bool
-// 	var sitePowerLimitsActive bool
-// 	var bessSoeLimitActive bool
-
-// 	if point == controlPointBess {
-
-// 		// Apply the physical power limits of the BESS
-// 		targetPower, bessPowerLimitsActive1 = limitValue(targetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
-
-// 		// If we want to control the power at the BESS inverter meter, then we must ensure that it will not exceed the site connection limits.
-// 		// If it will exceed the site limits, then we move the control point to the site level, and apply the site connection limits.
-// 		bessPowerDiff := targetPower - c.lastBessTargetPower
-// 		expectedSitePower := c.SitePower() - bessPowerDiff // Site power: positive is import, negative is export. Battery power: positive is discharge, negative is charge.
-// 		var limitedSitePower = 0.0
-// 		limitedSitePower, sitePowerLimitsActive = limitValue(expectedSitePower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
-// 		if sitePowerLimitsActive {
-// 			point = controlPointSite
-// 			targetPower = limitedSitePower
-// 		}
-// 	} else if point == controlPointSite {
-
-// 		// If we want to control the power at the site meter, then apply the site connection limits:
-// 		targetPower, sitePowerLimitsActive = limitValue(targetPower, c.config.SiteImportPowerLimit, c.config.SiteExportPowerLimit)
-
-// 	} else {
-// 		panic(fmt.Sprintf("Unknown control point: %v", point))
-// 	}
-
-// 	bessTargetPower := 0.0
-// 	if point == controlPointSite {
-// 		// Convert the requested site power control level into a bess power control level
-// 		err := targetPower - c.SitePower()
-// 		bessTargetPower = c.lastBessTargetPower - err
-// 	} else if point == controlPointBess {
-// 		bessTargetPower = targetPower
-// 	} else {
-// 		panic(fmt.Sprintf("Unknown control point: %v", point))
-// 	}
-
-// 	// Re-apply the BESS power limits here as it's possible that the conversion from site power control level to bess power control level may have produced
-// 	// a target power outside of the BESS' capabilities
-// 	bessTargetPower, bessPowerLimitsActive2 = limitValue(bessTargetPower, c.config.BessDischargePowerLimit, c.config.BessChargePowerLimit)
-
-// 	// TODO: there are some edge-case scenarios where the sign of the targetPower could change - e.g. if solar exports exceed the site limits.
-// 	// In that scenario we might just want to turn the battery off?
-
-// 	// Apply BESS SoE limits
-// 	if bessTargetPower > 0 && c.bessSoe.value <= c.config.BessSoeMin {
-// 		bessTargetPower = 0
-// 		bessSoeLimitActive = true
-// 	}
-// 	if bessTargetPower < 0 && c.bessSoe.value >= c.config.BessSoeMax {
-// 		bessTargetPower = 0
-// 		bessSoeLimitActive = true
-// 	}
-
-// 	return bessTargetPower, activeConstraints{
-// 		bessPower: bessPowerLimitsActive1 || bessPowerLimitsActive2,
-// 		sitePower: sitePowerLimitsActive,
-// 		bessSoe:   bessSoeLimitActive,
-// 	}
-// }
 
 // maxBessDischarge returns the maximum discharge rate of the BESS at this point in time.
 func (c *Controller) maxBessDischarge() float64 {
