@@ -170,6 +170,6 @@ func predictImbalance(t time.Time, nivPredictionConfig config.NivPredictionConfi
 		return modoImbalancePrice, modoImbalanceVolume, true
 	}
 
-	logger.Info("Cannot NIV chase: modo imbalance price is for an old settlement period", "current_settlement_period", currentSP, "price_settlement_period", modoImbalancePriceSP, "volume_settlement_period", modoImbalanceVolumeSP)
+	logger.Info("Cannot predict imbalance price: modo price is for an old settlement period", "current_settlement_period", currentSP, "price_settlement_period", modoImbalancePriceSP, "volume_settlement_period", modoImbalanceVolumeSP)
 	return 0.0, 0.0, false
 }

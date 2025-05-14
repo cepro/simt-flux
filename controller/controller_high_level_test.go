@@ -18,7 +18,7 @@ const (
 )
 
 // TestController is a high level (almost integration) test of the controller's ability
-// to issue BessCommands to service various control modes.
+// to issue BessCommands to perform the various control modes.
 func TestController(test *testing.T) {
 	london, err := time.LoadLocation("Europe/London")
 	if err != nil {
