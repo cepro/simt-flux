@@ -25,18 +25,27 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 
 	controlComponentName := "dynamic_peak_discharge"
 
+	// A control component that discharges as fast possible - this will be capped by the various downstream constraints
 	maxDischargeComponent := controlComponent{
-		name:         controlComponentName,
-		status:       componentStatusActiveGreedy,
-		targetPower:  math.Inf(1), // discharge as fast possible - this will be capped by the various downstream checks
-		controlPoint: controlPointBess,
+		name:           controlComponentName,
+		targetPower:    pointerToFloat64(math.Inf(1)),
+		minTargetPower: pointerToFloat64(math.Inf(1)),
+		maxTargetPower: pointerToFloat64(math.Inf(1)),
+	}
+
+	// A control component that doesn't request any discharge, but also don't allow any lower-priority control components to charge
+	dontAllowChargeComponent := controlComponent{
+		name:           "dynamic_peak_discharge",
+		targetPower:    nil,
+		minTargetPower: pointerToFloat64(0),
+		maxTargetPower: nil,
 	}
 
 	// availableEnergy is how much energy we have to discharge before we reach the target
 	availableEnergy := bessSoe - conf.TargetSoe
 	if availableEnergy <= 0 {
 		logger.Info("Dynamic peak doesn't have enough energy", "available_energy", availableEnergy)
-		return INACTIVE_CONTROL_COMPONENT
+		return dontAllowChargeComponent
 	}
 
 	// assumedDurationToEmpty is an approximation because we may be limited by grid constraints which depend on the load and solar levels
@@ -73,7 +82,7 @@ func dynamicPeakDischarge(t time.Time, configs []config.DynamicPeakDischargeConf
 		// If we are not 'prioritising loads' then hold off on the discharge completely until the last minute,
 		// or until the system is short.
 		logger.Info("Dynamic peak doing nothing to wait for short system", "got_prediction", gotPrediction, "imbalance_volume", imbalanceVolume)
-		return INACTIVE_CONTROL_COMPONENT
+		return dontAllowChargeComponent
 	}
 
 	// System is short
@@ -169,12 +178,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 			)
 
 			if !math.IsNaN(encouragePower) && encouragePower > 0 {
-				return controlComponent{
-					name:         controlComponentName,
-					status:       componentStatusActiveAllowMoreCharge,
-					targetPower:  -encouragePower,
-					controlPoint: controlPointBess,
-				}
+				return chargingControlComponentThatAllowsMoreCharge(controlComponentName, -encouragePower)
 			}
 		}
 
@@ -191,12 +195,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 		forcePower := (forceEnergy / hoursLeftOfSP) / chargeEfficiency
 
 		if !math.IsNaN(forcePower) && forcePower > 0 {
-			return controlComponent{
-				name:         controlComponentName,
-				status:       componentStatusActiveAllowMoreCharge,
-				targetPower:  -forcePower,
-				controlPoint: controlPointBess,
-			}
+			return chargingControlComponentThatAllowsMoreCharge(controlComponentName, -forcePower)
 		}
 	}
 

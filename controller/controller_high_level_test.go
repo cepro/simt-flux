@@ -17,17 +17,15 @@ const (
 	chargeEfficiency = 0.9
 )
 
-// TestController is a high level (almost integration) test of the controllers ability to issue BessCommands to service various control modes.
-// It feeds the controller with a pre-defined/static timeseries of consumer demand and prices to ensure that it reacts correctly.
+// TestController is a high level (almost integration) test of the controller's ability
+// to issue BessCommands to perform the various control modes.
 func TestController(test *testing.T) {
-
-	ctx := context.Background()
-
 	london, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		test.Fatalf("Could not load location: %v", err)
 	}
 
+	// pre-define some useful values
 	weekdays := timeutils.Days{
 		Name:     timeutils.WeekdayDaysName,
 		Location: london,
@@ -36,344 +34,607 @@ func TestController(test *testing.T) {
 		Name:     timeutils.WeekdayDaysName,
 		Location: london,
 	}
-	importAvoidancePeriods := []timeutils.DayedPeriod{
-		{
-			Days: weekdays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: weekdays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: weekdays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: weekdays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
-			},
-		},
-	}
-	exportAvoidancePeriods := []timeutils.DayedPeriod{
-		{
-			Days: alldays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: alldays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: alldays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
-			},
-		},
-		{
-			Days: alldays,
-			ClockTimePeriod: timeutils.ClockTimePeriod{
-				Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-				End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
-			},
-		},
-	}
-	chargeToSoePeriods := []config.DayedPeriodWithSoe{
-		{
-			Soe: 130,
-			DayedPeriod: timeutils.DayedPeriod{
-				Days: alldays,
+
+	// Test import avoidance
+	test.Run("ImportAvoidance", func(t *testing.T) {
+		importAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: weekdays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
-					Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
-					End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+					Start: timeutils.ClockTime{Hour: 9, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
 				},
 			},
-		},
-		{
-			Soe: 190,
-			DayedPeriod: timeutils.DayedPeriod{
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ImportAvoidancePeriods = importAvoidancePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T08:45:00+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 0},
+
+			// A period of increasing demand whilst we are in 'import avoidance' - the controller should use the battery to match the demand
+			{time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
+			{time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
+			{time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
+			{time: mustParseTime("2023-09-12T09:00:07+01:00"), bessSoe: 145, consumerDemand: 100, expectedBessTargetPower: 100},
+
+			// Demand exceeds battery capability during 'import avoidance' - should stick to max battery power
+			{time: mustParseTime("2023-09-12T09:00:08+01:00"), bessSoe: 143, consumerDemand: 110, expectedBessTargetPower: 105},
+			{time: mustParseTime("2023-09-12T09:00:09+01:00"), bessSoe: 141, consumerDemand: 120, expectedBessTargetPower: 105},
+			{time: mustParseTime("2023-09-12T09:00:10+01:00"), bessSoe: 139, consumerDemand: 106, expectedBessTargetPower: 105},
+
+			// Decreasing demand during 'import avoidance' - controller backs off to match demand
+			{time: mustParseTime("2023-09-12T09:00:11+01:00"), bessSoe: 144, consumerDemand: 50, expectedBessTargetPower: 50},
+			{time: mustParseTime("2023-09-12T09:00:12+01:00"), bessSoe: 142, consumerDemand: 25, expectedBessTargetPower: 25},
+
+			// Zero demand during 'import avoidance'
+			{time: mustParseTime("2023-09-12T09:00:13+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T09:00:14+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T09:00:15+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
+
+			// Solar surplus during 'import avoidance' - should allow export
+			{time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
+
+			// Weekend case - import avoidance should not apply
+			{time: mustParseTime("2023-09-09T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 0},
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T10:01:00+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test export avoidance, where the controller prevents grid exports
+	test.Run("ExportAvoidance", func(t *testing.T) {
+		exportAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: alldays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
+				},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ExportAvoidancePeriods = exportAvoidancePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T10:40:00+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: 0},
+
+			// Do export avoidance
+			{time: mustParseTime("2023-09-12T11:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T11:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T11:00:02+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: -10},
+			{time: mustParseTime("2023-09-12T11:00:03+01:00"), bessSoe: 101, consumerDemand: -50, expectedBessTargetPower: -50},
+			{time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
+			{time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T12:15:00+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test charge to battery SoE where the controller charges to reach some target SoE
+	test.Run("ChargeToSoE", func(t *testing.T) {
+		chargeToSoePeriods := []config.DayedPeriodWithSoe{
+			{
+				Soe: 130,
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+					},
+				},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ChargeToSoePeriods = chargeToSoePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T12:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+
+			// We need to make up 30kWh in the next 30mins
+			{time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
+			{time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
+			{time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: -15, expectedBessTargetPower: -60 / chargeEfficiency},
+
+			// We need to make up 15kWh in the next 30mins
+			{time: mustParseTime("2023-09-12T13:00:03+01:00"), bessSoe: 115, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T13:40:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test discharge to battery target
+	test.Run("DischargeToSoE", func(t *testing.T) {
+		// Configure discharge to SoE periods
+		dischargeToSoePeriods := []config.DayedPeriodWithSoe{
+			{
+				Soe: 70,
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
+					},
+				},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.DischargeToSoePeriods = dischargeToSoePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+
+			// Weekend case - discharge to SoE should not apply
+			{time: mustParseTime("2023-09-10T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+
+			// Discharge to SoE - controller discharges to reach target SoE
+			{time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+			{time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
+			{time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
+
+			// Outside of configured time - do nothing
+			{time: mustParseTime("2023-09-12T14:05:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test multiple active modes
+	test.Run("MultipleModes", func(t *testing.T) {
+		// Configure periods for both import and export avoidance
+		importAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: weekdays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+				},
+			},
+		}
+
+		exportAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: alldays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
+				},
+			},
+			{
 				Days: alldays,
 				ClockTimePeriod: timeutils.ClockTimePeriod{
 					Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
 					End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
 				},
 			},
-		},
-	}
-	dischargeToSoePeriods := []config.DayedPeriodWithSoe{
-		{
-			Soe: 70,
-			DayedPeriod: timeutils.DayedPeriod{
-				Days: alldays,
-				ClockTimePeriod: timeutils.ClockTimePeriod{
-					Start: timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
-					End:   timeutils.ClockTime{Hour: 14, Minute: 0, Second: 0, Location: london},
-				},
-			},
-		},
-	}
+		}
 
-	nivChasePeriods := []config.DayedPeriodWithNIV{
-		{
-			DayedPeriod: timeutils.DayedPeriod{
-				Days: alldays,
-				ClockTimePeriod: timeutils.ClockTimePeriod{
-					Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
-					End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
-				},
-			},
-			Niv: config.NivConfig{
-				ChargeCurve: cartesian.Curve{
-					Points: []cartesian.Point{
-						{X: -9999, Y: 180},
-						{X: 0, Y: 180},
-						{X: 20, Y: 0},
+		chargeToSoePeriods := []config.DayedPeriodWithSoe{
+			{
+				Soe: 190,
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
 					},
 				},
-				DischargeCurve: cartesian.Curve{
-					Points: []cartesian.Point{
-						{X: 30, Y: 180},
-						{X: 40, Y: 0},
-						{X: 9999, Y: 0},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ImportAvoidancePeriods = importAvoidancePeriods
+		config.ExportAvoidancePeriods = exportAvoidancePeriods
+		config.ChargeToSoePeriods = chargeToSoePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-12T14:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 0},
+
+			// Test when both 'export avoidance' and 'import avoidance' are active
+			{time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
+			{time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
+
+			// Test when both 'export avoidance' and 'charge to min' are active -  the controller should use the 'charge to min' value as a minimum but allow 'export avoidance' to specify a larger charge
+			{time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
+			{time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
+			{time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
+			{time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -100},
+
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test that the SoE limits are respected
+	test.Run("SoELimits", func(t *testing.T) {
+		// Configure both import and export avoidance periods for the test time
+		importAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: weekdays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+				},
+			},
+		}
+		exportAvoidancePeriods := []timeutils.DayedPeriod{
+			{
+				Days: alldays,
+				ClockTimePeriod: timeutils.ClockTimePeriod{
+					Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
+					End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
+				},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ImportAvoidancePeriods = importAvoidancePeriods
+		config.ExportAvoidancePeriods = exportAvoidancePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		testPoints := []testpoint{
+			// Ensure maximum bess SoE is honored (import and export avoidance active)
+			{time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50}, // can charge 1kWh
+			{time: mustParseTime("2023-09-12T21:00:01+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},   // can't charge anything as battery is full
+			{time: mustParseTime("2023-09-12T21:00:02+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T21:00:03+01:00"), bessSoe: 181, consumerDemand: -50, expectedBessTargetPower: 0},
+
+			// Ensure minimum bess SoE is honored (import and export avoidance active)
+			{time: mustParseTime("2023-09-12T21:30:00+01:00"), bessSoe: 21, consumerDemand: 10, expectedBessTargetPower: 10}, // can discharge 1kWh
+			{time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},  // can't discharge as battery is at the configured min SoE
+			{time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
+			{time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test NIV chasing (there are other dedicated niv chase tests in `comp_niv_chase_test.go`)
+	test.Run("NivChasing", func(t *testing.T) {
+		// Configure NIV chase periods
+		nivChasePeriods := []config.DayedPeriodWithNIV{
+			{
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 23, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
 					},
 				},
-				CurveShiftLong:  0,
-				CurveShiftShort: 0,
-				DefaultPricing:  []config.TimedRate{},
+				Niv: config.NivConfig{
+					ChargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: -9999, Y: 180},
+							{X: 0, Y: 180},
+							{X: 20, Y: 0},
+						},
+					},
+					DischargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: 30, Y: 180},
+							{X: 40, Y: 0},
+							{X: 9999, Y: 0},
+						},
+					},
+					CurveShiftLong:  0,
+					CurveShiftShort: 0,
+					DefaultPricing:  []config.TimedRate{},
+				},
 			},
-		},
-	}
+		}
 
-	axleSchedule := axle.Schedule{
-		ReceivedTime: time.Time{},
-		Items: []axle.ScheduleItem{
+		// Define rate periods for import/export
+		chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].DayedPeriod}
+		ratesImport := []config.TimedRate{
 			{
-				Start:          mustParseTime("2023-09-13T09:00:00+01:00"),
-				End:            mustParseTime("2023-09-13T09:05:00+01:00"),
-				Action:         "charge_max",
-				AllowDeviation: false,
+				Rate:    10,
+				Periods: chargesPeriods,
 			},
+		}
+		ratesExport := []config.TimedRate{
 			{
-				Start:          mustParseTime("2023-09-13T11:00:00+01:00"),
-				End:            mustParseTime("2023-09-13T11:05:00+01:00"),
-				Action:         "avoid_import",
-				AllowDeviation: false,
+				Rate:    -10,
+				Periods: chargesPeriods,
 			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.NivChasePeriods = nivChasePeriods
+		config.RatesImport = ratesImport
+		config.RatesExport = ratesExport
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
+
+		// These are defined as vars because Go cannot get the address of a constant - e.g. you can't do `&50.0`
+		var fifty float64 = 50.0
+		var seventy float64 = 70.0
+
+		testPoints := []testpoint{
+			// Imbalance price attractive for charge - charge at full rate with charge limits
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
+
+			// Imbalance price attractive for discharge - discharge at full rate with discharge limits
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
+
+			// Imbalance price attractive for discharge - limited by site export
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 105}, // limited by BESS discharge power
+
+			// Imbalance price attractive for charge - limited by site import
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -60},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -30, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -80},
+			{time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -60, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100}, // limited by BESS charge power
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+
+	// Test Axle Schedule commands
+	test.Run("AxleSchedules", func(t *testing.T) {
+
+		// Create axle schedule
+		axleSchedule := axle.Schedule{
+			ReceivedTime: time.Time{},
+			Items: []axle.ScheduleItem{
+				{
+					Start:          mustParseTime("2023-09-13T09:00:00+01:00"),
+					End:            mustParseTime("2023-09-13T09:05:00+01:00"),
+					Action:         "charge_max",
+					AllowDeviation: false,
+				},
+				{
+					Start:          mustParseTime("2023-09-13T09:10:00+01:00"),
+					End:            mustParseTime("2023-09-13T09:15:00+01:00"),
+					Action:         "discharge_max",
+					AllowDeviation: false,
+				},
+				{
+					Start:          mustParseTime("2023-09-13T11:00:00+01:00"),
+					End:            mustParseTime("2023-09-13T11:05:00+01:00"),
+					Action:         "avoid_import",
+					AllowDeviation: false,
+				},
+				{
+					Start:          mustParseTime("2023-09-13T12:00:00+01:00"),
+					End:            mustParseTime("2023-09-13T12:05:00+01:00"),
+					Action:         "avoid_export",
+					AllowDeviation: false,
+				},
+				{
+					Start:          mustParseTime("2023-09-13T13:00:00+01:00"),
+					End:            mustParseTime("2023-09-13T13:30:00+01:00"),
+					Action:         "avoid_import",
+					AllowDeviation: false,
+				},
+			},
+		}
+		chargeToSoePeriods := []config.DayedPeriodWithSoe{
 			{
-				Start:          mustParseTime("2023-09-13T12:00:00+01:00"),
-				End:            mustParseTime("2023-09-13T12:05:00+01:00"),
-				Action:         "avoid_export",
-				AllowDeviation: false,
+				Soe: 130,
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 11, Minute: 30, Second: 0, Location: london},
+					},
+				},
 			},
-		},
-	}
+		}
+		nivChasePeriods := []config.DayedPeriodWithNIV{
+			{
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 13, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 13, Minute: 30, Second: 0, Location: london},
+					},
+				},
+				Niv: config.NivConfig{
+					ChargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: -9999, Y: 180},
+							{X: 0, Y: 180},
+							{X: 20, Y: 0},
+						},
+					},
+					DischargeCurve: cartesian.Curve{
+						Points: []cartesian.Point{
+							{X: 30, Y: 180},
+							{X: 40, Y: 0},
+							{X: 9999, Y: 0},
+						},
+					},
+					CurveShiftLong:  0,
+					CurveShiftShort: 0,
+					DefaultPricing:  []config.TimedRate{},
+				},
+			},
+		}
 
-	chargesPeriods := []timeutils.DayedPeriod{nivChasePeriods[0].DayedPeriod} // This is unrealistic but convenient for the test conciseness
-	ratesImport := []config.TimedRate{
-		{
-			Rate:    10,
-			Periods: chargesPeriods,
-		},
-	}
-	ratesExport := []config.TimedRate{
-		{
-			Rate:    -10,
-			Periods: chargesPeriods,
-		},
-	}
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ChargeToSoePeriods = chargeToSoePeriods
+		config.NivChasePeriods = nivChasePeriods
 
-	// These are defined as vars because Go cannot get the address of a constant - e.g. you can't do `&50.0`
-	var fifty float64 = 50.0
-	var seventy float64 = 70.0
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
+		}
 
-	bessCommands := make(chan telemetry.BessCommand, 1)
+		ctrl.AxleSchedules <- axleSchedule
+
+		// These are defined as vars because Go cannot get the address of a constant - e.g. you can't do `&50.0`
+		var fifty float64 = 50.0
+		var seventy float64 = 70.0
+
+		testPoints := []testpoint{
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-13T08:59:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},
+
+			// Test the charge_max command
+			{time: mustParseTime("2023-09-13T09:00:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50}, // limit is from the site import constraint
+			{time: mustParseTime("2023-09-13T09:01:00+01:00"), bessSoe: 55, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100},   // limit is from the BESS charge power limit
+			{time: mustParseTime("2023-09-13T09:02:00+01:00"), bessSoe: 180, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},     // limit is from the BESS SoE
+
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-13T09:08:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},
+
+			// Test the discharge_max command
+			{time: mustParseTime("2023-09-13T09:10:00+01:00"), bessSoe: 180, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70}, // limit is from the site export constraint
+			{time: mustParseTime("2023-09-13T09:11:00+01:00"), bessSoe: 55, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 105},      // limit is from the BESS discharge power limit
+			{time: mustParseTime("2023-09-13T09:12:00+01:00"), bessSoe: 20, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 0},        // limit is from the BESS SoE
+
+			// Test the avoid_import command
+			// This is failing because the import avoidance is 'inactive', and hte lower-priority chargeToSoE (or NivChase) component wants to charge so much that import is not actually avoided
+			{time: mustParseTime("2023-09-13T11:00:00+01:00"), bessSoe: 50, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0}, // nothing to do here as we are exporting
+			{time: mustParseTime("2023-09-13T11:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as there is zero load / generation
+			{time: mustParseTime("2023-09-13T11:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 10}, // discharge to match the consumer demand - to avoid imports from the grid
+			{time: mustParseTime("2023-09-13T11:03:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // we would like to discharge to match the consumer demand, but there is no SoE left
+
+			// Test the avoid_export command
+			{time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
+			{time: mustParseTime("2023-09-13T12:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as imports are okay
+			{time: mustParseTime("2023-09-13T12:03:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -10}, // charge to avoid export
+
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-13T12:07:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},
+
+			// Test the avoid_import schedule in combination with NIV chasing to check that we can export if prices are good
+			{time: mustParseTime("2023-09-13T13:00:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: 0, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 10},    // discharge to prevent imports for the consumerDemand
+			{time: mustParseTime("2023-09-13T13:20:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: 999, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 105}, // discharge above the neccesary 10kW in order to capitalise on NIV chasing opportunity
+			{time: mustParseTime("2023-09-13T13:25:00+01:00"), bessSoe: 150, consumerDemand: 10, imbalancePrice: -999, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 10}, // even though the NIV chase opportunity is great for charging we can't because of the axle schedule to avoid imports
+
+		}
+
+		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
+	})
+}
+
+// baseTestInitialisation creates a basic configuration and the context and channels that are required for all tests.
+func baseTestInitialisation() (Config, context.Context, chan telemetry.BessCommand, chan time.Time) {
+
+	ctx := context.Background()
+	bessCommandsChan := make(chan telemetry.BessCommand, 1)
 	ctrlTickerChan := make(chan time.Time, 1)
-	ctrl := New(Config{
+
+	// Create a base controller configuration
+	baseConfig := Config{
 		BessChargeEfficiency:    chargeEfficiency,
 		BessSoeMin:              20,
 		BessSoeMax:              180,
 		BessChargePowerLimit:    100,
-		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing the asymmetry
-		SiteImportPowerLimit:    9999, // this is replaced at each test iteration
-		SiteExportPowerLimit:    9999, // this is replaced at each test iteration
-		ImportAvoidancePeriods:  importAvoidancePeriods,
-		ExportAvoidancePeriods:  exportAvoidancePeriods,
-		ChargeToSoePeriods:      chargeToSoePeriods,
-		DischargeToSoePeriods:   dischargeToSoePeriods,
-		NivChasePeriods:         nivChasePeriods,
-		RatesImport:             ratesImport,
-		RatesExport:             ratesExport,
-		ModoClient:              &MockImbalancePricer{}, // this is replaced at each test iteration
+		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing
+		SiteImportPowerLimit:    9999, // replaced at test time
+		SiteExportPowerLimit:    9999, // replaced at test time
+		ModoClient:              &MockImbalancePricer{},
 		MaxReadingAge:           5 * time.Second,
-		BessCommands:            bessCommands,
-	})
-	go ctrl.Run(ctx, ctrlTickerChan)
-
-	ctrl.AxleSchedules <- axleSchedule
-
-	// testpoint represents a point in time that we are testing as part of a larger timeseries
-	type testpoint struct {
-		time                    time.Time // the point in time being tested
-		bessSoe                 float64   // the state of energy of the battery at this point in time
-		consumerDemand          float64   // the consumer demand at this point in time
-		imbalancePrice          float64   // the predicted system settelment price for this period
-		imbalanceVolume         float64   // the predicted system settelment volume for this period
-		siteImportPowerLimit    *float64  // site import limits applied for the test point, defaults to 9999 if nil
-		siteExportPowerLimit    *float64  // site export limits applied for the test point, defaults to 9999 if nil
-		expectedBessTargetPower float64   // the power command that we expect the controller to issue at this point in time
-	}
-	// TODO: this array of test points covers many test scenarios, it would be better if this was refactored so that each scenario was kept more separate somehow
-	testpoints := []testpoint{
-		// // Start off with zero consumer demand, expecting zero power from the battery
-		// {time: mustParseTime("2023-09-12T09:00:00+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:01+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:02+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:03+01:00"), bessSoe: 150, consumerDemand: 0, expectedBessTargetPower: 0},
-
-		// // A period of increasing demand whilst we are in 'import avoidance' - the controller should use the battery to match the demand - which should reduce site import
-		// {time: mustParseTime("2023-09-12T09:00:04+01:00"), bessSoe: 150, consumerDemand: 25, expectedBessTargetPower: 25},
-		// {time: mustParseTime("2023-09-12T09:00:05+01:00"), bessSoe: 149, consumerDemand: 50, expectedBessTargetPower: 50},
-		// {time: mustParseTime("2023-09-12T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 75},
-		// {time: mustParseTime("2023-09-12T09:00:07+01:00"), bessSoe: 145, consumerDemand: 100, expectedBessTargetPower: 100},
-
-		// // A period where the demand exceeds the batteries power capability whilst we are in 'import avoidance' - the controller should stick to the maximum power of the battery
-		// {time: mustParseTime("2023-09-12T09:00:08+01:00"), bessSoe: 143, consumerDemand: 110, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T09:00:09+01:00"), bessSoe: 141, consumerDemand: 120, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T09:00:10+01:00"), bessSoe: 139, consumerDemand: 106, expectedBessTargetPower: 105},
-
-		// // A period of decreasing demand whilst we are in 'import avoidance' - the controller should back off to match the demand
-		// {time: mustParseTime("2023-09-12T09:00:11+01:00"), bessSoe: 144, consumerDemand: 50, expectedBessTargetPower: 50},
-		// {time: mustParseTime("2023-09-12T09:00:12+01:00"), bessSoe: 142, consumerDemand: 25, expectedBessTargetPower: 25},
-
-		// // Another period of zero demand whilst we are in 'import avoidance'
-		// {time: mustParseTime("2023-09-12T09:00:13+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:14+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:15+01:00"), bessSoe: 141, consumerDemand: 0, expectedBessTargetPower: 0},
-
-		// // A period of solar surplus whilst we are in 'import avoidance' - the controller should allow this to be exported
-		// {time: mustParseTime("2023-09-12T09:00:16+01:00"), bessSoe: 141, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T09:00:17+01:00"), bessSoe: 142, consumerDemand: -10, expectedBessTargetPower: 0},
-
-		// // Skup to a time when we are in 'import avoidance' but it's at the weekend so it shouldn't apply
-		// {time: mustParseTime("2023-09-09T09:00:06+01:00"), bessSoe: 147, consumerDemand: 75, expectedBessTargetPower: 0},
-
-		// // Currently a discontinuity in time is not an issue for the controller...
-
-		// // Skip to a time where we are outside of any configured acivity, the controller should do nothing
-		// {time: mustParseTime("2023-09-12T10:00:16+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:17+01:00"), bessSoe: 140, consumerDemand: -10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:18+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T10:00:19+01:00"), bessSoe: 140, consumerDemand: 10, expectedBessTargetPower: 0},
-
-		// // Skip to a time wher we are in 'export avoidance' - the controller should prevent export
-		// {time: mustParseTime("2023-09-12T11:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T11:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T11:00:02+01:00"), bessSoe: 100, consumerDemand: -10, expectedBessTargetPower: -10},
-		// {time: mustParseTime("2023-09-12T11:00:03+01:00"), bessSoe: 101, consumerDemand: -50, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T11:00:04+01:00"), bessSoe: 102, consumerDemand: -500, expectedBessTargetPower: -100},
-		// {time: mustParseTime("2023-09-12T11:00:05+01:00"), bessSoe: 103, consumerDemand: 15, expectedBessTargetPower: 0},
-
-		// // Skip to a time wher we are in 'charge to soe' - the controller should charge to reach the target soe
-		// {time: mustParseTime("2023-09-12T13:00:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T13:00:01+01:00"), bessSoe: 100, consumerDemand: 0, expectedBessTargetPower: -60 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T13:00:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: -60 / chargeEfficiency},
-
-		// // Skip to a time wher we are in 'discharge to soe' - the controller should discharge to reach the target soe
-		// {time: mustParseTime("2023-09-12T13:30:00+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
-		// {time: mustParseTime("2023-09-12T13:30:01+01:00"), bessSoe: 200, consumerDemand: 0, expectedBessTargetPower: 105},
-		// {time: mustParseTime("2023-09-12T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 60},
-
-		// // Skup to a time when we are in 'discharge to soe' but it's at the weekend so it shouldn't apply
-		// {time: mustParseTime("2023-09-10T13:30:02+01:00"), bessSoe: 100, consumerDemand: 15, expectedBessTargetPower: 0},
-
-		// // Skip to a time when both 'export avoidance' and 'import avoidance' are active
-		// {time: mustParseTime("2023-09-12T15:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: 15},
-		// {time: mustParseTime("2023-09-12T15:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T15:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -15},
-
-		// // Skip to a time when both 'export avoidance' and 'charge to min' are active - the controller should prioritise 'charge to min'
-		// {time: mustParseTime("2023-09-12T17:00:00+01:00"), bessSoe: 160, consumerDemand: 15, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:01+01:00"), bessSoe: 160, consumerDemand: 0, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:02+01:00"), bessSoe: 160, consumerDemand: -15, expectedBessTargetPower: -30 / chargeEfficiency},
-		// {time: mustParseTime("2023-09-12T17:00:03+01:00"), bessSoe: 160, consumerDemand: -100, expectedBessTargetPower: -30 / chargeEfficiency},
-
-		// // Ensure that the maximum bess soe is honored (import and export avoidance are active for these test points)
-		// {time: mustParseTime("2023-09-12T21:00:00+01:00"), bessSoe: 179, consumerDemand: -50, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T21:00:01+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:00:02+01:00"), bessSoe: 180, consumerDemand: -50, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:00:03+01:00"), bessSoe: 181, consumerDemand: -50, expectedBessTargetPower: 0},
-		// // Ensure that the minimum bess soe is honored (import and export avoidance are active for these test points)
-		// {time: mustParseTime("2023-09-12T21:30:00+01:00"), bessSoe: 21, consumerDemand: 10, expectedBessTargetPower: 10},
-		// {time: mustParseTime("2023-09-12T21:30:01+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:30:02+01:00"), bessSoe: 20, consumerDemand: 10, expectedBessTargetPower: 0},
-		// {time: mustParseTime("2023-09-12T21:30:03+01:00"), bessSoe: 19, consumerDemand: 10, expectedBessTargetPower: 0},
-
-		// // Test NIV chasing...
-
-		// // Imbalance price is very attractive for charge - DUoS charges plus imbalance is 0p/kWh - charge at full rate, but abide by charge limits
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: -10, expectedBessTargetPower: -100},
-
-		// // Imbalance price is very attractive for discharge - DUoS charges plus imbalance is 70p/kWh - discharge at full rate, but abide by discharge limits
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 180, consumerDemand: 10, imbalancePrice: 60, expectedBessTargetPower: 105},
-
-		// // Imbalance price is attractive for discharge - DUoS charges plus imbalance is 70p/kWh - but we are limited by site export limits, which also track any load/generation from the houses
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 60},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -50, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 20},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 80},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 100, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 105}, // here we are limited by the discharge power limits of the BESS
-
-		// // Imbalance price is attractive for charge - DUoS charges plus imbalance is 0p/kWh - but we are limited by site import limits, which also track any load/generation from the houses
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 0, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -40},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: 45, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -5},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -10, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -60},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -30, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -80},
-		// {time: mustParseTime("2023-09-12T23:10:00+01:00"), bessSoe: 100, consumerDemand: -60, imbalancePrice: -10, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100}, // here we are limited by the charge power limits of the BESS
-
-		// Test that the controller follows the "Axle Schedule" and does a "charge_max", which has priorty over all the other control components
-		{time: mustParseTime("2023-09-13T09:00:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -50}, // limit is from the site import constraint
-		{time: mustParseTime("2023-09-13T09:01:00+01:00"), bessSoe: 55, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100},   // limit is from the BESS charge power limit
-		{time: mustParseTime("2023-09-13T09:02:00+01:00"), bessSoe: 180, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},     // limit is from the BESS SoE
-
-		// Test that the controller follows the "Axle Schedule" and does an "avoid_import", which has priorty over all the other control components
-		// {time: mustParseTime("2023-09-13T11:00:00+01:00"), bessSoe: 50, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0}, // nothing to do here as we are exporting
-		{time: mustParseTime("2023-09-13T11:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as there is zero load / generation
-		{time: mustParseTime("2023-09-13T11:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 10}, // discharge to match the consumer demand - to avoid imports from the grid
-		{time: mustParseTime("2023-09-13T11:03:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // we would like to discharge to match the consumer demand, but there is no SoE left
-
-		// Test that the controller follows the "Axle Schedule" and does an "avoid_export", which has priorty over all the other control components
-		// TODO: proper avoid_import and avoid_export behaviour - at the moment the controller is just zeroing the grid boundary
-		{time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
-		{time: mustParseTime("2023-09-13T12:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 10},  // discharge to match the consumer demand - to avoid imports from the grid
-		{time: mustParseTime("2023-09-13T12:03:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -10}, // we would like to discharge to match the consumer demand, but there is no SoE left
+		BessCommands:            bessCommandsChan,
 	}
 
-	mock := microgridMock{
-		SiteMeterReadings: ctrl.SiteMeterReadings,
-		BessReadings:      ctrl.BessReadings,
-		BessCommands:      bessCommands,
-	}
-	for _, point := range testpoints {
-		test.Logf("Simulating time %v", point.time)
+	return baseConfig, ctx, bessCommandsChan, ctrlTickerChan
+}
+
+// testpoint represents a point in time that we are testing as part of a larger timeseries
+type testpoint struct {
+	time                    time.Time // the point in time being tested
+	bessSoe                 float64   // the state of energy of the battery at this point in time
+	consumerDemand          float64   // the consumer demand at this point in time
+	imbalancePrice          float64   // the predicted system settlement price for this period
+	imbalanceVolume         float64   // the predicted system settlement volume for this period
+	siteImportPowerLimit    *float64  // site import limits applied for the test point, defaults to 9999 if nil
+	siteExportPowerLimit    *float64  // site export limits applied for the test point, defaults to 9999 if nil
+	expectedBessTargetPower float64   // the power command that we expect the controller to issue at this point in time
+}
+
+// runTestScenario runs a batch of test points against the controller
+func runTestScenario(t *testing.T, mock *microgridMock, ctrlTickerChan chan<- time.Time, ctrl *Controller, points []testpoint) {
+	for _, point := range points {
+		t.Logf("Simulating time %v", point.time)
 
 		// Update the mock modo client to return the test point's imbalance price
 		ctrl.config.ModoClient = &MockImbalancePricer{
@@ -405,12 +666,12 @@ func TestController(test *testing.T) {
 		// wait for the controller to issue a command
 		err := mock.WaitForBessCommand()
 		if err != nil {
-			test.Errorf("At time '%v', failed to wait for bess command: %v", point.time, err)
+			t.Errorf("At time '%v', failed to wait for bess command: %v", point.time, err)
 			return
 		}
 
 		if !almostEqual(mock.bessTargetPower, point.expectedBessTargetPower, 0.1) {
-			test.Errorf("At time '%v' got unexpected bess target power: %f, expected: %f", point.time, mock.bessTargetPower, point.expectedBessTargetPower)
+			t.Errorf("At time '%v' got unexpected bess target power: %f, expected: %f", point.time, mock.bessTargetPower, point.expectedBessTargetPower)
 			return
 		}
 	}
@@ -428,7 +689,6 @@ type microgridMock struct {
 // SimulateReadings generates mocked meter and bess readings and sends them to the controller.
 func (m microgridMock) SimulateReadings(consumerDemand float64, bessSoe float64) {
 	// Assume that the 'site power' is exactly the consumer demand minus the bess target power for now.
-	// Later we might want to add some noise or more real-world behaviour.
 	sitePower := consumerDemand - m.bessTargetPower
 
 	m.SiteMeterReadings <- telemetry.MeterReading{
@@ -451,5 +711,4 @@ func (m *microgridMock) WaitForBessCommand() error {
 	case <-time.After(time.Second):
 		return fmt.Errorf("timed out")
 	}
-
 }

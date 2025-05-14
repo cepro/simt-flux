@@ -29,12 +29,7 @@ func chargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, char
 		return INACTIVE_CONTROL_COMPONENT
 	}
 
-	return controlComponent{
-		name:         "charge_to_soe",
-		status:       componentStatusActiveAllowMoreCharge,
-		targetPower:  chargePower,
-		controlPoint: controlPointBess,
-	}
+	return chargingControlComponentThatAllowsMoreCharge("charge_to_soe", chargePower)
 }
 
 // dischargeToSoe returns the control component for discharging the battery to a pre-defined state of energy.
@@ -55,15 +50,10 @@ func dischargeToSoe(t time.Time, configs []config.DayedPeriodWithSoe, bessSoe, d
 	}
 
 	durationToDischarge := endOfDischarge.Sub(t)
-	dichargePower := energyToDischarge / durationToDischarge.Hours()
-	if dichargePower <= 0 {
+	dischargePower := energyToDischarge / durationToDischarge.Hours()
+	if dischargePower <= 0 {
 		return INACTIVE_CONTROL_COMPONENT
 	}
 
-	return controlComponent{
-		name:         "discharge_to_soe",
-		status:       componentStatusActiveAllowMoreDischarge,
-		targetPower:  dichargePower,
-		controlPoint: controlPointBess,
-	}
+	return dischargingControlComponentThatAllowsMoreDischarge("discharge_to_soe", dischargePower)
 }

@@ -21,8 +21,9 @@ type Axle struct {
 	siteMeterID uuid.UUID
 	bessMeterID uuid.UUID
 
-	host   string
-	logger *slog.Logger
+	host                         string
+	hardcodedScheduleAPIResponse string
+	logger                       *slog.Logger
 
 	// these maps hold the last reading received, keyed by the device ID
 	latestBessReadings  map[uuid.UUID]telemetry.BessReading
@@ -31,20 +32,21 @@ type Axle struct {
 	latestSchedule Schedule
 }
 
-func New(schedules chan<- Schedule, host string, siteMeterID, bessMeterID uuid.UUID) *Axle {
+func New(schedules chan<- Schedule, host string, siteMeterID, bessMeterID uuid.UUID, hardcodedScheduleAPIResponse string) *Axle {
 
 	logger := slog.Default().With("host", host)
 
 	return &Axle{
-		BessReadings:        make(chan telemetry.BessReading, 25), // TODO: check this size. A small buffer to allow things to catch up in case the upload is slow
-		MeterReadings:       make(chan telemetry.MeterReading, 25),
-		schedules:           schedules,
-		siteMeterID:         siteMeterID,
-		bessMeterID:         bessMeterID,
-		host:                host,
-		logger:              logger,
-		latestBessReadings:  make(map[uuid.UUID]telemetry.BessReading),
-		latestMeterReadings: make(map[uuid.UUID]telemetry.MeterReading),
+		BessReadings:                 make(chan telemetry.BessReading, 25), // TODO: check this size. A small buffer to allow things to catch up in case the upload is slow
+		MeterReadings:                make(chan telemetry.MeterReading, 25),
+		schedules:                    schedules,
+		siteMeterID:                  siteMeterID,
+		bessMeterID:                  bessMeterID,
+		host:                         host,
+		hardcodedScheduleAPIResponse: hardcodedScheduleAPIResponse,
+		logger:                       logger,
+		latestBessReadings:           make(map[uuid.UUID]telemetry.BessReading),
+		latestMeterReadings:          make(map[uuid.UUID]telemetry.MeterReading),
 	}
 }
 
@@ -101,7 +103,7 @@ func (a *Axle) processSchedule() {
 	now := time.Now()
 
 	scheduleItems := make([]ScheduleItem, 1)
-	json.Unmarshal([]byte(hardCodedResponse), &scheduleItems)
+	json.Unmarshal([]byte(a.hardcodedScheduleAPIResponse), &scheduleItems)
 
 	schedule := Schedule{
 		ReceivedTime: now,
