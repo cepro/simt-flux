@@ -6,7 +6,7 @@ import (
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
-// basicExportAvoidance returns the control component for avoiding microgrid boundary exports.
+// basicExportAvoidance returns the control component for avoiding microgrid boundary exports, from the given configuration.
 func basicExportAvoidance(t time.Time, exportAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	_, exportAvoidancePeriod := findDayedPeriodContainingTime(t, exportAvoidancePeriods)

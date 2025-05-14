@@ -37,7 +37,7 @@ func importAvoidanceWhenShort(t time.Time, configs []config.ImportAvoidanceWhenS
 	return importAvoidanceHelper(sitePower, lastTargetPower, "import_avoidance_when_short", true)
 }
 
-// basicImportAvoidance returns the control component for avoiding microgrid boundary imports.
+// basicImportAvoidance returns the control component for avoiding microgrid boundary imports, from the given configuration.
 func basicImportAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedPeriod, sitePower, lastTargetPower float64) controlComponent {
 
 	_, importAvoidancePeriod := findDayedPeriodContainingTime(t, importAvoidancePeriods)
