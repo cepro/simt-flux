@@ -194,7 +194,7 @@ func main() {
 	// Create the Axle API if it's configured
 	var axleAPI *axle.Axle
 	if config.Axle != nil {
-		axleAPI = axle.New(ctrl.AxleSchedules, config.Axle.Host, config.Controller.SiteMeterID, config.Controller.BessMeterID)
+		axleAPI = axle.New(ctrl.AxleSchedules, config.Axle.Host, config.Controller.SiteMeterID, config.Controller.BessMeterID, config.Axle.HardCodedScheduleAPIResponse)
 		go axleAPI.Run(
 			ctx,
 			time.Second*time.Duration(config.Axle.TelemetryUploadIntervalSecs),

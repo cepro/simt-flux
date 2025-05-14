@@ -93,19 +93,9 @@ func nivChase(
 	// Battery power constraints are applied upstream...
 
 	if targetPower > 0 {
-		return controlComponent{
-			name:         "niv_chase",
-			status:       componentStatusActiveAllowMoreDischarge,
-			targetPower:  targetPower,
-			controlPoint: controlPointBess,
-		}
+		return dischargingControlComponentThatAllowsMoreDischarge("niv_chase", targetPower)
 	} else if targetPower < 0 {
-		return controlComponent{
-			name:         "niv_chase",
-			status:       componentStatusActiveAllowMoreCharge,
-			targetPower:  targetPower,
-			controlPoint: controlPointBess,
-		}
+		return chargingControlComponentThatAllowsMoreCharge("niv_chase", targetPower)
 	} else {
 		return INACTIVE_CONTROL_COMPONENT
 	}

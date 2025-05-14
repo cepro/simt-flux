@@ -53,18 +53,28 @@ func basicImportAvoidance(t time.Time, importAvoidancePeriods []timeutils.DayedP
 func importAvoidanceHelper(sitePower, lastTargetPower float64, controlComponentName string, allowMoreDischarge bool) controlComponent {
 	importAvoidancePower := sitePower + lastTargetPower
 	if importAvoidancePower < 0 {
-		return INACTIVE_CONTROL_COMPONENT // there is nothing to do as the site is not importing
+		// In this case we don't need to tell the battery to do anything in order to achieve 'import avoidance', however, we
+		// do need to limit any lower-priority components from charging so much as to trigger an import. We do this by setting
+		// the minimum BESS target power here.
+		return controlComponent{
+			name:           controlComponentName,
+			targetPower:    nil,
+			minTargetPower: &importAvoidancePower, // Setting the minimum power to a negative value is setting the maximum charge rate.
+			maxTargetPower: nil,
+		}
 	}
 
-	status := componentStatusActiveGreedy
+	// As long as the battery is discharging at least `importAvoidancePower` than we probably
+	// don't mind if it discharges evem more than that.
+	maxBessTargetPower := &importAvoidancePower
 	if allowMoreDischarge {
-		status = componentStatusActiveAllowMoreDischarge
+		maxBessTargetPower = nil
 	}
 
 	return controlComponent{
-		name:         controlComponentName,
-		status:       status,
-		targetPower:  0, // Target zero power at the site boundary
-		controlPoint: controlPointSite,
+		name:           controlComponentName,
+		targetPower:    &importAvoidancePower, // Target zero power at the site boundary
+		minTargetPower: &importAvoidancePower,
+		maxTargetPower: maxBessTargetPower,
 	}
 }

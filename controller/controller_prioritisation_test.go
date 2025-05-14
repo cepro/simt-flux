@@ -35,16 +35,16 @@ func TestPrioritiseControlComponents_NoActiveComponents(t *testing.T) {
 	// Test with inactive components only
 	components = []controlComponent{
 		{
-			name:         "component1",
-			status:       componentStatusInactive,
-			targetPower:  100,
-			controlPoint: controlPointBess,
+			name:           "component1",
+			targetPower:    nil,
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 		{
-			name:         "component2",
-			status:       componentStatusInactive,
-			targetPower:  200,
-			controlPoint: controlPointBess,
+			name:           "component2",
+			targetPower:    nil,
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 	}
 
@@ -63,25 +63,21 @@ func TestPrioritiseControlComponents_GreedyComponent(t *testing.T) {
 
 	components := []controlComponent{
 		{
-			name:         "greedy",
-			status:       componentStatusActiveGreedy,
-			targetPower:  100,
-			controlPoint: controlPointBess,
+			name:           "greedy",
+			targetPower:    pointerToFloat64(100),
+			minTargetPower: pointerToFloat64(100),
+			maxTargetPower: pointerToFloat64(100),
 		},
 		{
-			name:         "lower_priority",
-			status:       componentStatusActiveGreedy,
-			targetPower:  200,
-			controlPoint: controlPointBess,
+			name:           "lower_priority",
+			targetPower:    pointerToFloat64(200),
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 	}
 
 	action := newTestController().prioritiseControlComponents(components)
 
-	// Verify only the first component was used (greedy one)
-	if action.activeComponentNames != "greedy" {
-		t.Errorf("Expected only 'greedy' component, got %s", action.activeComponentNames)
-	}
 	if action.bessTargetPower != 100 {
 		t.Errorf("Expected 100 power, got %f", action.bessTargetPower)
 	}
@@ -91,43 +87,33 @@ func TestPrioritiseControlComponents_AllowMoreCharge(t *testing.T) {
 
 	components := []controlComponent{
 		{
-			name:         "allow_more_charge",
-			status:       componentStatusActiveAllowMoreCharge,
-			targetPower:  -50, // Baseline
-			controlPoint: controlPointBess,
+			name:           "allow_more_charge",
+			targetPower:    pointerToFloat64(-50),
+			minTargetPower: nil,                   // allow more negative (faster charge rate)
+			maxTargetPower: pointerToFloat64(-50), // don't allow slower charging or discharging
 		},
 		{
-			name:         "discharge_more", // discharge should be ignored
-			status:       componentStatusActiveAllowMoreDischarge,
-			targetPower:  200,
-			controlPoint: controlPointBess,
+			name:           "discharge_more", // discharge should be ignored
+			targetPower:    pointerToFloat64(200),
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 		{
-			name:         "discharge_greedy", // discharge should be ignored
-			status:       componentStatusActiveGreedy,
-			targetPower:  50,
-			controlPoint: controlPointBess,
+			name:           "charge_more", // Should be allowed since it charges more
+			targetPower:    pointerToFloat64(-100),
+			minTargetPower: nil,
+			maxTargetPower: pointerToFloat64(-100),
 		},
 		{
-			name:         "charge_more", // Should be allowed since it charges more
-			status:       componentStatusActiveAllowMoreCharge,
-			targetPower:  -100, // More charging (negative)
-			controlPoint: controlPointBess,
-		},
-		{
-			name:         "charge_less", // Should be ignored since it charges less
-			status:       componentStatusActiveGreedy,
-			targetPower:  -75, // Less charging (more positive)
-			controlPoint: controlPointBess,
+			name:           "charge_less", // Should be ignored since it charges less
+			targetPower:    pointerToFloat64(-75),
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 	}
 
 	action := newTestController().prioritiseControlComponents(components)
 
-	// Verify the "charge_more" component was selected since it charges more
-	if action.activeComponentNames != "allow_more_charge,charge_more" {
-		t.Errorf("Expected 'allow_more_charge,charge_more', got %s", action.activeComponentNames)
-	}
 	if action.bessTargetPower != -100 {
 		t.Errorf("Expected -100 power, got %f", action.bessTargetPower)
 	}
@@ -137,49 +123,39 @@ func TestPrioritiseControlComponents_AllowMoreDischarge(t *testing.T) {
 
 	components := []controlComponent{
 		{
-			name:         "inactive",
-			status:       componentStatusInactive,
-			targetPower:  0.0,
-			controlPoint: controlPointBess,
+			name:           "inactive",
+			targetPower:    nil,
+			minTargetPower: nil,
+			maxTargetPower: nil,
 		},
 		{
-			name:         "allow_more_discharge",
-			status:       componentStatusActiveAllowMoreDischarge,
-			targetPower:  50, // Baseline
-			controlPoint: controlPointBess,
+			name:           "allow_more_discharge",
+			targetPower:    pointerToFloat64(50),
+			minTargetPower: pointerToFloat64(50), // don't allow slower discharging or charging
+			maxTargetPower: nil,                  // allow more positive (faster discharge rate)
 		},
 		{
-			name:         "charge_more", // charge should be ignored
-			status:       componentStatusActiveAllowMoreCharge,
-			targetPower:  -200,
-			controlPoint: controlPointBess,
+			name:           "charge_more", // charge should be ignored
+			targetPower:    pointerToFloat64(-100),
+			minTargetPower: nil,
+			maxTargetPower: pointerToFloat64(-100),
 		},
 		{
-			name:         "charge_greedy", // charge should be ignored
-			status:       componentStatusActiveGreedy,
-			targetPower:  -50,
-			controlPoint: controlPointBess,
+			name:           "discharge_greedy", // Should be allowed since it discharges more
+			targetPower:    pointerToFloat64(100),
+			minTargetPower: pointerToFloat64(100),
+			maxTargetPower: pointerToFloat64(100),
 		},
 		{
-			name:         "discharge_greedy", // Should be allowed since it discharges more
-			status:       componentStatusActiveGreedy,
-			targetPower:  100,
-			controlPoint: controlPointBess,
-		},
-		{
-			name:         "discharge_more", // Should be ignored since the previous component was greedy
-			status:       componentStatusActiveGreedy,
-			targetPower:  150,
-			controlPoint: controlPointBess,
+			name:           "discharge_more", // Should be ignored since the previous component was greedy
+			targetPower:    pointerToFloat64(150),
+			minTargetPower: pointerToFloat64(150),
+			maxTargetPower: nil,
 		},
 	}
 
 	action := newTestController().prioritiseControlComponents(components)
 
-	// Verify the "charge_more" component was selected since it charges more
-	if action.activeComponentNames != "allow_more_discharge,discharge_greedy" {
-		t.Errorf("Expected 'allow_more_discharge,discharge_greedy', got %s", action.activeComponentNames)
-	}
 	if action.bessTargetPower != 100 {
 		t.Errorf("Expected 100 power, got %f", action.bessTargetPower)
 	}

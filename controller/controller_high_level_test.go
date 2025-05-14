@@ -17,30 +17,6 @@ const (
 	chargeEfficiency = 0.9
 )
 
-// baseTestInitialisation creates a basic configuration and the context and channels that are required for all tests.
-func baseTestInitialisation() (Config, context.Context, chan telemetry.BessCommand, chan time.Time) {
-
-	ctx := context.Background()
-	bessCommandsChan := make(chan telemetry.BessCommand, 1)
-	ctrlTickerChan := make(chan time.Time, 1)
-
-	// Create a base controller configuration
-	baseConfig := Config{
-		BessChargeEfficiency:    chargeEfficiency,
-		BessSoeMin:              20,
-		BessSoeMax:              180,
-		BessChargePowerLimit:    100,
-		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing
-		SiteImportPowerLimit:    9999, // replaced at test time
-		SiteExportPowerLimit:    9999, // replaced at test time
-		ModoClient:              &MockImbalancePricer{},
-		MaxReadingAge:           5 * time.Second,
-		BessCommands:            bessCommandsChan,
-	}
-
-	return baseConfig, ctx, bessCommandsChan, ctrlTickerChan
-}
-
 // TestController is a high level (almost integration) test of the controller's ability
 // to issue BessCommands to service various control modes.
 func TestController(test *testing.T) {
@@ -69,27 +45,6 @@ func TestController(test *testing.T) {
 					End:   timeutils.ClockTime{Hour: 10, Minute: 0, Second: 0, Location: london},
 				},
 			},
-			// {  // TODO: remove
-			// 	Days: weekdays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
-			// 	},
-			// },
-			// {
-			// 	Days: weekdays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
-			// 	},
-			// },
-			// {
-			// 	Days: weekdays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 23, Minute: 30, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 23, Minute: 59, Second: 59, Location: london},
-			// 	},
-			// },
 		}
 
 		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
@@ -152,27 +107,6 @@ func TestController(test *testing.T) {
 					End:   timeutils.ClockTime{Hour: 12, Minute: 0, Second: 0, Location: london},
 				},
 			},
-			// {  // TODO: remove these
-			// 	Days: alldays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 15, Minute: 0, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 16, Minute: 0, Second: 0, Location: london},
-			// 	},
-			// },
-			// {
-			// 	Days: alldays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 17, Minute: 0, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 18, Minute: 0, Second: 0, Location: london},
-			// 	},
-			// },
-			// {
-			// 	Days: alldays,
-			// 	ClockTimePeriod: timeutils.ClockTimePeriod{
-			// 		Start: timeutils.ClockTime{Hour: 21, Minute: 0, Second: 0, Location: london},
-			// 		End:   timeutils.ClockTime{Hour: 22, Minute: 0, Second: 0, Location: london},
-			// 	},
-			// },
 		}
 
 		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
@@ -519,16 +453,7 @@ func TestController(test *testing.T) {
 	})
 
 	// Test Axle Schedule commands
-	test.Run("AxleScheduleCommands", func(t *testing.T) {
-		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
-
-		ctrl := New(config)
-		go ctrl.Run(ctx, ctrlTickerChan)
-		mock := microgridMock{
-			SiteMeterReadings: ctrl.SiteMeterReadings,
-			BessReadings:      ctrl.BessReadings,
-			BessCommands:      bessCommandsChan,
-		}
+	test.Run("AxleSchedules", func(t *testing.T) {
 
 		// Create axle schedule
 		axleSchedule := axle.Schedule{
@@ -538,6 +463,12 @@ func TestController(test *testing.T) {
 					Start:          mustParseTime("2023-09-13T09:00:00+01:00"),
 					End:            mustParseTime("2023-09-13T09:05:00+01:00"),
 					Action:         "charge_max",
+					AllowDeviation: false,
+				},
+				{
+					Start:          mustParseTime("2023-09-13T09:10:00+01:00"),
+					End:            mustParseTime("2023-09-13T09:15:00+01:00"),
+					Action:         "discharge_max",
 					AllowDeviation: false,
 				},
 				{
@@ -553,6 +484,29 @@ func TestController(test *testing.T) {
 					AllowDeviation: false,
 				},
 			},
+		}
+		chargeToSoePeriods := []config.DayedPeriodWithSoe{
+			{
+				Soe: 130,
+				DayedPeriod: timeutils.DayedPeriod{
+					Days: alldays,
+					ClockTimePeriod: timeutils.ClockTimePeriod{
+						Start: timeutils.ClockTime{Hour: 11, Minute: 0, Second: 0, Location: london},
+						End:   timeutils.ClockTime{Hour: 11, Minute: 05, Second: 0, Location: london},
+					},
+				},
+			},
+		}
+
+		config, ctx, bessCommandsChan, ctrlTickerChan := baseTestInitialisation()
+		config.ChargeToSoePeriods = chargeToSoePeriods
+
+		ctrl := New(config)
+		go ctrl.Run(ctx, ctrlTickerChan)
+		mock := microgridMock{
+			SiteMeterReadings: ctrl.SiteMeterReadings,
+			BessReadings:      ctrl.BessReadings,
+			BessCommands:      bessCommandsChan,
 		}
 
 		ctrl.AxleSchedules <- axleSchedule
@@ -570,15 +524,24 @@ func TestController(test *testing.T) {
 			{time: mustParseTime("2023-09-13T09:01:00+01:00"), bessSoe: 55, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: -100},   // limit is from the BESS charge power limit
 			{time: mustParseTime("2023-09-13T09:02:00+01:00"), bessSoe: 180, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},     // limit is from the BESS SoE
 
+			// Outside of configured times - do nothing
+			{time: mustParseTime("2023-09-13T09:08:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},
+
+			// Test the discharge_max command
+			{time: mustParseTime("2023-09-13T09:10:00+01:00"), bessSoe: 180, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: &seventy, expectedBessTargetPower: 70}, // limit is from the site export constraint
+			{time: mustParseTime("2023-09-13T09:11:00+01:00"), bessSoe: 55, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 105},      // limit is from the BESS discharge power limit
+			{time: mustParseTime("2023-09-13T09:12:00+01:00"), bessSoe: 20, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: nil, siteExportPowerLimit: nil, expectedBessTargetPower: 0},        // limit is from the BESS SoE
+
 			// Test the avoid_import command
+			// This is failing because the import avoidance is 'inactive', and hte lower-priority chargeToSoE (or NivChase) component wants to charge so much that import is not actually avoided
 			{time: mustParseTime("2023-09-13T11:00:00+01:00"), bessSoe: 50, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0}, // nothing to do here as we are exporting
 			{time: mustParseTime("2023-09-13T11:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as there is zero load / generation
 			{time: mustParseTime("2023-09-13T11:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 10}, // discharge to match the consumer demand - to avoid imports from the grid
 			{time: mustParseTime("2023-09-13T11:03:00+01:00"), bessSoe: 0, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // we would like to discharge to match the consumer demand, but there is no SoE left
 
 			// Test the avoid_export command
-			{time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
-			{time: mustParseTime("2023-09-13T12:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 10},  // discharge to match the consumer demand - to avoid imports from the grid
+			// {time: mustParseTime("2023-09-13T12:01:00+01:00"), bessSoe: 50, consumerDemand: 0, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},    // nothing to do here as there is zero load / generation
+			{time: mustParseTime("2023-09-13T12:02:00+01:00"), bessSoe: 50, consumerDemand: 10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: 0},   // nothing to do here as imports are okay
 			{time: mustParseTime("2023-09-13T12:03:00+01:00"), bessSoe: 0, consumerDemand: -10, imbalancePrice: 60, siteImportPowerLimit: &fifty, siteExportPowerLimit: &seventy, expectedBessTargetPower: -10}, // charge to avoid export
 
 			// Outside of configured times - do nothing
@@ -587,6 +550,30 @@ func TestController(test *testing.T) {
 
 		runTestScenario(t, &mock, ctrlTickerChan, ctrl, testPoints)
 	})
+}
+
+// baseTestInitialisation creates a basic configuration and the context and channels that are required for all tests.
+func baseTestInitialisation() (Config, context.Context, chan telemetry.BessCommand, chan time.Time) {
+
+	ctx := context.Background()
+	bessCommandsChan := make(chan telemetry.BessCommand, 1)
+	ctrlTickerChan := make(chan time.Time, 1)
+
+	// Create a base controller configuration
+	baseConfig := Config{
+		BessChargeEfficiency:    chargeEfficiency,
+		BessSoeMin:              20,
+		BessSoeMax:              180,
+		BessChargePowerLimit:    100,
+		BessDischargePowerLimit: 105,  // slightly higher discharge limit than charge limit for testing
+		SiteImportPowerLimit:    9999, // replaced at test time
+		SiteExportPowerLimit:    9999, // replaced at test time
+		ModoClient:              &MockImbalancePricer{},
+		MaxReadingAge:           5 * time.Second,
+		BessCommands:            bessCommandsChan,
+	}
+
+	return baseConfig, ctx, bessCommandsChan, ctrlTickerChan
 }
 
 // testpoint represents a point in time that we are testing as part of a larger timeseries

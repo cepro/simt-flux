@@ -269,7 +269,7 @@ func TestNivChase(test *testing.T) {
 			)
 
 			if !componentsEquivalent(component, subTest.expectedControlComponent) {
-				t.Errorf("got %v, expected %v", component, subTest.expectedControlComponent)
+				t.Errorf("got %s, expected %s", component.str(), subTest.expectedControlComponent.str())
 			}
 		})
 	}
@@ -448,15 +448,9 @@ func TestPredictImbalance(test *testing.T) {
 }
 
 func testActiveNivControlComponent(power float64) controlComponent {
-
-	status := componentStatusActiveAllowMoreCharge
 	if power > 0 {
-		status = componentStatusActiveAllowMoreDischarge
-	}
-	return controlComponent{
-		name:         "niv_chase",
-		status:       status,
-		targetPower:  power,
-		controlPoint: controlPointBess,
+		return dischargingControlComponentThatAllowsMoreDischarge("niv_chase", power)
+	} else {
+		return chargingControlComponentThatAllowsMoreCharge("niv_chase", power)
 	}
 }

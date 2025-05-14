@@ -17,34 +17,23 @@ func axleSchedule(t time.Time, schedule axle.Schedule, sitePower, lastTargetPowe
 
 	if scheduleItem.Action == "charge_max" {
 		return controlComponent{
-			name:         "axle_schedule.charge_max",
-			status:       componentStatusActiveGreedy,
-			targetPower:  math.Inf(-1), // ask for infinite charging and allow the limits to be applied as they may
-			controlPoint: controlPointBess,
+			name:           "axle_schedule.charge_max",
+			targetPower:    pointerToFloat64(math.Inf(-1)), // ask for infinite charging and allow the limits to be applied as they may
+			minTargetPower: pointerToFloat64(math.Inf(-1)),
+			maxTargetPower: pointerToFloat64(math.Inf(-1)),
 		}
 	} else if scheduleItem.Action == "discharge_max" {
 		return controlComponent{
-			name:         "axle_schedule.discharge_max",
-			status:       componentStatusActiveGreedy,
-			targetPower:  math.Inf(1), // ask for infinite discharging and allow the limits to be applied as they may
-			controlPoint: controlPointBess,
+			name:           "axle_schedule.discharge_max",
+			targetPower:    pointerToFloat64(math.Inf(1)), // ask for infinite charging and allow the limits to be applied as they may
+			minTargetPower: pointerToFloat64(math.Inf(1)),
+			maxTargetPower: pointerToFloat64(math.Inf(1)),
 		}
 	} else if scheduleItem.Action == "avoid_import" {
-		return controlComponent{
-			name:         "axle_schedule.avoid_import",
-			status:       componentStatusActiveGreedy,
-			targetPower:  0, // Target zero power at the site boundary
-			controlPoint: controlPointSite,
-		}
+		return importAvoidanceHelper(sitePower, lastTargetPower, "axle_schedule.avoid_import", true)
 	} else if scheduleItem.Action == "avoid_export" {
-		return controlComponent{
-			name:         "axle_schedule.avoid_export",
-			status:       componentStatusActiveGreedy,
-			targetPower:  0, // Target zero power at the site boundary
-			controlPoint: controlPointSite,
-		}
+		return exportAvoidanceHelper(sitePower, lastTargetPower, "axle_schedule.avoid_export", true)
 	}
-	// TODO: the avoid_import and avoid_export have been a bit tricky to do properly because they need to signal to later components that they can't import/export,
 
 	slog.Error("Unknown action type from Axle", "action_type", scheduleItem.Action)
 	return INACTIVE_CONTROL_COMPONENT

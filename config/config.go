@@ -177,11 +177,12 @@ type ControllerConfig struct {
 }
 
 type AxleConfig struct {
-	Host                        string `yaml:"host"`
-	UsernameEnvVar              string `yaml:"usernameEnvVar"`
-	PasswordEnvVar              string `yaml:"passwordEnvVar"`
-	TelemetryUploadIntervalSecs int    `yaml:"telemetryUploadIntervalSecs"`
-	SchedulePollIntervalSecs    int    `yaml:"schedulePollIntervalSecs"`
+	Host                         string `yaml:"host"`
+	UsernameEnvVar               string `yaml:"usernameEnvVar"`
+	PasswordEnvVar               string `yaml:"passwordEnvVar"`
+	TelemetryUploadIntervalSecs  int    `yaml:"telemetryUploadIntervalSecs"`
+	SchedulePollIntervalSecs     int    `yaml:"schedulePollIntervalSecs"`
+	HardCodedScheduleAPIResponse string `yaml:"hardcodedScheduleAPIResponse"`
 }
 
 type Config struct {

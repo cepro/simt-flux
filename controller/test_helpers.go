@@ -41,22 +41,51 @@ func mustParseTime(str string) time.Time {
 	return time
 }
 
-// componentsEquivalent returns true if c1 and c2 are equivalent. If the components are inactive then they are deemed equivalent whether or not other fields match.
+// componentsEquivalent returns true if c1 and c2 are equivalent.
 func componentsEquivalent(c1, c2 controlComponent) bool {
-	if c1.status != c2.status {
-		return false
-	}
-	if c1.status == componentStatusInactive {
-		return true
-	}
-	if c1.controlPoint != c2.controlPoint {
-		return false
-	}
-	if !almostEqual(c1.targetPower, c2.targetPower, 0.1) {
-		return false
-	}
+
 	if c1.name != c2.name {
 		return false
 	}
+	tolerance := 0.1 // 0.1kW
+
+	if !float64PointersNearlyEqual(c1.targetPower, c2.targetPower, tolerance) {
+		return false
+	}
+
+	if !float64PointersNearlyEqual(c1.minTargetPower, c2.minTargetPower, tolerance) {
+		return false
+	}
+
+	if !float64PointersNearlyEqual(c1.maxTargetPower, c2.maxTargetPower, tolerance) {
+		return false
+	}
+
 	return true
+}
+
+// float64PointersNearlyEqual returns true if the two float64 pointers are either both nil or both point to nearly the same value
+func float64PointersNearlyEqual(p1, p2 *float64, tolerance float64) bool {
+	if (p1 == nil) != (p2 == nil) {
+		return false
+	}
+	if p1 != nil {
+		return nearlyEqual(*p1, *p2, tolerance)
+	}
+	return true
+}
+
+func nearlyEqual(f1, f2, tolerance float64) bool {
+
+	// Handle infinities
+	if math.IsInf(f1, 0) || math.IsInf(f2, 0) {
+		return f1 == f2
+	}
+
+	// Handle NaN
+	if math.IsNaN(f1) || math.IsNaN(f2) {
+		return false // NaN is not equal to anything, even itself
+	}
+
+	return math.Abs(f1-f2) <= tolerance
 }
