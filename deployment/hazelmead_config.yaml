@@ -349,15 +349,9 @@ controller:
             start: 00:00:00:Europe/London
             end: 03:00:00:Europe/London
         niv:
-          chargeCurve: &weekdayChargeCurve  # this won't be used as charging is not permitted by the Axle schedule
-            points: [
-              { "x": -99999, "y": 1800 },
-              { "x": -2, "y": 1800 },
-              { "x": 2, "y": 1100 },
-              { "x": 6, "y": 1100 },
-              { "x": 12, "y": 0 }
-            ]
-          dischargeCurve: &weekdayDischargeCurve
+          chargeCurve:  # this won't be used as Axle controls charging on both baselining and trading days
+            points: []
+          dischargeCurve:
             points: [  # Discharge pretty much whenever the system is short in this period - this may need tweaking
               { "x": 10, "y": 1800 },
               { "x": 10, "y": 1100 },
@@ -381,8 +375,21 @@ controller:
           start: 03:00:00:Europe/London
           end: 23:59:59:Europe/London
         niv:
-          chargeCurve: *weekdayChargeCurve
-          dischargeCurve: *weekdayDischargeCurve
+          chargeCurve:
+            points: [
+              { "x": -99999, "y": 1800 },
+              { "x": -2, "y": 1800 },
+              { "x": 2, "y": 1100 },
+              { "x": 6, "y": 1100 },
+              { "x": 12, "y": 0 }
+            ]
+          dischargeCurve:
+            points: [
+              { "x": 8, "y": 1800 },
+              { "x": 18, "y": 1100 },
+              { "x": 25, "y": 1100 },
+              { "x": 35, "y": 0 },
+            ]
           curveShiftLong: 4
           curveShiftShort: 2
           defaultPricing: []
