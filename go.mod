@@ -11,6 +11,7 @@ require (
 	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b // indirect
 	github.com/andybalholm/stroke v0.0.0-20221221101821-bd29b49d73f0 // indirect
 	github.com/campoy/embedmd v1.0.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/glebarez/sqlite v1.9.0 // indirect
@@ -37,6 +38,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/ringsq/gormsqlite v0.0.0-20211110155943-91367e6f4df3 // indirect
 	github.com/simonvetter/modbus v1.6.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b // indirect
 	golang.org/x/exp/shiny v0.0.0-20230801115018-d63ba01acd4b // indirect
 	golang.org/x/image v0.11.0 // indirect

@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/cepro/besscontroller/axle"
+	"github.com/cepro/besscontroller/axleclient"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
 	timeutils "github.com/cepro/besscontroller/time_utils"
@@ -29,14 +29,14 @@ import (
 type Controller struct {
 	SiteMeterReadings chan telemetry.MeterReading
 	BessReadings      chan telemetry.BessReading
-	AxleSchedules     chan axle.Schedule
+	AxleSchedules     chan axleclient.Schedule
 
 	config Config
 
 	sitePower timedMetric // +ve is microgrid import, -ve is microgrid export
 	bessSoe   timedMetric
 
-	axleSchedule axle.Schedule
+	axleSchedule axleclient.Schedule
 
 	lastBessTargetPower float64 // +ve is battery discharge, -ve is battery charge
 }
@@ -82,7 +82,7 @@ func New(config Config) *Controller {
 	return &Controller{
 		SiteMeterReadings: make(chan telemetry.MeterReading, 1),
 		BessReadings:      make(chan telemetry.BessReading, 1),
-		AxleSchedules:     make(chan axle.Schedule, 1),
+		AxleSchedules:     make(chan axleclient.Schedule, 1),
 		config:            config,
 	}
 }

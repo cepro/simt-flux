@@ -178,6 +178,7 @@ type ControllerConfig struct {
 
 type AxleConfig struct {
 	Host                         string `yaml:"host"`
+	AssetId                      string `yaml:"assetId"`
 	UsernameEnvVar               string `yaml:"usernameEnvVar"`
 	PasswordEnvVar               string `yaml:"passwordEnvVar"`
 	TelemetryUploadIntervalSecs  int    `yaml:"telemetryUploadIntervalSecs"`

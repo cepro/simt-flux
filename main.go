@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/cepro/besscontroller/acuvim2"
-	"github.com/cepro/besscontroller/axle"
+	"github.com/cepro/besscontroller/axleclient"
+	"github.com/cepro/besscontroller/axlemgr"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/controller"
 	dataplatform "github.com/cepro/besscontroller/data_platform"
@@ -93,8 +94,10 @@ func main() {
 	}
 
 	var bess Bess
+	var bessID uuid.UUID
 	if config.Bess.PowerPack != nil {
 		ppConfig := config.Bess.PowerPack
+		bessID = ppConfig.ID
 		slog.Debug("Creating real powerpack", "bess_id", ppConfig.ID)
 		powerPack, err := powerpack.New(
 			ppConfig.ID,
@@ -115,6 +118,7 @@ func main() {
 		go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PowerPack.PollIntervalSecs))
 	} else if config.Bess.Mock != nil {
 		mockConfig := config.Bess.Mock
+		bessID = mockConfig.ID
 		slog.Debug("Creating mock powerpack", "bess_id", mockConfig.ID)
 		powerPackMock, err := powerpack.NewMock(mockConfig.ID, mockConfig.NameplateEnergy, mockConfig.NameplatePower)
 		if err != nil {
@@ -192,10 +196,38 @@ func main() {
 	go ctrl.Run(ctx, time.NewTicker(CONTROL_LOOP_PERIOD).C)
 
 	// Create the Axle API if it's configured
-	var axleAPI *axle.Axle
+	var axleManager *axlemgr.AxleMgr
 	if config.Axle != nil {
-		axleAPI = axle.New(ctrl.AxleSchedules, config.Axle.Host, config.Controller.SiteMeterID, config.Controller.BessMeterID, config.Axle.HardCodedScheduleAPIResponse)
-		go axleAPI.Run(
+
+		axleUsername, ok := os.LookupEnv(config.Axle.UsernameEnvVar)
+		if !ok {
+			slog.Error("Environment variable not found", "env_var", config.Axle.UsernameEnvVar)
+			return
+		}
+		axlePassword, ok := os.LookupEnv(config.Axle.PasswordEnvVar)
+		if !ok {
+			slog.Error("Environment variable not found", "env_var", config.Axle.PasswordEnvVar)
+			return
+		}
+
+		axleClient := axleclient.New(
+			http.Client{Timeout: time.Second * 10},
+			config.Axle.Host,
+			axleUsername,
+			axlePassword,
+		)
+
+		axleManager = axlemgr.New(
+			ctrl.AxleSchedules,
+			axleClient,
+			config.Axle.AssetId,
+			config.Controller.SiteMeterID,
+			config.Controller.BessMeterID,
+			bessID,
+			bess.NameplateEnergy(),
+		)
+
+		go axleManager.Run(
 			ctx,
 			time.Second*time.Duration(config.Axle.TelemetryUploadIntervalSecs),
 			time.Second*time.Duration(config.Axle.SchedulePollIntervalSecs),
@@ -220,16 +252,16 @@ func main() {
 				for _, dataPlatform := range dataPlatforms {
 					sendIfNonBlocking(dataPlatform.MeterReadings, meterReading, fmt.Sprintf("Dataplatform meter readings (%s)", dataPlatform.BufferRepositoryFilename()))
 				}
-				if axleAPI != nil {
-					sendIfNonBlocking(axleAPI.MeterReadings, meterReading, "Axle meter readings")
+				if axleManager != nil {
+					sendIfNonBlocking(axleManager.MeterReadings, meterReading, "Axle meter readings")
 				}
 			case bessReading := <-bess.Telemetry():
 				sendIfNonBlocking(ctrl.BessReadings, bessReading, "Controller bess readings")
 				for _, dataPlatform := range dataPlatforms {
 					sendIfNonBlocking(dataPlatform.BessReadings, bessReading, fmt.Sprintf("Dataplatform bess readings (%s)", dataPlatform.BufferRepositoryFilename()))
 				}
-				if axleAPI != nil {
-					sendIfNonBlocking(axleAPI.BessReadings, bessReading, "Axle bess readings")
+				if axleManager != nil {
+					sendIfNonBlocking(axleManager.BessReadings, bessReading, "Axle bess readings")
 				}
 			}
 		}
