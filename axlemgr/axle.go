@@ -13,22 +13,22 @@ import (
 // AxleMgr controls the flow of information to and from Axle. We send them operational telemetry and they give us control schedules.
 // At the moment schedules are retrieved via polling initiated here.
 type AxleMgr struct {
-	BessReadings  chan telemetry.BessReading  // put new bess readings here and they will be uploaded as telemetry to Axle
-	MeterReadings chan telemetry.MeterReading // put new meter readings here and they will be uploaded as telemetry to Axle
+	BessReadings  chan telemetry.BessReading  // put new bess readings here and the relevant data will be uploaded to Axle
+	MeterReadings chan telemetry.MeterReading // put new meter readings here and the relevant data will be uploaded to Axle
 
 	schedules chan<- axleclient.Schedule // new schedules will be placed onto this channel as they are received
 
 	axleAssetID string    // the ID that axle uses to identify this asset
-	bessID      uuid.UUID // these are our IDs
+	bessID      uuid.UUID // these are our IDs for the BESS and relevant meters
 	siteMeterID uuid.UUID
 	bessMeterID uuid.UUID
 
-	bessNameplateEnergy float64 // this is required because Axle wants the SoE as a percentage rather than as kWh
+	bessNameplateEnergy float64 // this is required to convert the SoE kWh to a percentage (Axle API wants a percentage)
 
-	client *axleclient.Client
+	client *axleclient.Client // The underlying API client to use to communicate with Axle
 	logger *slog.Logger
 
-	// these maps hold the last reading received, keyed by the device ID
+	// these maps hold the last reading received on the channels, keyed by the device ID
 	latestBessReadings  map[uuid.UUID]telemetry.BessReading
 	latestMeterReadings map[uuid.UUID]telemetry.MeterReading
 
@@ -38,7 +38,7 @@ type AxleMgr struct {
 func New(schedules chan<- axleclient.Schedule, client *axleclient.Client, bessID, siteMeterID, bessMeterID uuid.UUID, axleAssetID string, bessNameplateEnergy float64) *AxleMgr {
 
 	return &AxleMgr{
-		BessReadings:        make(chan telemetry.BessReading, 25), // TODO: check this size. A small buffer to allow things to catch up in case the upload is slow
+		BessReadings:        make(chan telemetry.BessReading, 25), // A small buffer to allow things to catch up in case the upload is slow
 		MeterReadings:       make(chan telemetry.MeterReading, 25),
 		schedules:           schedules,
 		axleAssetID:         axleAssetID,
@@ -107,12 +107,18 @@ func (a *AxleMgr) uploadOperationalTelemetry() {
 
 	axleReadings := a.getAxleReadings(bessReading, bessMeterReading, siteMeterReading)
 
+	numReadings := len(axleReadings)
+	if numReadings < 1 {
+		a.logger.Warn("No readings to send to Axle")
+		return
+	}
+
 	a.client.UploadReadings(axleReadings)
 
 	if err != nil {
 		a.logger.Info("Failed Axle operational telemetry upload", "error", err)
 	} else {
-		slog.Info("Axle operational telemetry uploaded", "num_readings", len(axleReadings))
+		a.logger.Info("Axle operational telemetry uploaded", "num_readings", len(axleReadings))
 	}
 }
 
