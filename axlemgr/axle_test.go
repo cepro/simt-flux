@@ -127,17 +127,13 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create a mock or actual AxleMgr with required fields
 			axleMgr := &AxleMgr{
 				axleAssetID:         tc.axleAssetID,
 				bessNameplateEnergy: tc.bessNameplateEnergy,
-				// Add other required fields as needed
 			}
 
-			// Call the function
 			result := axleMgr.getAxleReadings(tc.bessReading, tc.bessMeterReading, tc.siteMeterReading)
 
-			// Check the result
 			assertReadingsEqual(t, tc.expected, result)
 		})
 	}
