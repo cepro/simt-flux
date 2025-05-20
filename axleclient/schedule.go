@@ -1,4 +1,4 @@
-package axle
+package axleclient
 
 import (
 	"time"
@@ -7,9 +7,8 @@ import (
 )
 
 type Schedule struct {
-	// TODO: implement schedule based on what Axle send us
 	ReceivedTime time.Time
-	Items        []ScheduleItem
+	Items        []ScheduleItem `json:"schedule_steps"`
 }
 
 type ScheduleItem struct {

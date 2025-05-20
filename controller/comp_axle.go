@@ -4,12 +4,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/cepro/besscontroller/axle"
+	"github.com/cepro/besscontroller/axleclient"
 	"golang.org/x/exp/slog"
 )
 
 // axleSchedule returns the control component for following any Axle schedules
-func axleSchedule(t time.Time, schedule axle.Schedule, sitePower, lastTargetPower float64) controlComponent {
+func axleSchedule(t time.Time, schedule axleclient.Schedule, sitePower, lastTargetPower float64) controlComponent {
 	scheduleItem := schedule.FirstItemAt(t)
 	if scheduleItem == nil {
 		return INACTIVE_CONTROL_COMPONENT

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cepro/besscontroller/axle"
+	"github.com/cepro/besscontroller/axleclient"
 	"github.com/cepro/besscontroller/cartesian"
 	"github.com/cepro/besscontroller/config"
 	"github.com/cepro/besscontroller/telemetry"
@@ -456,9 +456,9 @@ func TestController(test *testing.T) {
 	test.Run("AxleSchedules", func(t *testing.T) {
 
 		// Create axle schedule
-		axleSchedule := axle.Schedule{
+		axleSchedule := axleclient.Schedule{
 			ReceivedTime: time.Time{},
-			Items: []axle.ScheduleItem{
+			Items: []axleclient.ScheduleItem{
 				{
 					Start:          mustParseTime("2023-09-13T09:00:00+01:00"),
 					End:            mustParseTime("2023-09-13T09:05:00+01:00"),
