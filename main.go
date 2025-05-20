@@ -220,10 +220,10 @@ func main() {
 		axleManager = axlemgr.New(
 			ctrl.AxleSchedules,
 			axleClient,
-			bessID,
+			config.Axle.AssetId,
 			config.Controller.SiteMeterID,
 			config.Controller.BessMeterID,
-			config.Axle.AssetId,
+			bessID,
 			bess.NameplateEnergy(),
 		)
 
