@@ -146,16 +146,11 @@ func (a *AxleMgr) processSchedule() {
 // Axle has it's own categorisation and structure for storing readings so here we just convert from our form to their form.
 func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterReading, siteMeterReading *telemetry.MeterReading) []axleclient.Reading {
 
-	t, err := time.Parse(time.RFC3339, "2000-01-01T00:00:00+00:00")
-	if err != nil {
-		panic(err)
-	}
-
 	readings := []axleclient.Reading{}
 
 	if siteMeterReading != nil {
 		boundary_power := siteMeterReading.PowerTotalActive
-		// t := siteMeterReading.Time
+		t := siteMeterReading.Time
 		if boundary_power != nil {
 			if *boundary_power >= 0 {
 				readings = append(readings, axleclient.Reading{
@@ -193,7 +188,7 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 
 	if bessReading != nil {
 		soePct := (bessReading.Soe / a.bessNameplateEnergy) * 100
-		// t := bessReading.Time
+		t := bessReading.Time
 		readings = append(readings, axleclient.Reading{
 			AssetId:        a.axleAssetID,
 			StartTimestamp: t,
