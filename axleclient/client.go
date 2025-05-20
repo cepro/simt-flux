@@ -44,6 +44,7 @@ func New(httpClient http.Client, baseUrl, username, password string) *Client {
 	return client
 }
 
+// GetSchedule pulls the latest schedule for the given asset ID from Axle and returns it.
 func (c *Client) GetSchedule(assetId string) (Schedule, error) {
 
 	req, err := http.NewRequest(
@@ -81,6 +82,45 @@ func (c *Client) GetSchedule(assetId string) (Schedule, error) {
 	return parsedResponse, nil
 }
 
+func (c *Client) UploadReadings(axleReadings []Reading) error {
+
+	for _, reading := range axleReadings {
+		slog.Info("Uploading reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp)
+	}
+
+	readingsData, err := json.Marshal(axleReadings)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/data/readings", c.baseUrl),
+		bytes.NewBuffer(readingsData),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = c.authorizeRequest(req)
+	if err != nil {
+		return fmt.Errorf("authorization: %w", err)
+	}
+
+	response, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("post readings: %w", err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		return fmt.Errorf("unexpected status code: %d", response.StatusCode)
+	}
+
+	return nil
+}
+
+// authorizeRequest adds the required Authorization header with access token to the given request (updating the access token as required).
 func (c *Client) authorizeRequest(req *http.Request) error {
 
 	if (time.Since(c.accessTokenLastUpdated)) >= accessTokenMaxAge {
@@ -96,8 +136,6 @@ func (c *Client) authorizeRequest(req *http.Request) error {
 }
 
 func (c *Client) updateAccessToken() error {
-
-	slog.Info("Refreshing axle API access token")
 
 	// The body of the request uses url encoding
 	data := url.Values{}
@@ -133,44 +171,6 @@ func (c *Client) updateAccessToken() error {
 
 	c.accessToken = parsedResponse.AccessToken
 	c.accessTokenLastUpdated = time.Now()
-
-	return nil
-}
-
-func (c *Client) UploadReadings(axleReadings []Reading) error {
-
-	for _, reading := range axleReadings {
-		slog.Info("Uploading reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp)
-	}
-
-	readings_data, err := json.Marshal(axleReadings)
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-
-	req, err := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%s/data/readings", c.baseUrl),
-		bytes.NewBuffer(readings_data),
-	)
-	if err != nil {
-		return err
-	}
-
-	err = c.authorizeRequest(req)
-	if err != nil {
-		return fmt.Errorf("authorization: %w", err)
-	}
-
-	response, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("post readings: %w", err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != 200 {
-		return fmt.Errorf("unexpected status code: %d", response.StatusCode)
-	}
 
 	return nil
 }
