@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// This package defines the YAML configuration structure
+
 type DynamicPeakDischargeConfig struct {
 	DayedPeriod            timeutils.DayedPeriod        `yaml:"period"`
 	TargetSoe              float64                      `yaml:"targetSoe"`
@@ -65,8 +67,6 @@ type NivPredictionConfig struct {
 	WhenLong  NivPredictionDirectionConfig `yaml:"whenLong"`
 }
 
-// TODO: think about naming here 'prediction' is used for both up to date modo and previous modo
-// in the code, but in the config it's used only for previosu modo data
 type NivPredictionDirectionConfig struct {
 	AllowPrediction bool    `yaml:"allowPrediction"`
 	VolumeCutoff    float64 `yaml:"volumeCutoff"` // imbalance volume in kWh
@@ -132,10 +132,9 @@ type BessConfig struct {
 }
 
 type SupabaseConfig struct {
-	Url string `yaml:"url"`
-	// key is specified via env var
+	Url           string `yaml:"url"`
 	Schema        string `yaml:"schema"`
-	AnonKeyEnvVar string `yaml:"anonKeyEnvVar"`
+	AnonKeyEnvVar string `yaml:"anonKeyEnvVar"` // keys are specified via env var
 	UserKeyEnvVar string `yaml:"userKeyEnvVar"`
 }
 
@@ -194,6 +193,7 @@ type Config struct {
 	Controller    ControllerConfig     `yaml:"controller"`
 }
 
+// Read returns a new Config instance, created by parsing the file at the given path
 func Read(path string) (Config, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	timeutils "github.com/cepro/besscontroller/time_utils"
 )
 
+// TimedRate represents a p/kWh that only applies at certain times of day
 type TimedRate struct {
 	Rate    float64                 `yaml:"rate"`
 	Periods []timeutils.DayedPeriod `yaml:"periods"`
