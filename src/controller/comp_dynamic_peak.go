@@ -149,6 +149,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 			},
 			modoClient,
 		)
+
 		if gotPrediction && imbalanceVolume < 0 {
 			// system is long
 
@@ -224,7 +225,7 @@ func datetimePoint(t time.Time, y float64) cartesian.Point {
 	// Returns a Point object that encodes a time of day.
 	// This uses a reference datetime to convert a time into a float number of seconds, so may not work over midnight
 	// boundaries.
-	referenceTime := time.Date(2000, 1, 1, 0, 0, 0, 0, t.Location())
+	referenceTime := time.Date(2000, 1, 1, 0, 0, 0, 0, &time.Location{})
 	duration := t.Sub(referenceTime) / time.Second // integer truncation of number of seconds isn't significant for our use cases
 	return cartesian.Point{
 		X: float64(duration),

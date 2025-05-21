@@ -276,25 +276,26 @@ func TestDynamicPeakApproach(test *testing.T) {
 			expectedControlComponent: chargingControlComponentThatAllowsMoreCharge("dynamic_peak_approach", -125.0),
 		},
 	}
-	for _, subTest := range subTests {
-		test.Run(subTest.name, func(t *testing.T) {
+
+	for _, st := range subTests {
+
+		test.Run(st.name, func(t *testing.T) {
 
 			component := dynamicPeakApproach(
-				subTest.t,
+				st.t,
 				configs,
-				subTest.bessSoe,
+				st.bessSoe,
 				1.0,
 				&MockImbalancePricer{
 					price:  0.0,
-					volume: subTest.imbalanceVolume,
-					time:   timeutils.FloorHH(subTest.t),
+					volume: st.imbalanceVolume,
+					time:   timeutils.FloorHH(st.t),
 				},
 			)
 
-			if !componentsEquivalent(component, subTest.expectedControlComponent) {
-				t.Errorf("got %s, expected %s", component.str(), subTest.expectedControlComponent.str())
+			if !componentsEquivalent(component, st.expectedControlComponent) {
+				test.Errorf("got %s, expected %s", component.str(), st.expectedControlComponent.str())
 			}
 		})
 	}
-
 }

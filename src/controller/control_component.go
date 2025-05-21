@@ -19,7 +19,7 @@ func (c *controlComponent) isActive() bool {
 }
 
 func (c *controlComponent) str() string {
-	return fmt.Sprintf("%s %s/%s/%s", c.name, strForPointerToFloat64(c.targetPower), strForPointerToFloat64(c.minTargetPower), strForPointerToFloat64(c.maxTargetPower))
+	return fmt.Sprintf("'%s'/%s/%s/%s", c.name, strForPointerToFloat64(c.targetPower), strForPointerToFloat64(c.minTargetPower), strForPointerToFloat64(c.maxTargetPower))
 }
 
 // strForPointerToFloat64 returns a string representing the *float64
