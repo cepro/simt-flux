@@ -201,6 +201,10 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 	return nil
 }
 
+func (p *PowerPack) ID() uuid.UUID {
+	return p.id
+}
+
 func (p *PowerPack) NameplateEnergy() float64 {
 	return p.nameplateEnergy
 }

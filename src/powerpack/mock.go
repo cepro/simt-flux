@@ -51,6 +51,10 @@ func (p *PowerPackMock) Run(ctx context.Context, period time.Duration) error {
 	}
 }
 
+func (p *PowerPackMock) ID() uuid.UUID {
+	return p.id
+}
+
 func (p *PowerPackMock) NameplateEnergy() float64 {
 	return p.nameplateEnergy
 }

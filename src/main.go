@@ -29,6 +29,7 @@ const (
 
 type Bess interface {
 	Run(ctx context.Context, period time.Duration) error
+	ID() uuid.UUID
 	NameplateEnergy() float64
 	NameplatePower() float64
 	Commands() chan<- telemetry.BessCommand
@@ -94,10 +95,8 @@ func main() {
 	}
 
 	var bess Bess
-	var bessID uuid.UUID
 	if config.Bess.PowerPack != nil {
 		ppConfig := config.Bess.PowerPack
-		bessID = ppConfig.ID
 		slog.Debug("Creating real powerpack", "bess_id", ppConfig.ID)
 		powerPack, err := powerpack.New(
 			ppConfig.ID,
@@ -118,7 +117,6 @@ func main() {
 		go powerPack.Run(ctx, time.Second*time.Duration(config.Bess.PowerPack.PollIntervalSecs))
 	} else if config.Bess.Mock != nil {
 		mockConfig := config.Bess.Mock
-		bessID = mockConfig.ID
 		slog.Debug("Creating mock powerpack", "bess_id", mockConfig.ID)
 		powerPackMock, err := powerpack.NewMock(mockConfig.ID, mockConfig.NameplateEnergy, mockConfig.NameplatePower)
 		if err != nil {
@@ -223,7 +221,7 @@ func main() {
 			config.Axle.AssetId,
 			config.Controller.SiteMeterID,
 			config.Controller.BessMeterID,
-			bessID,
+			bess.ID(),
 			bess.NameplateEnergy(),
 		)
 
