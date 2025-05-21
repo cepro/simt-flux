@@ -11,6 +11,7 @@ type Schedule struct {
 	Items        []ScheduleItem `json:"schedule_steps"`
 }
 
+// ScheduleItem holds a scheduled action recieved from Axle and defines how it maps from JSON
 type ScheduleItem struct {
 	Start          time.Time `json:"start_timestamp"`
 	End            time.Time `json:"end_timestamp"`

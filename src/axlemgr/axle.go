@@ -10,19 +10,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// AxleMgr controls the flow of information to and from Axle. We send them operational telemetry and they give us control schedules.
-// At the moment schedules are retrieved via polling initiated here.
+// AxleMgr controls the flow of information to and from Axle. We send Axle operational telemetry and they send us control schedules.
+// At the moment schedules are retrieved via polling which is initiated here.
 type AxleMgr struct {
 	BessReadings  chan telemetry.BessReading  // put new bess readings here and the relevant data will be uploaded to Axle
 	MeterReadings chan telemetry.MeterReading // put new meter readings here and the relevant data will be uploaded to Axle
 
 	schedules chan<- axleclient.Schedule // new schedules will be placed onto this channel as they are received
 
-	axleAssetID         string // the ID that axle uses to identify this asset
-	siteMeterID         uuid.UUID
+	axleAssetID         string    // the ID that axle uses to identify this asset
+	siteMeterID         uuid.UUID // these are our IDs for the relevant meters and BESS
 	bessMeterID         uuid.UUID
-	bessID              uuid.UUID // these are our IDs for the BESS and relevant meters
-	bessNameplateEnergy float64   // this is required to convert the SoE kWh to a percentage (Axle API wants a percentage)
+	bessID              uuid.UUID
+	bessNameplateEnergy float64 // this is required to convert the SoE kWh to a percentage (Axle API wants a percentage)
 
 	client *axleclient.Client // The underlying API client to use to communicate with Axle
 	logger *slog.Logger
@@ -52,7 +52,7 @@ func New(schedules chan<- axleclient.Schedule, client *axleclient.Client, axleAs
 	}
 }
 
-// Run loops forever and manages the API. Exits when the context is cancelled.
+// Run loops forever and manages the flow of data over the APIs. Exits when the context is cancelled.
 func (a *AxleMgr) Run(ctx context.Context, telemetryUploadInterval, schedulePullInterval time.Duration) error {
 
 	uploadTicker := time.NewTicker(telemetryUploadInterval)
@@ -143,6 +143,7 @@ func (a *AxleMgr) processSchedule() {
 
 // getAxleReadings converts the given telemetry.BessReading and telemetry.MeterReading to axleclient.Reading instances.
 // Axle has it's own categorisation and structure for storing readings so here we just convert from our form to their form.
+// If the input readings are nil then the associated data won't be sent to Axle.
 func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterReading, siteMeterReading *telemetry.MeterReading) []axleclient.Reading {
 
 	readings := []axleclient.Reading{}
@@ -151,6 +152,7 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 		boundary_power := siteMeterReading.PowerTotalActive
 		t := siteMeterReading.Time
 		if boundary_power != nil {
+			// Axle defines different labels for import and export power, whereas we have a positive of negative number
 			if *boundary_power >= 0 {
 				readings = append(readings, axleclient.Reading{
 					AssetId:        a.axleAssetID,
@@ -186,6 +188,7 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 	}
 
 	if bessReading != nil {
+		// Axle wants the SoE as a percentage
 		soePct := (bessReading.Soe / a.bessNameplateEnergy) * 100
 		t := bessReading.Time
 		readings = append(readings, axleclient.Reading{

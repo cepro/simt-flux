@@ -28,6 +28,7 @@ type Client struct {
 	logger *slog.Logger
 }
 
+// authResponse is the JSON body that is sent by Axle when we query the `auth/token-form` endpoint
 type authResponse struct {
 	AccessToken string `json:"access_token"`
 }
@@ -82,9 +83,11 @@ func (c *Client) GetSchedule(assetId string) (Schedule, error) {
 	return parsedResponse, nil
 }
 
+// Sends the given readings/telemetry to the Axle cloud
 func (c *Client) UploadReadings(axleReadings []Reading) error {
 
 	for _, reading := range axleReadings {
+		// This is debug logging really and may get too noisy
 		slog.Info("Uploading reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp)
 	}
 
@@ -135,6 +138,7 @@ func (c *Client) authorizeRequest(req *http.Request) error {
 	return nil
 }
 
+// updateAccessToken queries the Axle auth endpoint for a new access token and saves it
 func (c *Client) updateAccessToken() error {
 
 	// The body of the request uses url encoding
