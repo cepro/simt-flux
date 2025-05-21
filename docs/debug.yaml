@@ -7,7 +7,7 @@ meters:
 
 bess:
   mock:
-    host: localhot:1504
+    host: localhost:1504
     id: a1191105-a632-404c-ae79-3e647a411919
     pollIntervalSecs: 2
     nameplatePower: 565
@@ -18,7 +18,7 @@ dataPlatforms: []
 # Disabled as there isn't a dev system to test against - we could try a random UUID?
 # axle:
 #   host: "https://api.axle.energy"
-#   assetId: "8912ad26-0b6f-426f-9a51-8c561d51d453"  # This is the Axle identifier for our battery
+#   assetId  # This is the Axle identifier for our battery
 #   usernameEnvVar: AXLE_USERNAME
 #   passwordEnvVar: AXLE_PASSWORD
 #   telemetryUploadIntervalSecs: 10
