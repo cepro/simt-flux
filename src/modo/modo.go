@@ -72,6 +72,8 @@ func New(client http.Client) *Client {
 func (c *Client) Run(ctx context.Context, period time.Duration) error {
 	ticker := time.NewTicker(period)
 
+	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages" when it first runs up
+
 	for {
 		select {
 		case <-ctx.Done():

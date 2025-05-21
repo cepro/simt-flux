@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	CONTROL_LOOP_PERIOD = time.Second * 4
+	CONTROL_LOOP_PERIOD = time.Second * 4 // How frequently to run the main control loop
 )
 
+// Bess is an interface onto either a mock or a real battery
 type Bess interface {
 	Run(ctx context.Context, period time.Duration) error
 	ID() uuid.UUID
@@ -53,11 +54,12 @@ func main() {
 		return
 	}
 
+	// A main context for the whole program
 	ctx, cancel := context.WithCancel(context.Background())
 
 	meterReadings := make(chan telemetry.MeterReading, 5)
 
-	// Create Acuvim2 'real' meters
+	// Create any Acuvim2 'real' meters
 	acuvimMeters := make(map[uuid.UUID]*acuvim2.Acuvim2Meter, len(config.Meters.Acuvim2))
 	for _, meterConfig := range config.Meters.Acuvim2 {
 		slog.Debug("Creating real acuvim2 meter", "meter_id", meterConfig.ID)
@@ -78,7 +80,7 @@ func main() {
 		acuvimMeters[meterConfig.ID] = meter
 	}
 
-	// Create Acuvim2 mock meters
+	// Create any mock Acuvim2 meters
 	mockMeters := make(map[uuid.UUID]*acuvim2.Acuvim2MeterMock, len(config.Meters.Mock))
 	for _, meterConfig := range config.Meters.Mock {
 		slog.Debug("Creating mock meter", "meter_id", meterConfig.ID)
@@ -94,6 +96,7 @@ func main() {
 		mockMeters[meterConfig.ID] = meter
 	}
 
+	// Create either a real or a mock BESS
 	var bess Bess
 	if config.Bess.PowerPack != nil {
 		ppConfig := config.Bess.PowerPack
@@ -163,11 +166,11 @@ func main() {
 		dataPlatforms = append(dataPlatforms, dataPlatform)
 	}
 
-	// Create modo client
-	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages" when it first runs up
+	// Create modo client which pulls imbalance price and volume predictions
 	modoClient := modo.New(http.Client{Timeout: time.Second * 10})
 	go modoClient.Run(ctx, time.Second*30)
 
+	// Create the main controller
 	ctrl := controller.New(controller.Config{
 		BessIsEmulated:           config.Controller.Emulation.BessIsEmulated,
 		BessChargeEfficiency:     config.Controller.BessChargeEfficiency,
@@ -193,7 +196,7 @@ func main() {
 	})
 	go ctrl.Run(ctx, time.NewTicker(CONTROL_LOOP_PERIOD).C)
 
-	// Create the Axle API if it's configured
+	// Create the Axle API client and manager if it's configured
 	var axleManager *axlemgr.AxleMgr
 	if config.Axle != nil {
 
@@ -232,7 +235,7 @@ func main() {
 		)
 	}
 
-	// fan out the meter and bess readings to various modules: the controller, the data platform, and Axle API
+	// Here, any meter and bess readings are 'fanned out' to the various modules that are interested in the data: the controller, the data platform, and Axle API
 	go func() {
 		for {
 			select {
@@ -279,7 +282,7 @@ func main() {
 }
 
 // emulateSiteMeter generates a new emulated meter reading for every 'real' site meter reading. The emulated reading shows what the site power would be
-// if the bess was really delivering power.
+// if the bess was really delivering power. This is useful for testing a controller on a site before the BESS is operational.
 func emulateSiteMeterReading(emulatedSiteMeter uuid.UUID, ctrl *controller.Controller, meterReading telemetry.MeterReading) telemetry.MeterReading {
 	emulatedPower := ctrl.EmulatedSitePower()
 	return telemetry.MeterReading{
