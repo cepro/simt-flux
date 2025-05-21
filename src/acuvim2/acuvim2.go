@@ -13,7 +13,7 @@ import (
 )
 
 // Acuvim2Meter handles Modbus communications with the three phase Acuvim 2 meters.
-// Meter readings are taken regularly and sent onto the `Telemetry` channel.
+// Meter readings are taken regularly and sent onto the `readings` channel.
 type Acuvim2Meter struct {
 	readings chan<- telemetry.MeterReading
 	host     string
@@ -35,7 +35,7 @@ func New(readings chan<- telemetry.MeterReading, id uuid.UUID, host string, pt1 
 		return nil, fmt.Errorf("create modbus client: %w", err)
 	}
 
-	// TODO: PT and CT values could be read over modbus on initialisation rather then set by configuration
+	// PT and CT values could be read over modbus on startup rather then set by configuration
 
 	return &Acuvim2Meter{
 		readings: readings,
@@ -64,13 +64,13 @@ func (a *Acuvim2Meter) Run(ctx context.Context, period time.Duration) error {
 			metrics, err := a.client.PollBlocks(a, blocks)
 			if err != nil {
 				a.logger.Error("Failed to poll meter", "error", err)
-				continue // TODO: is this the right error handling
+				continue // try again next time
 			}
 
 			meterReading, err := a.metricsToMeterReading(metrics, t)
 			if err != nil {
 				a.logger.Error("Failed to convert metrics", "error", err)
-				continue
+				continue // try again next time
 			}
 
 			a.readings <- meterReading

@@ -52,7 +52,7 @@ func (c *Client) PollBlock(scaler Scaler, block MetricBlock) (map[string]interfa
 	metricVals := make(map[string]interface{}, len(block.Metrics))
 	for key, register := range block.Metrics {
 
-		// sanity check the configuration to avoid out of bound panics
+		// sanity check the modbus register configuration to avoid out of bound panics
 		offset := (int(register.StartAddr) - int(block.StartAddr)) * 2 // registers are two bytes long
 		if offset < 0 {
 			return nil, fmt.Errorf("register configuration for `%s` preceeds block", key)

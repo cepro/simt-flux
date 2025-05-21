@@ -16,7 +16,7 @@ const (
 	MODBUS_TIMEOUT_SECS = uint16(10)
 )
 
-// PowerPack represents a Tesla battery (actually a PowerPack or a MegaPack)
+// PowerPack represents a Tesla battery (this actually supports both PowerPacks and MegaPacks as they use a similar modbus API)
 type PowerPack struct {
 	host            string
 	id              uuid.UUID
@@ -68,7 +68,7 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64, tes
 	return p, nil
 }
 
-// Run loops forever polling telemetry from the meter every `period`. Exits when the context is cancelled.
+// Run loops forever polling telemetry from the Tesla battery every `period`. Exits when the context is cancelled.
 func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 
 	readingTicker := time.NewTicker(period)
@@ -77,19 +77,19 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case command := <-p.commands:
+		case command := <-p.commands: // if we receive a command then send it to the battery
 			err := p.issueCommand(command)
 			if err != nil {
 				p.logger.Error("Failed to issue command to bess", "bess_command", command, "error", err)
 				continue
 			}
 
-		case t := <-readingTicker.C:
+		case t := <-readingTicker.C: // poll telemetry regularly
 
 			metricVals, err := p.client.PollBlock(nil, statusBlock)
 			if err != nil {
 				p.logger.Error("Failed to poll BESS", "error", err)
-				continue // TODO: is this the right error handling
+				continue // try again next time
 			}
 
 			p.telemetry <- telemetry.BessReading{

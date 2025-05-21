@@ -2,6 +2,7 @@ package acuvim2
 
 import "github.com/cepro/besscontroller/modbus"
 
+// Maps out the modbus registers of interest
 var blocks = []modbus.MetricBlock{
 	{
 		Name:         "Power",
