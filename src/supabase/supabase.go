@@ -85,7 +85,7 @@ func (c *Client) createSubClient() error {
 	return nil
 }
 
-// setShouldReconnect is called when there has been an error with the modbus connection that should trigger a re-connect.
+// setShouldReconnect is called when there has been an error with the Supabase connection that should trigger a re-connect.
 func (c *Client) setShouldReconnect() {
 	c.shouldReconnect = true
 }

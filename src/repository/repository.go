@@ -60,7 +60,7 @@ func (r *Repository) convertReadingsForStorage(readings interface{}) interface{}
 	}
 }
 
-// ConvertStoredToReadings returns the "original reading" from teh given stored readings
+// ConvertStoredToReadings returns the "original reading" from the given stored readings
 func (r *Repository) ConvertStoredToReadings(storedReadings interface{}) interface{} {
 	switch storedReadingsTyped := storedReadings.(type) {
 

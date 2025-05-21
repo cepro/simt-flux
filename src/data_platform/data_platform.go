@@ -61,7 +61,6 @@ func (d *DataPlatform) BufferRepositoryFilename() string {
 // Run loops forever waiting for meter or bess readings, when they are available they are uploaded.
 func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 
-	// TODO: would be nice if this was "on the minute"
 	uploadTicker := time.NewTicker(uploadInterval)
 
 	for {
@@ -74,7 +73,7 @@ func (d *DataPlatform) Run(ctx context.Context, uploadInterval time.Duration) {
 		case reading := <-d.MeterReadings:
 			d.latestMeterReadings[reading.DeviceID] = reading
 
-		case _ = <-uploadTicker.C:
+		case <-uploadTicker.C:
 
 			var err error
 			attemptToProcessOldReadings := true
@@ -211,7 +210,8 @@ func (d *DataPlatform) processOldReadings(storedReadings interface{}) (int, erro
 		return 0, uploadErr
 	}
 
-	// TODO: what about failure here...
+	// If a failure (e.g. crash or power outage etc) happens at this line then Supabase would have the readings, but they would
+	// still be stored in SQlite for re-upload on the next reboot. However, this is unlikely to cause any major issues.
 
 	deleteErr := d.repository.DeleteReadings(storedReadings)
 	if deleteErr != nil {
