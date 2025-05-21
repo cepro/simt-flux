@@ -1,0 +1,70 @@
+meters:
+  mock:
+    "Mains incomer":
+      id: 570fec3b-e26f-4471-bc8b-693a2321dea2
+      host: null
+      pollIntervalSecs: 2
+
+bess:
+  mock:
+    host: localhost:1504
+    id: a1191105-a632-404c-ae79-3e647a411919
+    pollIntervalSecs: 2
+    nameplatePower: 565
+    nameplateEnergy: 1609
+
+dataPlatforms: []
+
+# Disabled as there isn't a dev system to test against - we could try a random UUID?
+# axle:
+#   host: "https://api.axle.energy"
+#   assetId  # This is the Axle identifier for our battery
+#   usernameEnvVar: AXLE_USERNAME
+#   passwordEnvVar: AXLE_PASSWORD
+#   telemetryUploadIntervalSecs: 10
+#   schedulePollIntervalSecs: 10
+
+
+controller:
+  siteMeter: 570fec3b-e26f-4471-bc8b-693a2321dea2
+  bessMeter: 8333c68b-d5e0-4caf-94f7-0e97c78b913a
+  emulation:
+    bessIsEmulated: true
+    emulatedSiteMeter: aa6a2312-c37a-4652-854f-657144bf1f1a
+  bessChargeEfficiency: 0.85
+  bessSoeMin: 40
+  bessSoeMax: 1800
+  bessChargePowerLimit: 565
+  bessDischargePowerLimit: 565
+  siteImportPowerLimit: 220
+  siteExportPowerLimit: 490
+  controlComponents:
+    importAvoidanceWhenShort:
+      - shortPrediction:
+          allowPrediction: true
+          volumeCutoff: 0
+          timeCutoffSecs: 1200  # 20mins
+        period:
+          days: all:Europe/London
+          start: 00:00:00:Europe/London
+          end: 23:59:59:Europe/London
+    importAvoidance: []
+    exportAvoidance:
+      # Activate export avoidance at all times except weekday evening peaks
+      - days: weekdays:Europe/London
+        start: 00:00:00:Europe/London
+        end: 17:00:00:Europe/London
+      - days: weekdays:Europe/London
+        start: 19:00:00:Europe/London
+        end: 23:59:59:Europe/London
+      - days: weekends:Europe/London
+        start: 00:00:00:Europe/London
+        end: 23:59:59:Europe/London
+    chargeToSoe: []
+    dischargeToSoe: []
+    dynamicPeakDischarge: []
+    dynamicPeakApproach: []
+    nivChase: []
+      
+  ratesImport: []
+  ratesExport: []
