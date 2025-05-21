@@ -3,11 +3,12 @@
 
 A Go service to control a microgrid battery, read from on-site meters, and upload telemetry. 
 
+Physical devices are queried over ModbusTCP, and the associated data (or 'readings') are distributed to the various modules that use the data (e.g. to upload as telemetry to the cloud, make decisions about control behaviour, etc)
+
 The high-level architecture of the program is shown below:
 
 ![high_level](docs/high_level.png)
 
-The physical devices are queried over ModbusTCP, and the associated data (or 'readings') are distributed to the various modules that use the data (e.g. to upload as telemetry to the cloud, make decisions about control behaviour, etc)
 
 ## Configuration
 
@@ -51,8 +52,8 @@ To run the program on your computer:
 
 To compile a binary that will run on a 64bit ARM processor like the newer RevPi's:
 
-`env GOARCH=arm64 GOOS=linux go build -o ./deployment/bess_controller_rpi_64 main.go`
+`env GOARCH=arm64 GOOS=linux go build -o ../bess_controller_rpi_64 main.go`
 
 To compile a binary that will run on the older 32bit ARM processors like the older RevPi's:
 
-`env GOARCH=arm GOARM=5 GOOS=linux go build -o ./deployment/bess_controller_rpi main.go`
+`env GOARCH=arm GOARM=5 GOOS=linux go build -o ../bess_controller_rpi main.go`
