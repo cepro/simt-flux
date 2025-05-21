@@ -18,6 +18,7 @@ const (
 	imbalanceVolumeUrlStr = "https://api.modoenergy.com/pub/v1/gb/modo/markets/niv-live"
 )
 
+// Client communicates with Modo and retrieves the imbalance price and volume predictions
 type Client struct {
 	client                    http.Client
 	lock                      sync.RWMutex   // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
@@ -72,7 +73,7 @@ func New(client http.Client) *Client {
 func (c *Client) Run(ctx context.Context, period time.Duration) error {
 	ticker := time.NewTicker(period)
 
-	// TODO: run retrieval immediately, otherwise we get "cannot run NIV chasing messages" when it first runs up
+	// TODO: We should run the queries immediately on startup, otherwise we get "cannot run NIV chasing" messages when the program first runs up
 
 	for {
 		select {
@@ -256,9 +257,9 @@ func (c *Client) requestImbalanceVolume() (imbalanceVolumeResponseItem, error) {
 func timeOfSettlementPeriod(dateStr string, settlementPeriod int) (time.Time, error) {
 
 	if settlementPeriod < 1 || settlementPeriod > 50 {
+		// TODO: we could have further validation of `settlementPeriod` range on clock change days etc
 		return time.Time{}, fmt.Errorf("invalid settlement period: %d", settlementPeriod)
 	}
-	// TODO: we could have further validation of `settlementPeriod` range on clock change days etc
 
 	// Go doesn't have built-in libraries to support standalone Dates (it's all Datetimes). So we first parse the date string (into a datetime)
 	// and then later re-create the datetime with timezone etc.
