@@ -91,7 +91,6 @@ func New(config Config) *Controller {
 // loop every time a tick is recieved on `tickerChan`.
 func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 
-	// TODO: print all configuration here
 	slog.Info(
 		"Starting controller",
 		"bess_soe_min", c.config.BessSoeMin,
@@ -147,22 +146,6 @@ func (c *Controller) Run(ctx context.Context, tickerChan <-chan time.Time) {
 	}
 }
 
-func (c *Controller) EmulatedSitePower() float64 {
-	// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
-	// Without the effect of the BESS on the site meter readings there is no 'closed loop control' and so if there is any site import the
-	// controller will increase BESS output to the maximum and empty the battery.
-	// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
-	return c.sitePower.value - c.lastBessTargetPower
-}
-
-// SitePower returns the metered power reading at the microgrid boundary (or an emulated value if appropriate)
-func (c *Controller) SitePower() float64 {
-	if c.config.BessIsEmulated {
-		return c.EmulatedSitePower()
-	}
-	return c.sitePower.value
-}
-
 // runControlLoop inspects the latest telemetry and controls the battery according to the highest priority control component.
 func (c *Controller) runControlLoop(t time.Time) {
 
@@ -170,7 +153,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 	ratesImport := config.SumTimedRates(t, c.config.RatesImport)
 	ratesExport := config.SumTimedRates(t, c.config.RatesExport)
 
-	// Calculate the different control components that all the different modes of operation want to do now. These are listed inpriority order.
+	// Calculate the different control components that all the different modes of operation want to do now. These are listed in priority order.
 	components := []controlComponent{
 		axleSchedule(
 			t,
@@ -257,6 +240,22 @@ func (c *Controller) runControlLoop(t time.Time) {
 	}
 	sendIfNonBlocking(c.config.BessCommands, command, "PowerPack commands")
 	c.lastBessTargetPower = action.bessTargetPower
+}
+
+func (c *Controller) EmulatedSitePower() float64 {
+	// If the BESS is emulated then it cannot actually export or import power, and so it cannot actually effect the site meter readings.
+	// Without the effect of the BESS on the site meter readings there is no 'closed loop control'. For example, if 'import avoidance' is
+	// active with an emulated BESS and there is any site import the controller will increase BESS output to the maximum and empty the battery.
+	// So here we mock the effect that the BESS would have had on the site meter reading as if it was real.
+	return c.sitePower.value - c.lastBessTargetPower
+}
+
+// SitePower returns the metered power reading at the microgrid boundary (or an emulated value if appropriate)
+func (c *Controller) SitePower() float64 {
+	if c.config.BessIsEmulated {
+		return c.EmulatedSitePower()
+	}
+	return c.sitePower.value
 }
 
 // prioritisedAction just helps organise the return values of `prioritiseControlComponents`
