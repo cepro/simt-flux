@@ -77,7 +77,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
-					Value:   -70.0,
+					Value:   70.0,
 					Label:   "battery_inverter_import_kw",
 				},
 			},
@@ -137,7 +137,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 				},
 				{
 					AssetId: "asset-123",
-					Value:   70,
+					Value:   -70,
 					Label:   "battery_inverter_import_kw",
 				},
 				{

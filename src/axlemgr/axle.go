@@ -171,7 +171,7 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 				AssetId:        a.axleAssetID,
 				StartTimestamp: t,
 				EndTimestamp:   t,
-				Value:          *bessPower,
+				Value:          *bessPower * -1,
 				Label:          "battery_inverter_import_kw",
 			})
 		}
