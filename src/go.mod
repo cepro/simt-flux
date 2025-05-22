@@ -1,6 +1,6 @@
 module github.com/cepro/besscontroller
 
-go 1.21.0
+go 1.21
 
 require (
 	gioui.org v0.2.0 // indirect
