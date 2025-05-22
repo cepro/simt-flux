@@ -83,6 +83,23 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			},
 		},
 		{
+			name: "BESS reading 110% SoE", // this should be limited to 100% before being sent to Axle
+			bessReading: &telemetry.BessReading{
+				Soe: 110.0,
+			},
+			bessMeterReading:    nil,
+			siteMeterReading:    nil,
+			axleAssetID:         "asset-123",
+			bessNameplateEnergy: 100.0,
+			expected: []axleclient.Reading{
+				{
+					AssetId: "asset-123",
+					Value:   100.0,
+					Label:   "battery_state_of_charge_pct",
+				},
+			},
+		},
+		{
 			name: "All readings present",
 			bessReading: &telemetry.BessReading{
 				Soe: 80.0,

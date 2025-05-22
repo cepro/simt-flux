@@ -3,6 +3,7 @@ package axlemgr
 import (
 	"context"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/cepro/besscontroller/axleclient"
@@ -164,8 +165,11 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 	}
 
 	if bessReading != nil {
-		// Axle wants the SoE as a percentage
+		// Axle wants the SoE as a percentage, ensure that it's between 0 and 100
 		soePct := (bessReading.Soe / a.bessNameplateEnergy) * 100
+		soePct = math.Max(0, soePct)
+		soePct = math.Min(100, soePct)
+
 		t := bessReading.Time
 		readings = append(readings, axleclient.Reading{
 			AssetId:        a.axleAssetID,
