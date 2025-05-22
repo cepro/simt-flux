@@ -66,6 +66,23 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			},
 		},
 		{
+			name:        "BESS meter reading only",
+			bessReading: nil,
+			bessMeterReading: &telemetry.MeterReading{
+				PowerTotalActive: pointerToFloat64(-70.0),
+			},
+			siteMeterReading:    nil,
+			axleAssetID:         "asset-123",
+			bessNameplateEnergy: 100.0,
+			expected: []axleclient.Reading{
+				{
+					AssetId: "asset-123",
+					Value:   -70.0,
+					Label:   "battery_inverter_import_kw",
+				},
+			},
+		},
+		{
 			name: "BESS reading only",
 			bessReading: &telemetry.BessReading{
 				Soe: 75.0,
@@ -105,7 +122,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 				Soe: 80.0,
 			},
 			bessMeterReading: &telemetry.MeterReading{
-				// Not yet implemented
+				PowerTotalActive: pointerToFloat64(70.0),
 			},
 			siteMeterReading: &telemetry.MeterReading{
 				PowerTotalActive: pointerToFloat64(-20.0),
@@ -117,6 +134,11 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 					AssetId: "asset-123",
 					Value:   -20.0,
 					Label:   "boundary_import_kw",
+				},
+				{
+					AssetId: "asset-123",
+					Value:   70,
+					Label:   "battery_inverter_import_kw",
 				},
 				{
 					AssetId: "asset-123",
