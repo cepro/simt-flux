@@ -136,7 +136,8 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 
 		peakPeriod := conf.PeakPeriod.ClockTimePeriod.AbsolutePeriodOnDate(t.Year(), t.Month(), t.Day())
 
-		referencePoint := datetimePoint(t, bessSoe)
+		endOfSP := timeutils.FloorHH(t).Add(time.Minute * 30)
+		endOfSPReferencePoint := datetimePoint(endOfSP, bessSoe)
 		hoursLeftOfSP := float64(timeutils.DurationLeftOfSP(t)) / float64(time.Hour)
 
 		// First check if there is a requirement to "encourage charge" if the system is long
@@ -167,7 +168,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 				conf.EncourageChargeDurationFactor,
 				time.Duration(float64(time.Minute)*conf.ChargeCushionMins),
 			)
-			encourageEnergy := encourageCurve.VerticalDistance(referencePoint)
+			encourageEnergy := encourageCurve.VerticalDistance(endOfSPReferencePoint)
 			encouragePower := (encourageEnergy / hoursLeftOfSP) / chargeEfficiency
 
 			logger.Info(
@@ -192,7 +193,7 @@ func dynamicPeakApproach(t time.Time, configs []config.DynamicPeakApproachConfig
 			conf.ForceChargeDurationFactor,
 			time.Duration(float64(time.Minute)*conf.ChargeCushionMins),
 		)
-		forceEnergy := forceCurve.VerticalDistance(referencePoint)
+		forceEnergy := forceCurve.VerticalDistance(endOfSPReferencePoint)
 		forcePower := (forceEnergy / hoursLeftOfSP) / chargeEfficiency
 
 		if !math.IsNaN(forcePower) && forcePower > 0 {
