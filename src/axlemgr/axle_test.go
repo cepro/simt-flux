@@ -46,11 +46,6 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 					Value:   50.0,
 					Label:   "boundary_import_kw",
 				},
-				{
-					AssetId: "asset-123",
-					Value:   0.0,
-					Label:   "boundary_export_kw",
-				},
 			},
 		},
 		{
@@ -65,13 +60,8 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
-					Value:   0.0,
+					Value:   -30.0,
 					Label:   "boundary_import_kw",
-				},
-				{
-					AssetId: "asset-123",
-					Value:   30.0,
-					Label:   "boundary_export_kw",
 				},
 			},
 		},
@@ -108,13 +98,8 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
-					Value:   0.0,
+					Value:   -20.0,
 					Label:   "boundary_import_kw",
-				},
-				{
-					AssetId: "asset-123",
-					Value:   20.0,
-					Label:   "boundary_export_kw",
 				},
 				{
 					AssetId: "asset-123",

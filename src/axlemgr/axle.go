@@ -153,37 +153,13 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 		t := siteMeterReading.Time
 		if boundary_power != nil {
 			// Axle defines different labels for import and export power, whereas we have a positive of negative number
-			if *boundary_power >= 0 {
-				readings = append(readings, axleclient.Reading{
-					AssetId:        a.axleAssetID,
-					StartTimestamp: t,
-					EndTimestamp:   t,
-					Value:          *boundary_power,
-					Label:          "boundary_import_kw",
-				})
-				readings = append(readings, axleclient.Reading{
-					AssetId:        a.axleAssetID,
-					StartTimestamp: t,
-					EndTimestamp:   t,
-					Value:          0.0,
-					Label:          "boundary_export_kw",
-				})
-			} else {
-				readings = append(readings, axleclient.Reading{
-					AssetId:        a.axleAssetID,
-					StartTimestamp: t,
-					EndTimestamp:   t,
-					Value:          0.0,
-					Label:          "boundary_import_kw",
-				})
-				readings = append(readings, axleclient.Reading{
-					AssetId:        a.axleAssetID,
-					StartTimestamp: t,
-					EndTimestamp:   t,
-					Value:          *boundary_power * -1,
-					Label:          "boundary_export_kw",
-				})
-			}
+			readings = append(readings, axleclient.Reading{
+				AssetId:        a.axleAssetID,
+				StartTimestamp: t,
+				EndTimestamp:   t,
+				Value:          *boundary_power,
+				Label:          "boundary_import_kw",
+			})
 		}
 	}
 
