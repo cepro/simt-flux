@@ -262,6 +262,13 @@ func TestDynamicPeakApproach(test *testing.T) {
 			expectedControlComponent: chargingControlComponentThatAllowsMoreCharge("dynamic_peak_approach", -720.0),
 		},
 		{
+			name:                     "Within 'force zone' and short: charge to force curve 2, later in the SP we should see a similar power specified (not spiky)",
+			t:                        mustParseTime("2024-09-05T14:50:00+01:00"),
+			bessSoe:                  130.0, // compared to the above test we have charged at 720kW for 10 minutes which is 120kWh of charge
+			imbalanceVolume:          100,
+			expectedControlComponent: chargingControlComponentThatAllowsMoreCharge("dynamic_peak_approach", -720.0),
+		},
+		{
 			name:                     "Within 'force zone' and long: charge to encourage curve",
 			t:                        mustParseTime("2024-09-05T14:40:00+01:00"),
 			bessSoe:                  200,
