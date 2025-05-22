@@ -73,46 +73,49 @@ func New(client http.Client) *Client {
 func (c *Client) Run(ctx context.Context, period time.Duration) error {
 	ticker := time.NewTicker(period)
 
-	// TODO: We should run the queries immediately on startup, otherwise we get "cannot run NIV chasing" messages when the program first runs up
+	// Run the queries immediately on startup, otherwise the program waits for a minute before it tries to get the data
+	c.process()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-
-			c.lock.RLock()
-			previousImbalancePrice := c.lastImbalancePrice
-			previousImbalancePriceSPTime := c.lastImbalancePriceSPTime
-			previousImbalanceVolume := c.lastImbalanceVolume
-			previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
-			c.lock.RUnlock()
-
-			err := c.updateImbalancePrice()
-			if err != nil {
-				c.logger.Error("Failed to update Modo imbalance price", "error", err)
-				continue
-			}
-
-			err = c.updateImbalanceVolume()
-			if err != nil {
-				c.logger.Error("Failed to update Modo imbalance volume", "error", err)
-				continue
-			}
-
-			priceDidChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
-			volumeDidChange := (previousImbalanceVolume != c.lastImbalanceVolume) || !(previousImbalanceVolumeSPTime.Equal(c.lastImbalanceVolumeSPTime))
-			c.logger.Info(
-				"Updated Modo imbalance price and volume",
-				"price", c.lastImbalancePrice,
-				"price_settlement_perod", c.lastImbalancePriceSPTime,
-				"volume", c.lastImbalanceVolume/1e3,
-				"volume_settlement_perod", c.lastImbalanceVolumeSPTime,
-				"did_change", priceDidChange || volumeDidChange,
-			)
-
+			c.process()
 		}
 	}
+}
+
+func (c *Client) process() {
+	c.lock.RLock()
+	previousImbalancePrice := c.lastImbalancePrice
+	previousImbalancePriceSPTime := c.lastImbalancePriceSPTime
+	previousImbalanceVolume := c.lastImbalanceVolume
+	previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
+	c.lock.RUnlock()
+
+	err := c.updateImbalancePrice()
+	if err != nil {
+		c.logger.Error("Failed to update Modo imbalance price", "error", err)
+		return
+	}
+
+	err = c.updateImbalanceVolume()
+	if err != nil {
+		c.logger.Error("Failed to update Modo imbalance volume", "error", err)
+		return
+	}
+
+	priceDidChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
+	volumeDidChange := (previousImbalanceVolume != c.lastImbalanceVolume) || !(previousImbalanceVolumeSPTime.Equal(c.lastImbalanceVolumeSPTime))
+	c.logger.Info(
+		"Updated Modo imbalance price and volume",
+		"price", c.lastImbalancePrice,
+		"price_settlement_perod", c.lastImbalancePriceSPTime,
+		"volume", c.lastImbalanceVolume/1e3,
+		"volume_settlement_perod", c.lastImbalanceVolumeSPTime,
+		"did_change", priceDidChange || volumeDidChange,
+	)
 }
 
 // ImbalancePrice returns the last cached imbalance price, and the settlement period time that it corresponds to
