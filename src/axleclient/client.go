@@ -86,7 +86,11 @@ func (c *Client) GetSchedule(assetId string) (Schedule, error) {
 // Sends the given readings/telemetry to the Axle cloud
 func (c *Client) UploadReadings(axleReadings []Reading) error {
 
-	readingsData, err := json.Marshal(axleReadings)
+	axleReadingsWrapped := ReadingsWrapped{
+		Readings: axleReadings,
+	}
+
+	readingsData, err := json.Marshal(axleReadingsWrapped)
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}
