@@ -113,8 +113,7 @@ func (a *AxleMgr) uploadOperationalTelemetry() {
 		return
 	}
 
-	a.client.UploadReadings(axleReadings)
-
+	err = a.client.UploadReadings(axleReadings)
 	if err != nil {
 		a.logger.Info("Failed Axle operational telemetry upload", "error", err)
 	}
