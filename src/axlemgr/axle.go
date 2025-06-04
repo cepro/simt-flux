@@ -189,6 +189,14 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 			Value:          soePct,
 			Label:          "battery_state_of_charge_pct",
 		})
+
+		readings = append(readings, axleclient.Reading{
+			AssetId:        a.axleAssetID,
+			StartTimestamp: t,
+			EndTimestamp:   t,
+			Value:          bessReading.Soe,
+			Label:          "battery_stored_energy_kwh",
+		})
 	}
 
 	return readings
