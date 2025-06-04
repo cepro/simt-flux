@@ -86,11 +86,6 @@ func (c *Client) GetSchedule(assetId string) (Schedule, error) {
 // Sends the given readings/telemetry to the Axle cloud
 func (c *Client) UploadReadings(axleReadings []Reading) error {
 
-	for _, reading := range axleReadings {
-		// This is debug logging really and may get too noisy
-		slog.Info("Uploading reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp)
-	}
-
 	readingsData, err := json.Marshal(axleReadings)
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
@@ -118,6 +113,10 @@ func (c *Client) UploadReadings(axleReadings []Reading) error {
 
 	if response.StatusCode != 200 {
 		return fmt.Errorf("unexpected status code: %d", response.StatusCode)
+	}
+
+	for _, reading := range axleReadings {
+		slog.Info("Uploaded Axle reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp, "status_code", response.StatusCode)
 	}
 
 	return nil
