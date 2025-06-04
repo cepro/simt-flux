@@ -3,7 +3,6 @@ package axlemgr
 import (
 	"context"
 	"log/slog"
-	"math"
 	"time"
 
 	"github.com/cepro/besscontroller/axleclient"
@@ -19,11 +18,10 @@ type AxleMgr struct {
 
 	schedules chan<- axleclient.Schedule // new schedules will be placed onto this channel as they are received
 
-	axleAssetID         string    // the ID that axle uses to identify this asset
-	siteMeterID         uuid.UUID // these are our IDs for the relevant meters and BESS
-	bessMeterID         uuid.UUID
-	bessID              uuid.UUID
-	bessNameplateEnergy float64 // this is required to convert the SoE kWh to a percentage (Axle API wants a percentage)
+	axleAssetID string    // the ID that axle uses to identify this asset
+	siteMeterID uuid.UUID // these are our IDs for the relevant meters and BESS
+	bessMeterID uuid.UUID
+	bessID      uuid.UUID
 
 	client *axleclient.Client // The underlying API client to use to communicate with Axle
 	logger *slog.Logger
@@ -35,7 +33,7 @@ type AxleMgr struct {
 	latestSchedule axleclient.Schedule
 }
 
-func New(schedules chan<- axleclient.Schedule, client *axleclient.Client, axleAssetID string, siteMeterID, bessMeterID, bessID uuid.UUID, bessNameplateEnergy float64) *AxleMgr {
+func New(schedules chan<- axleclient.Schedule, client *axleclient.Client, axleAssetID string, siteMeterID, bessMeterID, bessID uuid.UUID) *AxleMgr {
 
 	return &AxleMgr{
 		BessReadings:        make(chan telemetry.BessReading, 25), // A small buffer to allow things to catch up in case the upload is slow
@@ -45,7 +43,6 @@ func New(schedules chan<- axleclient.Schedule, client *axleclient.Client, axleAs
 		siteMeterID:         siteMeterID,
 		bessMeterID:         bessMeterID,
 		bessID:              bessID,
-		bessNameplateEnergy: bessNameplateEnergy,
 		client:              client,
 		logger:              slog.Default(),
 		latestBessReadings:  make(map[uuid.UUID]telemetry.BessReading),
@@ -113,12 +110,9 @@ func (a *AxleMgr) uploadOperationalTelemetry() {
 		return
 	}
 
-	a.client.UploadReadings(axleReadings)
-
+	err = a.client.UploadReadings(axleReadings)
 	if err != nil {
 		a.logger.Info("Failed Axle operational telemetry upload", "error", err)
-	} else {
-		a.logger.Info("Axle operational telemetry uploaded", "num_readings", len(axleReadings))
 	}
 }
 
@@ -178,18 +172,13 @@ func (a *AxleMgr) getAxleReadings(bessReading *telemetry.BessReading, bessMeterR
 	}
 
 	if bessReading != nil {
-		// Axle wants the SoE as a percentage, ensure that it's between 0 and 100
-		soePct := (bessReading.Soe / a.bessNameplateEnergy) * 100
-		soePct = math.Max(0, soePct)
-		soePct = math.Min(100, soePct)
-
 		t := bessReading.Time
 		readings = append(readings, axleclient.Reading{
 			AssetId:        a.axleAssetID,
 			StartTimestamp: t,
 			EndTimestamp:   t,
-			Value:          soePct,
-			Label:          "battery_state_of_charge_pct",
+			Value:          bessReading.Soe,
+			Label:          "battery_stored_energy_kwh",
 		})
 	}
 

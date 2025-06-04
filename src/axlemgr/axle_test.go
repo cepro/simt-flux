@@ -14,22 +14,20 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 
 	// Test cases
 	tests := []struct {
-		name                string
-		bessReading         *telemetry.BessReading
-		bessMeterReading    *telemetry.MeterReading
-		siteMeterReading    *telemetry.MeterReading
-		axleAssetID         string
-		bessNameplateEnergy float64
-		expected            []axleclient.Reading
+		name             string
+		bessReading      *telemetry.BessReading
+		bessMeterReading *telemetry.MeterReading
+		siteMeterReading *telemetry.MeterReading
+		axleAssetID      string
+		expected         []axleclient.Reading
 	}{
 		{
-			name:                "All readings are nil",
-			bessReading:         nil,
-			bessMeterReading:    nil,
-			siteMeterReading:    nil,
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
-			expected:            []axleclient.Reading{},
+			name:             "All readings are nil",
+			bessReading:      nil,
+			bessMeterReading: nil,
+			siteMeterReading: nil,
+			axleAssetID:      "asset-123",
+			expected:         []axleclient.Reading{},
 		},
 		{
 			name:             "Site meter reading with positive power",
@@ -38,8 +36,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			siteMeterReading: &telemetry.MeterReading{
 				PowerTotalActive: pointerToFloat64(50.0),
 			},
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			axleAssetID: "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
@@ -55,8 +52,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			siteMeterReading: &telemetry.MeterReading{
 				PowerTotalActive: pointerToFloat64(-30.0),
 			},
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			axleAssetID: "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
@@ -71,9 +67,8 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			bessMeterReading: &telemetry.MeterReading{
 				PowerTotalActive: pointerToFloat64(-70.0),
 			},
-			siteMeterReading:    nil,
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			siteMeterReading: nil,
+			axleAssetID:      "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
@@ -83,36 +78,34 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			},
 		},
 		{
-			name: "BESS reading only",
+			name: "BESS reading only 75kWh",
 			bessReading: &telemetry.BessReading{
 				Soe: 75.0,
 			},
-			bessMeterReading:    nil,
-			siteMeterReading:    nil,
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			bessMeterReading: nil,
+			siteMeterReading: nil,
+			axleAssetID:      "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
 					Value:   75.0,
-					Label:   "battery_state_of_charge_pct",
+					Label:   "battery_stored_energy_kwh",
 				},
 			},
 		},
 		{
-			name: "BESS reading 110% SoE", // this should be limited to 100% before being sent to Axle
+			name: "BESS reading 110kWh",
 			bessReading: &telemetry.BessReading{
 				Soe: 110.0,
 			},
-			bessMeterReading:    nil,
-			siteMeterReading:    nil,
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			bessMeterReading: nil,
+			siteMeterReading: nil,
+			axleAssetID:      "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
-					Value:   100.0,
-					Label:   "battery_state_of_charge_pct",
+					Value:   110.0,
+					Label:   "battery_stored_energy_kwh",
 				},
 			},
 		},
@@ -127,8 +120,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 			siteMeterReading: &telemetry.MeterReading{
 				PowerTotalActive: pointerToFloat64(-20.0),
 			},
-			axleAssetID:         "asset-123",
-			bessNameplateEnergy: 100.0,
+			axleAssetID: "asset-123",
 			expected: []axleclient.Reading{
 				{
 					AssetId: "asset-123",
@@ -143,7 +135,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 				{
 					AssetId: "asset-123",
 					Value:   80,
-					Label:   "battery_state_of_charge_pct",
+					Label:   "battery_stored_energy_kwh",
 				},
 			},
 		},
@@ -152,8 +144,7 @@ func TestAxleMgr_getAxleReadings(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			axleMgr := &AxleMgr{
-				axleAssetID:         tc.axleAssetID,
-				bessNameplateEnergy: tc.bessNameplateEnergy,
+				axleAssetID: tc.axleAssetID,
 			}
 
 			result := axleMgr.getAxleReadings(tc.bessReading, tc.bessMeterReading, tc.siteMeterReading)
