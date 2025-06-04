@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -116,11 +117,17 @@ func (c *Client) UploadReadings(axleReadings []Reading) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("unexpected status code: %d", response.StatusCode)
+		// Axle gives nice error messages in the body of the response - read this in
+		bodyBytes, err2 := io.ReadAll(response.Body)
+		bodyString := "N/A"
+		if err2 == nil {
+			bodyString = string(bodyBytes)
+		}
+		return fmt.Errorf("unexpected status code: %d, response body: '%s', request body '%s'", response.StatusCode, bodyString, readingsData)
 	}
 
 	for _, reading := range axleReadings {
-		slog.Info("Uploaded Axle reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp, "status_code", response.StatusCode)
+		slog.Info("Uploaded Axle reading", "label", reading.Label, "value", reading.Value, "time", reading.StartTimestamp)
 	}
 
 	return nil
