@@ -225,7 +225,6 @@ func main() {
 			config.Controller.SiteMeterID,
 			config.Controller.BessMeterID,
 			bess.ID(),
-			bess.NameplateEnergy(),
 		)
 
 		go axleManager.Run(
