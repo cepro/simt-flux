@@ -168,7 +168,7 @@ func main() {
 
 	// Create modo client which pulls imbalance price and volume predictions
 	modoClient := modo.New(http.Client{Timeout: time.Second * 10})
-	go modoClient.Run(ctx, time.Second*30)
+	go modoClient.Run(ctx, time.Minute)
 
 	// Create the main controller
 	ctrl := controller.New(controller.Config{

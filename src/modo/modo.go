@@ -21,7 +21,7 @@ const (
 // Client communicates with Modo and retrieves the imbalance price and volume predictions
 type Client struct {
 	client                    http.Client
-	lock                      sync.RWMutex   // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`
+	lock                      sync.RWMutex   // mutex is used to lock access to `lastImbalancePrice` and `lastImbalancePriceSPTime`, as they may be accessed from different go routines
 	lastImbalancePrice        float64        // SSP in p/kWh
 	lastImbalancePriceSPTime  time.Time      // Settlement period that the imbalance price relates to
 	lastImbalanceVolume       float64        // Imbalance volume in kWh
@@ -69,29 +69,34 @@ func New(client http.Client) *Client {
 	}
 }
 
-// Run loops forever updating the imbalance price every `period`
+// Run loops forever updating the imbalance price or volume every `period`.
+// The calls to get the price and volume are alternated (with a call every `period`) because Modo
+// has implemented rate limiting which works across both calls. At the time of writing the rate
+// limiting seems to allow 1 call per minute.
 func (c *Client) Run(ctx context.Context, period time.Duration) error {
 	ticker := time.NewTicker(period)
 
-	// Run the queries immediately on startup, otherwise the program waits for a minute before it tries to get the data
-	c.process()
+	processPriceNext := true
 
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			c.process()
+			if processPriceNext {
+				c.processPrice()
+			} else {
+				c.processVolume()
+			}
+			processPriceNext = !processPriceNext
 		}
 	}
 }
 
-func (c *Client) process() {
+func (c *Client) processPrice() {
 	c.lock.RLock()
 	previousImbalancePrice := c.lastImbalancePrice
 	previousImbalancePriceSPTime := c.lastImbalancePriceSPTime
-	previousImbalanceVolume := c.lastImbalanceVolume
-	previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
 	c.lock.RUnlock()
 
 	err := c.updateImbalancePrice()
@@ -100,21 +105,33 @@ func (c *Client) process() {
 		return
 	}
 
-	err = c.updateImbalanceVolume()
+	priceDidChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
+	c.logger.Info(
+		"Updated Modo imbalance price",
+		"price", c.lastImbalancePrice,
+		"price_settlement_perod", c.lastImbalancePriceSPTime,
+		"did_change", priceDidChange,
+	)
+}
+
+func (c *Client) processVolume() {
+	c.lock.RLock()
+	previousImbalanceVolume := c.lastImbalanceVolume
+	previousImbalanceVolumeSPTime := c.lastImbalanceVolumeSPTime
+	c.lock.RUnlock()
+
+	err := c.updateImbalanceVolume()
 	if err != nil {
 		c.logger.Error("Failed to update Modo imbalance volume", "error", err)
 		return
 	}
 
-	priceDidChange := (previousImbalancePrice != c.lastImbalancePrice) || !(previousImbalancePriceSPTime.Equal(c.lastImbalancePriceSPTime))
 	volumeDidChange := (previousImbalanceVolume != c.lastImbalanceVolume) || !(previousImbalanceVolumeSPTime.Equal(c.lastImbalanceVolumeSPTime))
 	c.logger.Info(
-		"Updated Modo imbalance price and volume",
-		"price", c.lastImbalancePrice,
-		"price_settlement_perod", c.lastImbalancePriceSPTime,
+		"Updated Modo imbalance volume",
 		"volume", c.lastImbalanceVolume/1e3,
 		"volume_settlement_perod", c.lastImbalanceVolumeSPTime,
-		"did_change", priceDidChange || volumeDidChange,
+		"did_change", volumeDidChange,
 	)
 }
 
