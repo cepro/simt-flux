@@ -1,0 +1,5 @@
+%syntax-version=1.0.0
+%project=flux
+
+create-flux-schema 2025-06-12T13:41:08Z Marcus Wood <marcus.wood@cepro.energy> # Creates the flux schema
+create-market-data-tables 2025-06-12T14:22:33Z Marcus Wood <marcus.wood@cepro.energy> # Creates the market_data and related tables
