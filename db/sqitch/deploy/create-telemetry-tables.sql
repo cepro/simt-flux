@@ -2,6 +2,7 @@
 
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
 
 CREATE TABLE flux.mg_bess_readings (
     "time" timestamp with time zone not null,
@@ -41,7 +42,7 @@ CREATE TABLE flux.mg_meter_readings (
     "energy_imported_reactive" float4,
     "energy_exported_reactive" float4,
     "energy_imported_apparent" float4,
-    "energy_exported_apparent" float4,
+    "energy_exported_apparent" float4
 );
 
 CREATE TABLE flux.mg_device_registry (
