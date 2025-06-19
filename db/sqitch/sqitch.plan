@@ -1,0 +1,9 @@
+%syntax-version=1.0.0
+%project=flux
+
+create-flux-schema 2025-06-12T13:41:08Z Marcus Wood <marcus.wood@cepro.energy> # Creates the flux schema
+create-market-data-tables 2025-06-12T14:22:33Z Marcus Wood <marcus.wood@cepro.energy> # Creates the market_data and related tables
+create-telemetry-tables 2025-06-17T11:46:55Z Marcus Wood <marcus.wood@cepro.energy> # Creates the mg_meter_readings, mg_bess_readings and device_registry tables
+create-bess-controller-role 2025-06-18T13:27:17Z Marcus Wood <marcus.wood@cepro.energy> # Creates a new role for the bess controller with limited permissions
+enable-timescaledb-toolkit 2025-06-19T11:59:59Z Marcus Wood <marcus.wood@cepro.energy> # Enables the timescaledb toolkit extension
+create-telemetry-rollups 2025-06-17T11:55:26Z Marcus Wood <marcus.wood@cepro.energy> # Creates the 5m and 30m rollup intermediate tables and functions for meter_readings and bess_readings
