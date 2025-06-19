@@ -14,4 +14,6 @@ GRANT INSERT ON flux.mg_meter_readings TO besscontroller;
 GRANT SELECT ON flux.mg_bess_readings TO besscontroller;
 GRANT SELECT ON flux.mg_meter_readings TO besscontroller;
 
+GRANT besscontroller to authenticator;
+
 COMMIT;
