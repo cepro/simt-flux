@@ -2,8 +2,8 @@
 
 BEGIN;
 
-DELETE FUNCTION flux.insert_market_data_batch(data flux.market_data_input[]);
+DROP FUNCTION flux.insert_market_data_batch(data flux.market_data_input[]);
 
-DELETE TYPE flux.market_data_input;
+DROP TYPE flux.market_data_input;
 
 COMMIT;
