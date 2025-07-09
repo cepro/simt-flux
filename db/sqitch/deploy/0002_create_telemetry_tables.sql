@@ -2,9 +2,6 @@
 
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-
-
 CREATE TABLE flux.mg_bess_readings (
     "time" timestamp with time zone not null,
     "device_id" uuid not null,

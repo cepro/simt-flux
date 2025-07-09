@@ -1,9 +1,7 @@
 -- Deploy flux:create-telemetry-rollups to pg
 
-BEGIN;
 
-
-CREATE MATERIALIZED VIEW flux.meter_readings_5m_intermediate
+CREATE MATERIALIZED VIEW IF NOT EXISTS flux.mg_meter_readings_5m_intermediate
 WITH (timescaledb.continuous) AS
 select
     device_id,
@@ -41,10 +39,10 @@ select
     counter_agg(time, energy_exported_reactive) as energy_exported_reactive_counter_agg,
     counter_agg(time, energy_imported_apparent) as energy_imported_apparent_counter_agg,
     counter_agg(time, energy_exported_apparent) as energy_exported_apparent_counter_agg
-FROM flux.meter_readings
+FROM flux.mg_meter_readings
 GROUP BY device_id, time_b;
 
-CREATE MATERIALIZED VIEW flux.meter_readings_30m_intermediate
+CREATE MATERIALIZED VIEW IF NOT EXISTS flux.mg_meter_readings_30m_intermediate
 WITH (timescaledb.continuous) AS
 select
     device_id,
@@ -82,11 +80,10 @@ select
     counter_agg(time, energy_exported_reactive) as energy_exported_reactive_counter_agg,
     counter_agg(time, energy_imported_apparent) as energy_imported_apparent_counter_agg,
     counter_agg(time, energy_exported_apparent) as energy_exported_apparent_counter_agg
-FROM flux.meter_readings
+FROM flux.mg_meter_readings
 GROUP BY device_id, time_b;
 
-
-CREATE OR REPLACE FUNCTION get_meter_readings_5m(
+CREATE OR REPLACE FUNCTION flux.get_meter_readings_5m(
     start_time TIMESTAMPTZ DEFAULT now() - INTERVAL '24 hours',
     end_time TIMESTAMPTZ DEFAULT now(),
     device_ids UUID[] DEFAULT NULL
@@ -225,7 +222,39 @@ BEGIN
           interpolated_delta(t.energy_exported_phase_c_active_counter_agg, t.time_b, '5m', 
                              LAG(t.energy_exported_phase_c_active_counter_agg) OVER ordered_meter, 
                              LEAD(t.energy_exported_phase_c_active_counter_agg) OVER ordered_meter)
-        END AS energy_exported_phase_c_active_delta
+        END AS energy_exported_phase_c_active_delta,
+        
+        CASE WHEN t.energy_imported_reactive_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_imported_reactive_counter_agg, t.time_b, '5m', 
+                             LAG(t.energy_imported_reactive_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_imported_reactive_counter_agg) OVER ordered_meter)
+        END AS energy_imported_reactive_delta,
+        
+        CASE WHEN t.energy_exported_reactive_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_exported_reactive_counter_agg, t.time_b, '5m', 
+                             LAG(t.energy_exported_reactive_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_exported_reactive_counter_agg) OVER ordered_meter)
+        END AS energy_exported_reactive_delta,
+        
+        CASE WHEN t.energy_imported_apparent_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_imported_apparent_counter_agg, t.time_b, '5m', 
+                             LAG(t.energy_imported_apparent_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_imported_apparent_counter_agg) OVER ordered_meter)
+        END AS energy_imported_apparent_delta,
+        
+        CASE WHEN t.energy_exported_apparent_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_exported_apparent_counter_agg, t.time_b, '5m', 
+                             LAG(t.energy_exported_apparent_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_exported_apparent_counter_agg) OVER ordered_meter)
+        END AS energy_exported_apparent_delta
         
     FROM flows.mg_meter_readings_5m_intermediate t
     WHERE t.time_b BETWEEN start_time AND end_time
@@ -236,7 +265,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Do the same with the 30m aggregation
-CREATE OR REPLACE FUNCTION get_meter_readings_30m(
+CREATE OR REPLACE FUNCTION flux.get_meter_readings_30m(
     start_time TIMESTAMPTZ DEFAULT now() - INTERVAL '24 hours',
     end_time TIMESTAMPTZ DEFAULT now(),
     device_ids UUID[] DEFAULT NULL
@@ -265,6 +294,10 @@ RETURNS TABLE(
     energy_exported_phase_b_active_min REAL,
     energy_imported_phase_c_active_min REAL,
     energy_exported_phase_c_active_min REAL,
+    energy_imported_reactive_min REAL,
+    energy_exported_reactive_min REAL,
+    energy_imported_apparent_min REAL,
+    energy_exported_apparent_min REAL,
     energy_imported_active_delta DOUBLE PRECISION,
     energy_exported_active_delta DOUBLE PRECISION,
     energy_imported_phase_a_active_delta DOUBLE PRECISION,
@@ -272,7 +305,11 @@ RETURNS TABLE(
     energy_imported_phase_b_active_delta DOUBLE PRECISION,
     energy_exported_phase_b_active_delta DOUBLE PRECISION,
     energy_imported_phase_c_active_delta DOUBLE PRECISION,
-    energy_exported_phase_c_active_delta DOUBLE PRECISION
+    energy_exported_phase_c_active_delta DOUBLE PRECISION,
+    energy_imported_reactive_delta DOUBLE PRECISION,
+    energy_exported_reactive_delta DOUBLE PRECISION,
+    energy_imported_apparent_delta DOUBLE PRECISION,
+    energy_exported_apparent_delta DOUBLE PRECISION
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -300,6 +337,10 @@ BEGIN
         t.energy_exported_phase_b_active_min, 
         t.energy_imported_phase_c_active_min,
         t.energy_exported_phase_c_active_min,
+        t.energy_imported_reactive_min,
+        t.energy_exported_reactive_min,
+        t.energy_imported_apparent_min,
+        t.energy_exported_apparent_min,
         
         CASE WHEN t.energy_imported_active_counter_agg IS NULL THEN
           NULL 
@@ -363,7 +404,39 @@ BEGIN
           interpolated_delta(t.energy_exported_phase_c_active_counter_agg, t.time_b, '30m', 
                              LAG(t.energy_exported_phase_c_active_counter_agg) OVER ordered_meter, 
                              LEAD(t.energy_exported_phase_c_active_counter_agg) OVER ordered_meter)
-        END AS energy_exported_phase_c_active_delta
+        END AS energy_exported_phase_c_active_delta,
+        
+        CASE WHEN t.energy_imported_reactive_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_imported_reactive_counter_agg, t.time_b, '30m', 
+                             LAG(t.energy_imported_reactive_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_imported_reactive_counter_agg) OVER ordered_meter)
+        END AS energy_imported_reactive_delta,
+        
+        CASE WHEN t.energy_exported_reactive_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_exported_reactive_counter_agg, t.time_b, '30m', 
+                             LAG(t.energy_exported_reactive_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_exported_reactive_counter_agg) OVER ordered_meter)
+        END AS energy_exported_reactive_delta,
+        
+        CASE WHEN t.energy_imported_apparent_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_imported_apparent_counter_agg, t.time_b, '30m', 
+                             LAG(t.energy_imported_apparent_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_imported_apparent_counter_agg) OVER ordered_meter)
+        END AS energy_imported_apparent_delta,
+        
+        CASE WHEN t.energy_exported_apparent_counter_agg IS NULL THEN
+          NULL 
+        ELSE
+          interpolated_delta(t.energy_exported_apparent_counter_agg, t.time_b, '30m', 
+                             LAG(t.energy_exported_apparent_counter_agg) OVER ordered_meter, 
+                             LEAD(t.energy_exported_apparent_counter_agg) OVER ordered_meter)
+        END AS energy_exported_apparent_delta
         
     FROM flows.mg_meter_readings_30m_intermediate t
     WHERE t.time_b BETWEEN start_time AND end_time
@@ -373,26 +446,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE MATERIALIZED VIEW flux.mg_bess_readings_5m
+WITH (timescaledb.continuous) AS
+select
+    device_id,
+    time_bucket('5m', time) as time_b,
+    avg(soe) as soe_avg,
+    avg(target_power) as target_power_avg
+FROM flux.mg_bess_readings
+GROUP BY device_id, time_b;
 
--- CREATE MATERIALIZED VIEW marcus.bess_readings_5m
--- WITH (timescaledb.continuous) AS
--- select
---     device_id,
---     time_bucket('5m', time) as time_b,
---     avg(soe) as soe_avg,
---     avg(target_power) as target_power_avg
--- FROM marcus.bess_readings
--- GROUP BY device_id, time_b;
 
-
--- CREATE MATERIALIZED VIEW marcus.bess_readings_30m
--- WITH (timescaledb.continuous) AS
--- select
---     device_id,
---     time_bucket('30m', time) as time_b,
---     avg(soe) as soe_avg,
---     avg(target_power) as target_power_avg
--- FROM marcus.bess_readings
--- GROUP BY device_id, time_b;
-
-COMMIT;
+CREATE MATERIALIZED VIEW flux.mg_bess_readings_30m
+WITH (timescaledb.continuous) AS
+select
+    device_id,
+    time_bucket('30m', time) as time_b,
+    avg(soe) as soe_avg,
+    avg(target_power) as target_power_avg
+FROM flux.mg_bess_readings
+GROUP BY device_id, time_b;
