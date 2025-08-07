@@ -1,3 +1,4 @@
 deployment/logs
 .vscode
 sqitch_secrets.conf
+sqitch_secrets_mgf.conf
