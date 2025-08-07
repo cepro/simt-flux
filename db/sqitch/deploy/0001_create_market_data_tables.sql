@@ -2,6 +2,9 @@
 
 BEGIN;
 
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+CREATE EXTENSION IF NOT EXISTS timescaledb_toolkit WITH SCHEMA "extensions";
+
 -- The market_data table holds various types of data about the electricity markets.
 -- For example, imbalance volume, price, day-ahead prices, etc.
 CREATE TABLE flux.market_data (

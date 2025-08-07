@@ -1,4 +1,4 @@
--- Verify flux:enable-timescaledb-toolkit on pg
+-- Verify flux:create-market-data-functions on pg
 
 BEGIN;
 
