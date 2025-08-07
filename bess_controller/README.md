@@ -37,13 +37,13 @@ Follow instructions on the main Go website to install Go on your development sys
 
 ## Testing
 
-To run unit tests from the `src` directory:
+To run unit tests from the `bess_controller/src` directory:
 - `go test ./...`
 
 
 ## Compilation
 
-The following instructions assume you are in the `src` directory. And you may need to specify environment variables, depending on your configuration file.
+The following instructions assume you are in the `bess_controller/src` directory. And you may need to specify environment variables, depending on your configuration file.
 
 
 To run the program on your computer:
