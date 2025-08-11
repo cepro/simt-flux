@@ -2,6 +2,29 @@
 
 BEGIN;
 
+-- Add policies for the intermediate rollups which use continous aggregates
+SELECT add_continuous_aggregate_policy('flux.mg_meter_readings_30m_intermediate',
+    start_offset => null,
+    end_offset => null,
+    schedule_interval => INTERVAL '5 minutes'
+);
+SELECT add_continuous_aggregate_policy('flux.mg_meter_readings_5m_intermediate',
+    start_offset => null,
+    end_offset => null,
+    schedule_interval => INTERVAL '5 minutes'
+);
+SELECT add_continuous_aggregate_policy('flux.mg_bess_readings_5m',
+    start_offset => null,
+    end_offset => null,
+    schedule_interval => INTERVAL '5 minutes'
+);
+SELECT add_continuous_aggregate_policy('flux.mg_bess_readings_30m',
+    start_offset => null,
+    end_offset => null,
+    schedule_interval => INTERVAL '30 minutes'
+);
+
+-- Fix the functiions themselves, which were referencing Flows and had mismatched columns
 DROP FUNCTION flux.get_meter_readings_5m(timestamp with time zone,timestamp with time zone,uuid[]);
 DROP FUNCTION flux.get_meter_readings_30m(timestamp with time zone,timestamp with time zone,uuid[]);
 
