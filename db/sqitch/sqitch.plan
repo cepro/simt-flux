@@ -9,3 +9,4 @@
 0005_create_market_data_functions 2025-07-09T13:30:49Z Marcus Wood <marcus.wood@cepro.energy> # Adds function to add data to the market_data table
 0006_add_scraper_role 2025-08-07T14:11:22Z Marcus Wood <marcus.wood@cepro.energy> # Adds a scraper role that can insert market data that has been scraped from the web
 0007_add_flux_grafana_reader 2025-08-11T08:37:25Z Marcus Wood <marcus.wood@cepro.energy> # Adds the flux_grafana_reader role
+0008_fix_telemetry_rollups 2025-08-11T11:26:41Z Marcus Wood <marcus.wood@cepro.energy> # Fixes the get_meter_readings_5m and get_meter_readings_30m functions which were referencing flows rather than flux
