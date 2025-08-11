@@ -12,6 +12,9 @@ GRANT SELECT ON flux.mg_bess_readings TO flux_grafana_reader;
 GRANT SELECT ON flux.market_data TO flux_grafana_reader;
 GRANT SELECT ON flux.market_data_types TO flux_grafana_reader;
 
+GRANT SELECT ON flux.mg_meter_readings_5m_intermediate TO flux_grafana_reader;
+GRANT SELECT ON flux.mg_meter_readings_30m_intermediate TO flux_grafana_reader;
+
 ALTER ROLE flux_grafana_reader SET search_path = flux,public;
 
 GRANT USAGE ON SCHEMA public TO flux_grafana_reader;
