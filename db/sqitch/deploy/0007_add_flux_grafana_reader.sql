@@ -12,6 +12,8 @@ GRANT SELECT ON flux.mg_bess_readings TO flux_grafana_reader;
 GRANT SELECT ON flux.market_data TO flux_grafana_reader;
 GRANT SELECT ON flux.market_data_types TO flux_grafana_reader;
 
+GRANT SELECT ON flux.mg_bess_readings_5m TO flux_grafana_reader;
+GRANT SELECT ON flux.mg_bess_readings_30m TO flux_grafana_reader;
 GRANT SELECT ON flux.mg_meter_readings_5m_intermediate TO flux_grafana_reader;
 GRANT SELECT ON flux.mg_meter_readings_30m_intermediate TO flux_grafana_reader;
 
