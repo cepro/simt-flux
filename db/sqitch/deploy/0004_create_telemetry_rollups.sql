@@ -256,7 +256,7 @@ BEGIN
                              LEAD(t.energy_exported_apparent_counter_agg) OVER ordered_meter)
         END AS energy_exported_apparent_delta
         
-    FROM flows.mg_meter_readings_5m_intermediate t
+    FROM flux.mg_meter_readings_5m_intermediate t
     WHERE t.time_b BETWEEN start_time AND end_time
 		AND (device_ids IS NULL OR t.device_id = ANY(device_ids))
     WINDOW ordered_meter AS (PARTITION BY t.device_id ORDER BY t.time_b);
@@ -438,7 +438,7 @@ BEGIN
                              LEAD(t.energy_exported_apparent_counter_agg) OVER ordered_meter)
         END AS energy_exported_apparent_delta
         
-    FROM flows.mg_meter_readings_30m_intermediate t
+    FROM flux.mg_meter_readings_30m_intermediate t
     WHERE t.time_b BETWEEN start_time AND end_time
 		AND (device_ids IS NULL OR t.device_id = ANY(device_ids))
     WINDOW ordered_meter AS (PARTITION BY t.device_id ORDER BY t.time_b);
