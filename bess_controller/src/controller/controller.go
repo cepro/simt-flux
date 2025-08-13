@@ -263,8 +263,8 @@ func (c *Controller) SitePower() float64 {
 type prioritisedAction struct {
 	bessTargetPower         float64           // the power that the bess should deliver
 	constraints             activeConstraints // any constraints that were used when calculating the `bessTargetPower` (useful for logging)
-	effectiveComponentNames string            // comma-separated names of any components that were used to calculate the `bessTargetPower` (useful for logging)
-	activeComponentNames    string            // comma-separated names of any components that were "active" - but they don't neccesarily effect the power
+	effectiveComponentNames string            // comma-separated names of any components that influenced the calculation of `bessTargetPower` (useful for logging)
+	activeComponentNames    string            // comma-separated names of any components that were "active" - i.e. wanted to influence the calculation of `bessTargetPower` - even if they didn't actually effect it (useful for logging)
 }
 
 // prioritiseControlComponents runs through all the given components and decides the appropriate action to take.
