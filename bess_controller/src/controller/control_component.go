@@ -47,7 +47,7 @@ func chargingControlComponentThatAllowsMoreCharge(name string, power float64) co
 	}
 }
 
-// dischargingControlComponentThatAllowsMoreCharge returns a control component which charges at the given power level (which must be positive to indicate a discharge), and
+// dischargingControlComponentThatAllowsMoreDischarge returns a control component which discharges at the given power level (which must be positive to indicate a discharge), and
 // also allows any lower-priority components that wish to discharge even faster to do so. It doesn't allow lower-priority components to discharge at a slower rate or to charge.
 func dischargingControlComponentThatAllowsMoreDischarge(name string, power float64) controlComponent {
 
