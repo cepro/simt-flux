@@ -225,6 +225,7 @@ func (c *Controller) runControlLoop(t time.Time) {
 		"Controlling BESS",
 		"site_power", c.sitePower.value,
 		"bess_soe", c.bessSoe.value,
+		"control_components_effective", action.effectiveComponentNames,
 		"control_components_active", action.activeComponentNames,
 		"constraint_site_power_active", action.constraints.sitePower,
 		"constraint_bess_power_active", action.constraints.bessPower,
@@ -260,9 +261,10 @@ func (c *Controller) SitePower() float64 {
 
 // prioritisedAction just helps organise the return values of `prioritiseControlComponents`
 type prioritisedAction struct {
-	bessTargetPower      float64           // the power that the bess should deliver
-	constraints          activeConstraints // any constraints that were used when calculating the `bessTargetPower` (useful for logging)
-	activeComponentNames string            // comma-separated names of any components that were used to calculate the `bessTargetPower` (useful for logging)
+	bessTargetPower         float64           // the power that the bess should deliver
+	constraints             activeConstraints // any constraints that were used when calculating the `bessTargetPower` (useful for logging)
+	effectiveComponentNames string            // comma-separated names of any components that were used to calculate the `bessTargetPower` (useful for logging)
+	activeComponentNames    string            // comma-separated names of any components that were "active" - but they don't neccesarily effect the power
 }
 
 // prioritiseControlComponents runs through all the given components and decides the appropriate action to take.
@@ -276,9 +278,13 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 	var minPower *float64
 	var maxPower *float64
 
-	activeComponentNames := "" // Keep track of the names of any active components for debug logging
+	// Keep track of the names of any effective/active components for debug logging
+	effectiveComponentNames := ""
+	activeComponentNames := ""
 
 	for _, component := range components {
+
+		isEffective := false
 
 		if component.isActive() {
 			activeComponentNames = fmt.Sprintf("%s,%s", activeComponentNames, component.name)
@@ -293,6 +299,7 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 			if ((minPower == nil) || (*component.targetPower >= *minPower)) &&
 				((maxPower == nil) || (*component.targetPower <= *maxPower)) {
 				power = component.targetPower
+				isEffective = true
 			}
 		}
 
@@ -302,8 +309,9 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 				// this component specifies a minTargetPower that is higher than any previous limit
 				if (power == nil) || (*component.minTargetPower <= *power) {
 					minPower = component.minTargetPower
+					isEffective = true
 				} else {
-					slog.Error("Component's min target power puts the current power out of bounds - ignoring", "target_power", *power, "component_min_power", *component.minTargetPower, "component_name", component.name)
+					// Component's min target power puts the current power out of bounds - ignoring it
 				}
 			}
 		}
@@ -314,27 +322,34 @@ func (c *Controller) prioritiseControlComponents(components []controlComponent) 
 				// this component specifies a maxTargetPower that is lower than any previous limit
 				if (power == nil) || (*component.maxTargetPower >= *power) {
 					maxPower = component.maxTargetPower
+					isEffective = true
 				} else {
-					slog.Error("Component's max target power puts the current power out of bounds - ignoring", "target_power", *power, "component_min_power", *component.maxTargetPower, "component_name", component.name)
+					// Component's max target power puts the current power out of bounds - ignore it
 				}
 			}
+		}
+
+		if isEffective {
+			effectiveComponentNames = fmt.Sprintf("%s,%s", effectiveComponentNames, component.name)
 		}
 	}
 
 	if power == nil {
 		return prioritisedAction{
-			bessTargetPower:      0.0,
-			constraints:          activeConstraints{},
-			activeComponentNames: "idle",
+			bessTargetPower:         0.0,
+			constraints:             activeConstraints{},
+			effectiveComponentNames: "idle",
+			activeComponentNames:    "idle",
 		}
 	}
 
 	constrainedPower, activeConstraints := c.constrainedBessPower(*power)
 
 	return prioritisedAction{
-		bessTargetPower:      constrainedPower,
-		constraints:          activeConstraints,
-		activeComponentNames: activeComponentNames,
+		bessTargetPower:         constrainedPower,
+		constraints:             activeConstraints,
+		effectiveComponentNames: effectiveComponentNames,
+		activeComponentNames:    activeComponentNames,
 	}
 }
 
