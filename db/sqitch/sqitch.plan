@@ -10,3 +10,4 @@
 0006_add_scraper_role 2025-08-07T14:11:22Z Marcus Wood <marcus.wood@cepro.energy> # Adds a scraper role that can insert market data that has been scraped from the web
 0007_add_flux_grafana_reader 2025-08-11T08:37:25Z Marcus Wood <marcus.wood@cepro.energy> # Adds the flux_grafana_reader role
 0008_fix_telemetry_rollups 2025-08-11T11:26:41Z Marcus Wood <marcus.wood@cepro.energy> # Fixes the get_meter_readings_5m and get_meter_readings_30m functions which were referencing flows rather than flux
+0009_alert_permissions 2025-10-09T00:20:40Z Chris Hatch <chris@cepro.energy> # permissions for alerts and grafanareader
