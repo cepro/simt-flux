@@ -192,27 +192,19 @@ func (p *PowerPack) logConfigParameters() {
 	p.logger.Info(fmt.Sprintf("Retrieved PowerPack real power command configuration: %+v", metrics))
 }
 
-// issueCommand sends commands to the PowerPack and manages idle-based OFF mode.
+// issueCommand sends commands to the PowerPack and optionally manages idle-based OFF mode.
 //
-// FEATURE: Turns battery OFF when idle (power=0) for 5+ minutes to reduce standby consumption.
+// When idle OFF is enabled, the battery automatically turns OFF after being idle (power=0)
+// for a configurable duration to reduce standby power consumption (~200W).
 //
-// State Machine:
-//   Mode=0 → Write Mode=1+Timeout, then send heartbeat+power → Mode=1
-//   Mode=1 → (power=0 for 5+ mins) → Write Mode=0 → Mode=0
+// State transitions:
+//   Mode=0 (OFF) → Write Mode=1 + Timeout → Send heartbeat + power → Mode=1 (ON)
+//   Mode=1 (ON) + idle timeout → Write Mode=0 → Mode=0 (OFF)
 //
-// Safety Features:
-//   - currentMode read from Tesla every 2 seconds (ground truth)
-//   - Independent idle timer works across all control modes
-//   - Matches original code flow: heartbeat+power sent immediately
-//
-// Configuration (YAML):
+// The idle OFF feature is disabled by default and must be explicitly enabled in config:
 //   teslaOptions:
-//     offIdleEnabled: true
-//     offIdleThresholdMins: 5.0
-//
-// Deployment:
-//   Phase 1: OFF command commented out - monitoring/validation only
-//   Phase 2: OFF command active - actual Mode=0 writes
+//     offIdleEnabled: true          # Default: false
+//     offIdleThresholdMins: 5.0     # Minutes of idle before turning OFF
 func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 
 	err := p.initializeBessIfRequired()
@@ -220,20 +212,22 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 		return fmt.Errorf("initialize bess: %w", err)
 	}
 
-	// Track idle time for OFF mode logic
+	// Track idle time when feature is enabled or for debugging
 	now := time.Now()
-	if command.TargetPower == 0.0 {
-		if p.idleStartTime == nil {
-			p.idleStartTime = &now
-			p.logger.Debug("Battery entered idle state (power=0)")
+	if p.teslaOptions.OffIdleEnabled {
+		if command.TargetPower == 0.0 {
+			if p.idleStartTime == nil {
+				p.idleStartTime = &now
+				p.logger.Debug("Battery entered idle state (power=0)")
+			}
+		} else {
+			if p.idleStartTime != nil {
+				idleDuration := now.Sub(*p.idleStartTime)
+				p.logger.Debug("Battery exited idle state",
+					"idle_duration_secs", idleDuration.Seconds())
+			}
+			p.idleStartTime = nil
 		}
-	} else {
-		if p.idleStartTime != nil {
-			idleDuration := now.Sub(*p.idleStartTime)
-			p.logger.Debug("Battery exited idle state",
-				"idle_duration_secs", idleDuration.Seconds())
-		}
-		p.idleStartTime = nil
 	}
 
 	// Calculate idle duration
@@ -250,75 +244,65 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 		shouldTurnOff = true
 	}
 
-	// Log when OFF would trigger (always log, even if command commented out)
-	if shouldTurnOff && p.currentMode == 1 {
-		p.logger.Info("IDLE TIMEOUT - Would turn battery OFF",
-			"current_mode", p.currentMode,
+	// Turn OFF battery when idle timeout reached
+	if p.currentMode == 1 && shouldTurnOff {
+		p.logger.Info("Turning battery OFF due to idle timeout",
 			"idle_duration_mins", idleDuration.Minutes(),
 			"threshold_mins", p.teslaOptions.OffIdleThresholdMins,
-			"phase", "1-monitoring-only")
+			"current_mode", p.currentMode)
+
+		// Write Mode=0 (Off)
+		err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(0))
+		if err != nil {
+			return fmt.Errorf("turn OFF - write mode: %w", err)
+		}
+
+		// Keep haveIssuedFirstCommand=true so battery stays OFF when power=0
+
+		// Don't send heartbeat or power when turning OFF
+		return nil
 	}
 
-	// STATE: Battery is ON (Mode=1) and should turn OFF
-	// PHASE 1: Comment out the actual OFF command - just log
-	if p.currentMode == 1 && shouldTurnOff {
-
-		// COMMENTED OUT FOR PHASE 1 - MONITORING ONLY
-		/*
-			p.logger.Info("Turning battery OFF",
-				"idle_duration_mins", idleDuration.Minutes(),
-				"threshold_mins", p.teslaOptions.OffIdleThresholdMins,
+	// Turn ON battery when it's OFF AND power is needed
+	// Exception: Always turn ON during first startup to establish connection
+	if p.currentMode == 0 {
+		// Only turn ON if: first startup OR power is needed
+		if !p.haveIssuedFirstCommand || command.TargetPower != 0.0 {
+			logMsg := "Initializing battery to Direct Mode"
+			if p.haveIssuedFirstCommand {
+				logMsg = "Turning battery ON from OFF state"
+			}
+			p.logger.Info(logMsg,
 				"current_mode", p.currentMode,
-				"phase", "2-active")
+				"target_power", command.TargetPower)
 
-			// Write Mode=0 (Off)
-			err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(0))
+			// Write Mode=1 (Direct)
+			err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(1))
 			if err != nil {
-				return fmt.Errorf("turn OFF - write mode: %w", err)
+				return fmt.Errorf("turn ON - write mode: %w", err)
 			}
 
-			p.haveIssuedFirstCommand = false // Reset for next turn-ON sequence
+			// Write timeout
+			err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
+			if err != nil {
+				return fmt.Errorf("turn ON - write timeout: %w", err)
+			}
 
-			// Don't send heartbeat or power when turning OFF
+			p.haveIssuedFirstCommand = true
+			p.idleStartTime = nil // Reset idle timer
+
+			// Fall through to send heartbeat + power
+		} else {
+			// Battery is OFF and should stay OFF (power=0)
+			p.logger.Debug("Battery remains OFF (no power demand)",
+				"current_mode", p.currentMode,
+				"target_power", command.TargetPower)
+			// Don't send heartbeat or power when OFF
 			return nil
-		*/
-
-		// PHASE 1: Just log that we WOULD turn off, but don't actually do it
-		// The log message above already captured this
-		// Fall through to send normal commands (keep battery running)
+		}
 	}
 
-	// STATE: Battery is OFF (Mode=0) - turn it ON
-	// This handles both first startup AND turn-ON after idle OFF
-	if p.currentMode == 0 {
-		logMsg := "First startup - initializing battery to Direct Mode"
-		if p.haveIssuedFirstCommand {
-			logMsg = "Battery is OFF, turning ON"
-		}
-		p.logger.Info(logMsg,
-			"current_mode", p.currentMode,
-			"target_power", command.TargetPower)
-
-		// Write Mode=1 (Direct)
-		err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(1))
-		if err != nil {
-			return fmt.Errorf("turn ON - write mode: %w", err)
-		}
-
-		// Write timeout
-		err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
-		if err != nil {
-			return fmt.Errorf("turn ON - write timeout: %w", err)
-		}
-
-		p.haveIssuedFirstCommand = true
-		p.idleStartTime = nil // Reset idle timer
-
-		// Fall through to send heartbeat + power below (like original code)
-	}
-
-	// NORMAL OPERATION: Send heartbeat and power (always, like original code)
-
+	// Always send heartbeat and power for normal operation
 	// Write heartbeat toggle
 	err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Heartbeat"], p.nextHeartbeat())
 	if err != nil {

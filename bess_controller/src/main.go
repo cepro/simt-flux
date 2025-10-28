@@ -23,6 +23,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// Build-time variables set via -ldflags
+var (
+	buildVersion = "dev"
+	buildTime    = "unknown"
+)
+
 const (
 	CONTROL_LOOP_PERIOD = time.Second * 4 // How frequently to run the main control loop
 )
@@ -46,7 +52,11 @@ func main() {
 	flag.StringVar(&configFilePath, "f", "./config.json", "Specify config file path")
 	flag.Parse()
 
-	slog.Info("Starting", "config_file", configFilePath)
+	// Log version on startup for deployment verification
+	slog.Info("BESS Controller starting",
+		"version", buildVersion,
+		"build_time", buildTime,
+		"config_file", configFilePath)
 
 	config, err := config.Read(configFilePath)
 	if err != nil {
