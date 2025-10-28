@@ -11,3 +11,4 @@
 0007_add_flux_grafana_reader 2025-08-11T08:37:25Z Marcus Wood <marcus.wood@cepro.energy> # Adds the flux_grafana_reader role
 0008_fix_telemetry_rollups 2025-08-11T11:26:41Z Marcus Wood <marcus.wood@cepro.energy> # Fixes the get_meter_readings_5m and get_meter_readings_30m functions which were referencing flows rather than flux
 0009_alert_permissions 2025-10-09T00:20:40Z Chris Hatch <chris@cepro.energy> # permissions for alerts and grafanareader
+0010_add_bess_real_power_mode 2025-10-28T16:00:00Z Damon Rand <damon@cepro.energy> # Add Tesla Real Power Mode tracking to BESS readings
