@@ -22,8 +22,9 @@ type SupabaseReadingMeta struct {
 // supabaseBessReading holds the json encoding schema for a BESS reading in supabase.
 type supabaseBessReading struct {
 	SupabaseReadingMeta
-	Soe         float64 `json:"soe"`
-	TargetPower float64 `json:"target_power"`
+	Soe           float64 `json:"soe"`
+	TargetPower   float64 `json:"target_power"`
+	RealPowerMode uint16  `json:"real_power_mode"`
 }
 
 // supabaseMeterReading holds the json encoding schema for a meter reading in supabase.
@@ -65,6 +66,7 @@ func convertReadingsForSupabase(readings interface{}) (interface{}, string) {
 				SupabaseReadingMeta: SupabaseReadingMeta(reading.ReadingMeta),
 				Soe:                 reading.Soe,
 				TargetPower:         reading.TargetPower,
+				RealPowerMode:       reading.RealPowerMode,
 			})
 		}
 		return supabaseReadings, SUPABASE_BESS_READING_TABLE_NAME

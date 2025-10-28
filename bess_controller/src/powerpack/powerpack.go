@@ -31,7 +31,12 @@ type PowerPack struct {
 	heartbeatToggle        bool
 	haveInitializedBess    bool
 	haveIssuedFirstCommand bool
-	logger                 *slog.Logger
+
+	// Idle-based OFF mode state tracking
+	currentMode   uint16     // Current Tesla mode read from battery (ground truth)
+	idleStartTime *time.Time // When power=0 started, nil if power≠0
+
+	logger *slog.Logger
 }
 
 // TeslaOptions defines parameters that are set internally on the PowerPack via modbus
@@ -39,6 +44,10 @@ type TeslaOptions struct {
 	RampRateUp       float64 // sets the maximum ramp up rate at the inverters
 	RampRateDown     float64 // sets the maximum ramp down rate at the inverters
 	AlwaysActiveMode bool    // if true, then equipment will not enter power saving modes, meaning it is more responsive, but less efficient
+
+	// Idle-based OFF mode configuration
+	OffIdleEnabled       bool    // Enable automatic turn OFF after idle period
+	OffIdleThresholdMins float64 // Minutes of power=0 before turning OFF (e.g., 5.0)
 }
 
 func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64, teslaOptions TeslaOptions) (*PowerPack, error) {
@@ -62,7 +71,12 @@ func New(id uuid.UUID, host string, nameplateEnergy, nameplatePower float64, tes
 		heartbeatToggle:        false,
 		haveInitializedBess:    false,
 		haveIssuedFirstCommand: false,
-		logger:                 logger,
+
+		// Initialize OFF mode tracking
+		currentMode:   0,   // Will be read from battery
+		idleStartTime: nil, // No idle period yet
+
+		logger: logger,
 	}
 
 	return p, nil
@@ -88,9 +102,24 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 
 			metricVals, err := p.client.PollBlock(nil, statusBlock)
 			if err != nil {
-				p.logger.Error("Failed to poll BESS", "error", err)
+				p.logger.Error("Failed to poll BESS status", "error", err)
 				continue // try again next time
 			}
+
+			// Read mode block to get current Tesla mode (ground truth for OFF mode logic)
+			modeVals, err := p.client.PollBlock(nil, realPowerCommandBlock)
+			if err != nil {
+				p.logger.Error("Failed to poll BESS mode", "error", err)
+				// Don't fail completely - use cached mode value
+				modeVals = map[string]interface{}{"Mode": p.currentMode}
+			}
+
+			// Update cached mode with actual value from Tesla
+			readMode := modeVals["Mode"].(uint16)
+			if readMode != p.currentMode {
+				p.logger.Info("Battery mode changed", "old_mode", p.currentMode, "new_mode", readMode)
+			}
+			p.currentMode = readMode
 
 			p.telemetry <- telemetry.BessReading{
 				ReadingMeta: telemetry.ReadingMeta{
@@ -102,6 +131,7 @@ func (p *PowerPack) Run(ctx context.Context, period time.Duration) error {
 				Soe:                     float64(metricVals["NominalEnergy"].(int32)) / 1000.0,
 				AvailableInverterBlocks: metricVals["AvailableBlocks"].(uint16),
 				CommandSource:           metricVals["CommandSource"].(uint16),
+				RealPowerMode:           readMode, // Include actual mode from Tesla
 			}
 		}
 	}
@@ -162,7 +192,27 @@ func (p *PowerPack) logConfigParameters() {
 	p.logger.Info(fmt.Sprintf("Retrieved PowerPack real power command configuration: %+v", metrics))
 }
 
-// issueCommand sends the given command to the PowerPack and manages the associated modbus registers like heartbeat, timeout and real power mode.
+// issueCommand sends commands to the PowerPack and manages idle-based OFF mode.
+//
+// FEATURE: Turns battery OFF when idle (power=0) for 5+ minutes to reduce standby consumption.
+//
+// State Machine:
+//   Mode=0 → Write Mode=1+Timeout, then send heartbeat+power → Mode=1
+//   Mode=1 → (power=0 for 5+ mins) → Write Mode=0 → Mode=0
+//
+// Safety Features:
+//   - currentMode read from Tesla every 2 seconds (ground truth)
+//   - Independent idle timer works across all control modes
+//   - Matches original code flow: heartbeat+power sent immediately
+//
+// Configuration (YAML):
+//   teslaOptions:
+//     offIdleEnabled: true
+//     offIdleThresholdMins: 5.0
+//
+// Deployment:
+//   Phase 1: OFF command commented out - monitoring/validation only
+//   Phase 2: OFF command active - actual Mode=0 writes
 func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 
 	err := p.initializeBessIfRequired()
@@ -170,32 +220,115 @@ func (p *PowerPack) issueCommand(command telemetry.BessCommand) error {
 		return fmt.Errorf("initialize bess: %w", err)
 	}
 
-	// The PowerPack expects the heartbeat to be toggled regularly
+	// Track idle time for OFF mode logic
+	now := time.Now()
+	if command.TargetPower == 0.0 {
+		if p.idleStartTime == nil {
+			p.idleStartTime = &now
+			p.logger.Debug("Battery entered idle state (power=0)")
+		}
+	} else {
+		if p.idleStartTime != nil {
+			idleDuration := now.Sub(*p.idleStartTime)
+			p.logger.Debug("Battery exited idle state",
+				"idle_duration_secs", idleDuration.Seconds())
+		}
+		p.idleStartTime = nil
+	}
+
+	// Calculate idle duration
+	idleDuration := time.Duration(0)
+	if p.idleStartTime != nil {
+		idleDuration = now.Sub(*p.idleStartTime)
+	}
+
+	// Determine if we should turn OFF due to idle timeout
+	shouldTurnOff := false
+	if p.teslaOptions.OffIdleEnabled &&
+		command.TargetPower == 0.0 &&
+		idleDuration >= time.Duration(p.teslaOptions.OffIdleThresholdMins*float64(time.Minute)) {
+		shouldTurnOff = true
+	}
+
+	// Log when OFF would trigger (always log, even if command commented out)
+	if shouldTurnOff && p.currentMode == 1 {
+		p.logger.Info("IDLE TIMEOUT - Would turn battery OFF",
+			"current_mode", p.currentMode,
+			"idle_duration_mins", idleDuration.Minutes(),
+			"threshold_mins", p.teslaOptions.OffIdleThresholdMins,
+			"phase", "1-monitoring-only")
+	}
+
+	// STATE: Battery is ON (Mode=1) and should turn OFF
+	// PHASE 1: Comment out the actual OFF command - just log
+	if p.currentMode == 1 && shouldTurnOff {
+
+		// COMMENTED OUT FOR PHASE 1 - MONITORING ONLY
+		/*
+			p.logger.Info("Turning battery OFF",
+				"idle_duration_mins", idleDuration.Minutes(),
+				"threshold_mins", p.teslaOptions.OffIdleThresholdMins,
+				"current_mode", p.currentMode,
+				"phase", "2-active")
+
+			// Write Mode=0 (Off)
+			err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(0))
+			if err != nil {
+				return fmt.Errorf("turn OFF - write mode: %w", err)
+			}
+
+			p.haveIssuedFirstCommand = false // Reset for next turn-ON sequence
+
+			// Don't send heartbeat or power when turning OFF
+			return nil
+		*/
+
+		// PHASE 1: Just log that we WOULD turn off, but don't actually do it
+		// The log message above already captured this
+		// Fall through to send normal commands (keep battery running)
+	}
+
+	// STATE: Battery is OFF (Mode=0) - turn it ON
+	// This handles both first startup AND turn-ON after idle OFF
+	if p.currentMode == 0 {
+		logMsg := "First startup - initializing battery to Direct Mode"
+		if p.haveIssuedFirstCommand {
+			logMsg = "Battery is OFF, turning ON"
+		}
+		p.logger.Info(logMsg,
+			"current_mode", p.currentMode,
+			"target_power", command.TargetPower)
+
+		// Write Mode=1 (Direct)
+		err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(1))
+		if err != nil {
+			return fmt.Errorf("turn ON - write mode: %w", err)
+		}
+
+		// Write timeout
+		err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
+		if err != nil {
+			return fmt.Errorf("turn ON - write timeout: %w", err)
+		}
+
+		p.haveIssuedFirstCommand = true
+		p.idleStartTime = nil // Reset idle timer
+
+		// Fall through to send heartbeat + power below (like original code)
+	}
+
+	// NORMAL OPERATION: Send heartbeat and power (always, like original code)
+
+	// Write heartbeat toggle
 	err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Heartbeat"], p.nextHeartbeat())
 	if err != nil {
 		return fmt.Errorf("write heartbeat: %w", err)
 	}
 
-	// The PowerPack expects power in units of Watts
-	p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Power"], uint32(math.Round(command.TargetPower*1000)))
+	// Write target power
+	err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Power"], uint32(math.Round(command.TargetPower*1000)))
 	if err != nil {
 		return fmt.Errorf("write real power: %w", err)
-	}
-
-	// If this is the first power command we have issued, then set the "real power command mode" to "direct" (which means we will tell the PowerPack
-	// direclty how much power to import/export). The Tesla manual reccomends setting this *after* the first power command, hence this is not sent
-	// in the `initializeBessIfRequired` function.
-	if !p.haveIssuedFirstCommand {
-		// configure the heartbeat timeout for "direct real power commands" on the modbus connection
-		err = p.client.WriteMetric(directRealPowerCommandBlock.Metrics["Timeout"], MODBUS_TIMEOUT_SECS)
-		if err != nil {
-			return fmt.Errorf("write timeout: %w", err)
-		}
-		err = p.client.WriteMetric(realPowerCommandBlock.Metrics["Mode"], uint16(1))
-		if err != nil {
-			return fmt.Errorf("write real power mode: %w", err)
-		}
-		p.haveIssuedFirstCommand = true
 	}
 
 	return nil

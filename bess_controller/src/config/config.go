@@ -118,6 +118,10 @@ type PowerPackTeslaOptions struct {
 	InverterRampRateUp   float64 `yaml:"inverterRampRateUp"`
 	InverterRampRateDown float64 `yaml:"inverterRampRateDown"`
 	AlwaysActive         bool    `yaml:"alwaysActive"`
+
+	// Idle-based OFF mode configuration
+	OffIdleEnabled       bool    `yaml:"offIdleEnabled"`       // Enable automatic turn OFF after idle period
+	OffIdleThresholdMins float64 `yaml:"offIdleThresholdMins"` // Minutes of power=0 before turning OFF
 }
 
 type MockBessConfig struct {

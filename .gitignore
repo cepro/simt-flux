@@ -2,3 +2,4 @@ deployment/logs
 .vscode
 sqitch_secrets.conf
 sqitch_secrets_mgf.conf
+bess_controller/bess_controller_rpi_64

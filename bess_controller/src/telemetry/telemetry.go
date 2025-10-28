@@ -20,6 +20,7 @@ type BessReading struct {
 	Soe                     float64 // state of energy
 	AvailableInverterBlocks uint16  // how many inverter blocks are available for power delivery
 	CommandSource           uint16  // enum determining how the bess is being controlled
+	RealPowerMode           uint16  // Tesla Real Power Mode: 0=Off, 1=Direct, 2=Site Control, 3=Go to Energy, 4=Opticaster, 5=Scheduler
 }
 
 // MeterReading holds data pulled from a meter

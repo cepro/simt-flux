@@ -107,9 +107,11 @@ func main() {
 			ppConfig.NameplateEnergy,
 			ppConfig.NameplatePower,
 			powerpack.TeslaOptions{
-				RampRateUp:       ppConfig.TeslaOptions.InverterRampRateUp,
-				RampRateDown:     ppConfig.TeslaOptions.InverterRampRateDown,
-				AlwaysActiveMode: ppConfig.TeslaOptions.AlwaysActive,
+				RampRateUp:           ppConfig.TeslaOptions.InverterRampRateUp,
+				RampRateDown:         ppConfig.TeslaOptions.InverterRampRateDown,
+				AlwaysActiveMode:     ppConfig.TeslaOptions.AlwaysActive,
+				OffIdleEnabled:       ppConfig.TeslaOptions.OffIdleEnabled,
+				OffIdleThresholdMins: ppConfig.TeslaOptions.OffIdleThresholdMins,
 			},
 		)
 		if err != nil {
