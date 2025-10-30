@@ -143,3 +143,16 @@ var realPowerRampParametersBlock = modbus.MetricBlock{
 		},
 	},
 }
+
+var shutdownCommandBlock = modbus.MetricBlock{
+	Name:         "ShutdownCommand",
+	StartAddr:    1500,
+	NumRegisters: 1,
+	Metrics: map[string]modbus.Metric{
+		"Shutdown": {
+			StartAddr:   1500,
+			DataType:    modbus.Uint16Type, // bool represented as uint16: 0=active, 1=shutdown
+			ScalingFunc: nil,
+		},
+	},
+}
